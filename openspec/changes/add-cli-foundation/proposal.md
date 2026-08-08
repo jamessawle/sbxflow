@@ -8,13 +8,13 @@ and process execution.
 ## What Changes
 
 - Introduce a Go executable and module for `sbxflow`.
-- Build the command tree with Cobra and present help and errors with Fang.
+- Build and present the command tree directly with Cobra.
 - Provide root help through the no-argument invocation, `help`, `-h`, and
   `--help`.
 - Provide build-aware version output through `-v` and `--version`, without a
   `version` subcommand.
-- Keep Fang's completion and man-page commands disabled until they are added as
-  intentional public capabilities.
+- Keep Cobra's completion command disabled until it is added as an intentional
+  public capability; do not add a man-page command.
 - Add automated tests, Mise development tasks, and documentation for the initial
   CLI behavior.
 
@@ -33,7 +33,7 @@ None.
 
 - Adds Go as the application implementation language and pinned development
   toolchain.
-- Adds Cobra and Fang as runtime dependencies.
+- Adds Cobra as the command-line runtime dependency.
 - Introduces the executable entry point, CLI package structure, and CLI-focused
   tests.
 - Extends Mise setup and validation to build, format, vet, and test Go code.

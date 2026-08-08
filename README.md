@@ -9,8 +9,8 @@ running with the declared agent and ordered set of kits, recreating it when its
 build inputs change.
 
 > [!NOTE]
-> sbxflow is in early development. This README describes the initial interface;
-> the CLI is not available yet.
+> sbxflow is in early development. Its foundational CLI is available, but the
+> lifecycle commands described below are not implemented yet.
 
 ## Configuration
 
@@ -47,7 +47,25 @@ source type determines how each selection is resolved:
 See [`examples`](examples/) for complete configurations, including the
 configuration derived from a working `personal-site` sandbox script.
 
-## Commands
+## Foundational CLI
+
+Run the CLI from the repository with Mise:
+
+```text
+mise exec -- go run ./cmd/sbxflow
+```
+
+The root command displays help when invoked without arguments. The same help is
+available through `sbxflow help`, `sbxflow -h`, and `sbxflow --help`.
+
+Use `sbxflow -v` or `sbxflow --version` to display the build identity. Local
+builds report an explicit development version. A `version` subcommand is not
+available.
+
+Completion, man-page, and lifecycle commands are intentionally absent from the
+foundational executable.
+
+## Planned lifecycle commands
 
 ```text
 sbxflow up
@@ -57,7 +75,7 @@ sbxflow validate
 sbxflow doctor
 ```
 
-### `sbxflow up`
+### `sbxflow up` (planned)
 
 Bring the declared sandbox up:
 
@@ -66,23 +84,23 @@ Bring the declared sandbox up:
 - Recreate it when its build inputs are out of date.
 - Leave it unchanged when it is current and running.
 
-### `sbxflow down`
+### `sbxflow down` (planned)
 
 Stop the sandbox while preserving its installed tools, Docker images, agent
 history, and other sandbox state.
 
-### `sbxflow destroy`
+### `sbxflow destroy` (planned)
 
 Remove the sandbox and its persisted state completely. Repository files remain
 on the host.
 
-### `sbxflow validate`
+### `sbxflow validate` (planned)
 
 Validate the configuration's syntax and semantics without changing sandbox
 state. Validation also reports the effective kit-source trust derived from the
 ordered selections.
 
-### `sbxflow doctor`
+### `sbxflow doctor` (planned)
 
 Check whether the local environment can run the declaration, including the
 `sbx` installation, compatible version, authentication, daemon health, and
@@ -111,7 +129,7 @@ Development tools are managed with [Mise](https://mise.jdx.dev/):
 
 ```text
 mise run setup      Install tools and activate the Git hooks
-mise run fmt        Format Markdown files
+mise run fmt        Format Markdown and Go files
 mise run validate   Run all repository checks
 ```
 

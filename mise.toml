@@ -2,6 +2,7 @@ min_version = "2026.8.2"
 
 [tools]
 actionlint = "1.7.12"
+go = "1.26.5"
 node = "24.18.0"
 "npm:@fission-ai/openspec" = "1.8.0"
 "npm:prettier" = "3.9.6"
@@ -20,8 +21,11 @@ fi
 '''
 
 [tasks.fmt]
-description = "Format Markdown files"
-run = 'prettier --write "**/*.md"'
+description = "Format project files"
+run = '''
+prettier --write "**/*.md"
+gofmt -w .
+'''
 
 [tasks.validate]
 description = "Run all repository checks"
@@ -29,4 +33,15 @@ run = '''
 prettier --check "**/*.md"
 actionlint
 openspec validate --all --strict --no-interactive
+
+unformatted="$(gofmt -l .)"
+if [ -n "$unformatted" ]; then
+  echo "Go files need formatting:"
+  echo "$unformatted"
+  exit 1
+fi
+
+go vet ./...
+go test ./...
+go build ./...
 '''

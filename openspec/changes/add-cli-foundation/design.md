@@ -16,8 +16,8 @@ fit the repository's existing Mise-managed development and validation workflow.
 - Establish a testable Go executable with a thin process entry point.
 - Centralize command construction so later commands share help, output, error,
   and context conventions.
-- Use attractive terminal-aware presentation without making color or styling
-  necessary to understand output.
+- Use compact, conventional presentation that remains predictable in terminals
+  and redirected output.
 - Make development and release version output deterministic.
 
 **Non-Goals:**
@@ -40,20 +40,17 @@ Alternatives considered were TypeScript, which would require an additional
 runtime or packaging decision, and Rust, whose additional implementation
 complexity is not justified for this command-oriented application.
 
-### Use Cobra for the command model and Fang for presentation
+### Use Cobra directly for the command model and presentation
 
-Cobra will own the root command, flags, argument validation, help semantics,
-and future command tree. Fang will execute that command while supplying styled
-help and errors and the `-v`/`--version` integration.
+Cobra will own the root command, flags, argument validation, help and version
+semantics, error presentation, and future command tree. Its compact default
+presentation is predictable in interactive terminals and redirected output
+without requiring terminal styling or an additional presentation dependency.
 
-Fang will be configured without completions and without its hidden man-page
-command. Those are useful future capabilities, but enabling them implicitly
-would expand the initial interface and dependency behavior beyond the spec.
-
-Using Cobra alone was considered and would be functionally sufficient, but
-would require either accepting plain presentation or building presentation
-customization. Other command frameworks were rejected because Cobra and Fang
-together match both the mature command model and the desired polished output.
+Cobra's default completion command will be disabled, and no man-page command
+will be added. Both can be introduced later as intentional capabilities. A
+presentation wrapper such as Fang can likewise be added around the independently
+constructed Cobra command tree later without restructuring commands.
 
 ### Construct the command tree rather than storing global commands
 
@@ -82,8 +79,7 @@ warning and give users a misleading executable interface.
 
 Build metadata will have a deterministic development default and allow release
 builds to inject version and commit values through Go linker flags. The values
-will be passed to Fang for rendering so both version flags share one source of
-truth.
+will be passed to Cobra so both version flags share one source of truth.
 
 Relying only on automatic Go build information was considered, but local and
 direct binary builds do not always contain a useful module version. An explicit
@@ -103,14 +99,12 @@ aggregate validation task will include the relevant non-mutating checks.
 
 ## Risks / Trade-offs
 
-- **Fang describes itself as experimental** → Pin an exact compatible version,
-  keep Cobra commands independent of Fang-specific presentation, and cover the
-  public output contract with tests so Fang can be upgraded or replaced.
-- **Styled output can make tests and redirected output brittle** → Assert
-  semantic text and stream behavior, use controlled non-interactive output in
-  tests, and avoid ANSI snapshots.
-- **Fang reserves `-v` for version** → Treat `-v` as part of the public contract;
-  any future verbosity setting must use another shorthand or only `--verbose`.
+- **Plain output may feel less distinctive** → Prefer conventional, compact
+  output for the foundation and keep the command constructor independent so a
+  presentation layer can be added later if it provides clear value.
+- **Cobra reserves `-v` for version once version metadata is configured** →
+  Treat `-v` as part of the public contract; any future verbosity setting must
+  use another shorthand or only `--verbose`.
 - **Help output will evolve as real commands arrive** → Test required sections
   and command visibility instead of freezing the entire rendered document.
 - **Linker metadata can drift from release tooling** → Keep one build-metadata
@@ -121,4 +115,5 @@ aggregate validation task will include the relevant non-mutating checks.
 This is a new executable with no installed predecessor or persistent state to
 migrate. Implementation can be rolled back by removing the Go module,
 executable packages, Go-related Mise configuration, and associated
-documentation changes.
+documentation changes. A presentation wrapper can be introduced later around
+the root-command constructor without changing the public command contract.
