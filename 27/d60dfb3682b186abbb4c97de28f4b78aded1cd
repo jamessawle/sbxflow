@@ -1,0 +1,23 @@
+.github/pull_request_template.md
+  s_2285b673a9527e::t_9ed0115acd7a6d 1-9
+.github/dependabot.yml
+  s_2285b673a9527e::t_ac07058d22f513 1-13
+.github/workflows/ci.yml
+  s_2285b673a9527e::t_a404ab938ecfe9 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "27d60dfb3682b186abbb4c97de28f4b78aded1cd",
+  "prompts": {},
+  "sessions": {
+    "s_2285b673a9527e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe183-56fd-7183-9967-955f6c0a8b9e",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
