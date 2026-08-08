@@ -12,6 +12,16 @@ Development tools and Git hooks are managed with
 mise run setup
 ```
 
+The setup installs the pinned [OpenSpec](https://openspec.dev/) CLI. The
+repository also includes Codex skills for its spec-driven workflow; restart
+Codex after setup so it discovers them.
+
+Start a change with `$openspec-propose "describe the change"`. The usual flow is
+`$openspec-apply-change`, `$openspec-verify-change`, and
+`$openspec-archive-change`; use `$openspec-explore` when requirements need more
+discussion first. OpenSpec artifacts live in `openspec/` and are checked by
+`mise run validate`.
+
 Create a focused branch from the latest `main`. Before committing, format any
 Markdown changes and run the repository checks:
 

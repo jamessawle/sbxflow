@@ -1,0 +1,27 @@
+schema: spec-driven
+
+context: |
+  sbxflow is an early-stage, configuration-driven CLI for applying a
+  repository's declared Docker Sandbox configuration and lifecycle.
+  The public interface and initial scope are defined in README.md. Keep
+  implementation and documentation aligned with README.md and CONTRIBUTING.md.
+  Development tools and repository checks are managed with Mise. Markdown is
+  formatted with Prettier, GitHub Actions are linted with actionlint, and pull
+  request titles use Conventional Commits.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+operations:
+  apply:
+    guidance:
+      - Update documentation when behavior or the declared interface changes.
+      - Run mise run fmt after changing Markdown.
+      - Run mise run validate before considering implementation complete.

@@ -7,3 +7,7 @@ Before making changes in this repository, read and follow:
   commands, and pull request requirements.
 
 Keep implementation and documentation aligned with both files.
+
+OpenSpec is managed by Mise. Run OpenSpec CLI commands as
+`mise exec -- openspec ...` so repository-local skills use the pinned version
+rather than any global installation.
