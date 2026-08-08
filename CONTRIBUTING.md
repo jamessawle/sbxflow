@@ -1,0 +1,65 @@
+# Contributing
+
+Thank you for contributing to sbxflow. Read [`README.md`](README.md) first for
+the project's purpose, current interface, and lifecycle scope.
+
+## Development setup
+
+Development tools and Git hooks are managed with
+[Mise](https://mise.jdx.dev/):
+
+```text
+mise run setup
+```
+
+Create a focused branch from the latest `main`. Before committing, format any
+Markdown changes and run the repository checks:
+
+```text
+mise run fmt
+mise run validate
+```
+
+The pre-commit hook also rejects staged whitespace errors and changes that do
+not pass repository validation.
+
+## Pull requests
+
+Pull request titles must follow the
+[Conventional Commits](https://www.conventionalcommits.org/) format because
+GitHub uses the pull request title as the squash commit title on `main`:
+
+```text
+<type>(optional-scope)!: <description>
+```
+
+The allowed types are:
+
+- `build`
+- `chore`
+- `ci`
+- `docs`
+- `feat`
+- `fix`
+- `perf`
+- `refactor`
+- `revert`
+- `style`
+- `test`
+
+Examples:
+
+```text
+feat(cli): add the validate command
+fix(config): reject unknown source types
+docs: explain kit source trust
+feat(config)!: replace the kits declaration format
+```
+
+The required `Validate` check enforces this format whenever a pull request is
+opened, updated, reopened, or retitled. Intermediate commits on a branch do not
+need conventional messages because pull requests are squash merged.
+
+In the pull request body, summarize what changed and list the validation you
+ran. All required checks must pass and conversations must be resolved before a
+pull request can merge.
