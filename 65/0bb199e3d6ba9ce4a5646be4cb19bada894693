@@ -1,0 +1,29 @@
+openspec/changes/add-doctor-command/.openspec.yaml
+  s_ab2fae5417f5a9::t_fbd9ab83a33d66 1-2
+openspec/changes/add-doctor-command/design.md
+  s_ab2fae5417f5a9::t_96237d1ec9361f 1-193
+openspec/changes/add-doctor-command/proposal.md
+  s_ab2fae5417f5a9::t_2064e06b5de0aa 1-50
+openspec/changes/add-doctor-command/specs/cli-interface/spec.md
+  s_ab2fae5417f5a9::t_6a0cd13369355a 1-17
+openspec/changes/add-doctor-command/specs/environment-diagnostics/spec.md
+  s_ab2fae5417f5a9::t_f1188670fbc4bc 1-168
+openspec/changes/add-doctor-command/tasks.md
+  s_ab2fae5417f5a9::t_a291d8506c2f6b 1-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "650bb199e3d6ba9ce4a5646be4cb19bada894693",
+  "prompts": {},
+  "sessions": {
+    "s_ab2fae5417f5a9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe1fb-b44f-71a1-ab7e-bb41bb0d0f6a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
