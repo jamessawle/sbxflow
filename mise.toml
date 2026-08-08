@@ -1,0 +1,26 @@
+min_version = "2026.8.2"
+
+[tools]
+node = "24.18.0"
+"npm:prettier" = "3.9.6"
+
+[tasks.setup]
+description = "Install development tools and activate Git hooks"
+run = '''
+mise install
+
+if git rev-parse --git-dir >/dev/null 2>&1; then
+  git config core.hooksPath .githooks
+  echo "Configured Git hooks from .githooks."
+else
+  echo "No Git repository found; Git hook activation skipped."
+fi
+'''
+
+[tasks.fmt]
+description = "Format Markdown files"
+run = 'prettier --write "**/*.md"'
+
+[tasks.validate]
+description = "Run all repository checks"
+run = 'prettier --check "**/*.md"'

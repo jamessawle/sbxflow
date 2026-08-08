@@ -1,0 +1,35 @@
+# This example shows every kit source shape supported by the initial design.
+version: 1
+
+sandbox:
+  name: source-types
+  agent: shell
+
+  kits:
+    sources:
+      git-kits:
+        type: git
+        repo: https://github.com/example/sbx-kits.git
+        ref: v1.0.0
+
+      example-registry:
+        type: oci
+        base: ghcr.io/example
+
+      repository:
+        type: local
+        root: ./kits
+
+    use:
+      - source: git-kits
+        kit: kits/tooling
+
+      - source: example-registry
+        kit: registry-kit
+        version: 1.0.0
+
+      - source: repository
+        kit: local
+
+      - source: repository
+        kit: packaged.zip
