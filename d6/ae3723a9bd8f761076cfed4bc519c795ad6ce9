@@ -1,0 +1,45 @@
+go.mod
+  s_836b5c09e160f9::t_f56dfb063d0662 1-10
+go.sum
+  s_836b5c09e160f9::t_10ac56071f1664 1-10
+CONTRIBUTING.md
+  s_836b5c09e160f9::t_4317d755354825 15-31,47-50
+README.md
+  s_836b5c09e160f9::t_82ba58ae9f43b4 12-13,50-68,78,87,92,97,103,132
+cmd/sbxflow/main.go
+  s_836b5c09e160f9::t_0417e3008f5cb4 1-21
+cmd/sbxflow/main_test.go
+  s_836b5c09e160f9::t_6120ddae44948a 1-85
+internal/buildinfo/buildinfo.go
+  s_836b5c09e160f9::t_6ca99d7069df6e 1-28
+internal/buildinfo/buildinfo_test.go
+  s_836b5c09e160f9::t_94d76acea6ccb0 1-28
+internal/cli/root.go
+  s_836b5c09e160f9::t_7e1ec5db05add2 1-95
+internal/cli/root_test.go
+  s_836b5c09e160f9::t_fe1565bfb5cb2c 1-118
+mise.toml
+  s_836b5c09e160f9::t_af4a568dfe73fc 5,24-28,36-46
+openspec/changes/add-cli-foundation/design.md
+  s_836b5c09e160f9::t_374cc41570440b 19-20,43,45-48,50-53,82,102-107,118-119
+openspec/changes/add-cli-foundation/proposal.md
+  s_836b5c09e160f9::t_4fcb52dddf431f 11,16-17,36
+openspec/changes/add-cli-foundation/tasks.md
+  s_836b5c09e160f9::t_48c602f971e130 3-6,10,12,15-17,22,24,27,32,34,36,38-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "d6ae3723a9bd8f761076cfed4bc519c795ad6ce9",
+  "prompts": {},
+  "sessions": {
+    "s_836b5c09e160f9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe1dd-c01a-7e43-8c3f-12ffbf43226f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
