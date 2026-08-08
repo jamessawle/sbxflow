@@ -1,0 +1,74 @@
+name: Dependabot auto-merge
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: Auto-merge safe updates
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.pull_requests[0].number != null
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Enable auto-merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          pull_request=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER")
+
+          author=$(jq -r '.user.login' <<<"$pull_request")
+          head_repository=$(jq -r '.head.repo.full_name' <<<"$pull_request")
+          head_ref=$(jq -r '.head.ref' <<<"$pull_request")
+
+          if [ "$author" != "dependabot[bot]" ] ||
+             [ "$head_repository" != "$REPOSITORY" ] ||
+             [[ "$head_ref" != dependabot/* ]]; then
+            echo "PR #$PR_NUMBER is not an unmodified Dependabot PR; skipping."
+            exit 0
+          fi
+
+          update_type=$(
+            jq -r '
+              [.labels[].name] |
+              if index("patch") then "patch"
+              elif index("minor") then "minor"
+              else empty
+              end
+            ' <<<"$pull_request"
+          )
+
+          if [ -z "$update_type" ]; then
+            echo "PR #$PR_NUMBER is not a patch or minor update; skipping."
+            exit 0
+          fi
+
+          untrusted_commits=$(
+            gh api "repos/$REPOSITORY/pulls/$PR_NUMBER/commits" --jq '
+              [.[] |
+                select(
+                  .author.login != "dependabot[bot]" or
+                  .commit.verification.verified != true
+                )
+              ] | length
+            '
+          )
+
+          if [ "$untrusted_commits" -ne 0 ]; then
+            echo "PR #$PR_NUMBER contains commits not verified as Dependabot; refusing to merge."
+            exit 1
+          fi
+
+          echo "Enabling squash auto-merge for $update_type update PR #$PR_NUMBER."
+          gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --auto --squash

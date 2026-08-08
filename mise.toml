@@ -1,6 +1,7 @@
 min_version = "2026.8.2"
 
 [tools]
+actionlint = "1.7.12"
 node = "24.18.0"
 "npm:prettier" = "3.9.6"
 
@@ -23,4 +24,7 @@ run = 'prettier --write "**/*.md"'
 
 [tasks.validate]
 description = "Run all repository checks"
-run = 'prettier --check "**/*.md"'
+run = '''
+prettier --check "**/*.md"
+actionlint
+'''
