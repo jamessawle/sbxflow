@@ -1,0 +1,19 @@
+.github/workflows/ci.yml
+  s_2285b673a9527e::t_c9cd3b464fd3af 6,13,26-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "abee23a00be9afc82929750f69e98bafbab14862",
+  "prompts": {},
+  "sessions": {
+    "s_2285b673a9527e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe183-56fd-7183-9967-955f6c0a8b9e",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
