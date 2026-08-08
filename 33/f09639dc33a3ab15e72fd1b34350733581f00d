@@ -1,0 +1,27 @@
+openspec/changes/add-cli-foundation/.openspec.yaml
+  s_cca4204a2575eb::t_5ba4181c50ed03 1-2
+openspec/changes/add-cli-foundation/tasks.md
+  s_cca4204a2575eb::t_3b619cc78a0f02 1-38
+openspec/changes/add-cli-foundation/design.md
+  s_cca4204a2575eb::t_af1a3157a91c51 1-124
+openspec/changes/add-cli-foundation/proposal.md
+  s_cca4204a2575eb::t_c769ebfc7c84f5 1-41
+openspec/changes/add-cli-foundation/specs/cli-interface/spec.md
+  s_cca4204a2575eb::t_c5b96dface2144 1-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "33f09639dc33a3ab15e72fd1b34350733581f00d",
+  "prompts": {},
+  "sessions": {
+    "s_cca4204a2575eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe1c2-af6d-7102-beec-a81bc6a3465f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
