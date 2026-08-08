@@ -1,0 +1,23 @@
+.github/dependabot.yml
+  s_2285b673a9527e::t_27f05a35e51a33 14-20
+.github/workflows/dependabot-auto-merge.yml
+  s_2285b673a9527e::t_5ed8426e6e4bc4 1-74
+mise.toml
+  s_2285b673a9527e::t_dcebbd4094b4eb 4,27-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "4d565538ce99edde882ec5c8f1b591c982f1f27f",
+  "prompts": {},
+  "sessions": {
+    "s_2285b673a9527e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe183-56fd-7183-9967-955f6c0a8b9e",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
