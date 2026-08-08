@@ -17,7 +17,7 @@ checks.
 - Check that the global Docker Sandboxes network policy is initialized.
 - Warn when the effective global `kit.allowedSources` setting contains the
   unrestricted `"*"` entry, while respecting the setting's reported source.
-- Implement the checks as independent strategies with consistent results,
+- Implement independent checks with consistent results,
   dependency-aware skipping, and non-mutating remediation guidance.
 - Remove the root help-rendering workaround that exists only to expose `help`
   when it is the command tree's sole subcommand; Cobra's normal rendering can
@@ -40,8 +40,8 @@ checks.
 ## Impact
 
 - Extends the internal CLI command tree and command-level/process-level tests.
-- Adds internal abstractions for executing `sbx` and running diagnostic
-  strategies, without adding configuration loading or changing lifecycle
+- Adds internal abstractions for executing `sbx` and running diagnostic checks,
+  without adding configuration loading or changing lifecycle
   behavior.
 - Depends on machine-readable `sbx version`, `sbx diagnose`, `sbx policy`, and
   `sbx settings` command output within an explicitly supported CLI range.

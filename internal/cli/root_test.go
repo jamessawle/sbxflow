@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/jamessawle/sbxflow/internal/buildinfo"
+	"github.com/jamessawle/sbxflow/internal/doctor"
 )
 
 func TestRootHelp(t *testing.T) {
@@ -32,6 +33,7 @@ func TestRootHelp(t *testing.T) {
 				"Usage:",
 				"sbxflow",
 				"Available Commands:",
+				"doctor ",
 				"help ",
 				"Flags:",
 				"-h, --help",
@@ -42,7 +44,7 @@ func TestRootHelp(t *testing.T) {
 				}
 			}
 
-			for _, unavailable := range []string{"completion", "man", "up", "down", "destroy", "validate", "doctor"} {
+			for _, unavailable := range []string{"completion", "man", "up", "down", "destroy", "validate"} {
 				if strings.Contains(stdout, "\n  "+unavailable+" ") {
 					t.Errorf("stdout advertises unavailable command %q:\n%s", unavailable, stdout)
 				}
@@ -86,7 +88,7 @@ func TestVersionIncludesShortCommit(t *testing.T) {
 }
 
 func TestUnavailableCommands(t *testing.T) {
-	for _, name := range []string{"version", "completion", "man", "up", "down", "destroy", "validate", "doctor", "unknown"} {
+	for _, name := range []string{"version", "completion", "man", "up", "down", "destroy", "validate", "unknown"} {
 		t.Run(name, func(t *testing.T) {
 			stdout, stderr, err := execute([]string{name})
 			if err == nil {
@@ -107,12 +109,23 @@ func execute(args []string) (string, string, error) {
 }
 
 func executeWithInfo(args []string, info buildinfo.Info) (string, string, error) {
+	return executeWithDoctor(args, info, fakeDoctorRunner{})
+}
+
+func executeWithDoctor(args []string, info buildinfo.Info, runner DoctorRunner) (string, string, error) {
 	var stdout, stderr bytes.Buffer
-	err := Execute(
-		context.Background(),
-		args,
+	root := NewRootCommand(
 		Streams{In: strings.NewReader(""), Out: &stdout, Err: &stderr},
-		info,
+		runner,
 	)
+	root.Version = formatVersion(info)
+	root.SetArgs(args)
+	err := root.ExecuteContext(context.Background())
 	return stdout.String(), stderr.String(), err
 }
+
+type fakeDoctorRunner struct {
+	report doctor.Report
+}
+
+func (r fakeDoctorRunner) Run(context.Context) doctor.Report { return r.report }

@@ -65,6 +65,37 @@ available.
 Completion, man-page, and lifecycle commands are intentionally absent from the
 foundational executable.
 
+### `sbxflow doctor`
+
+Assess whether the local Docker Sandboxes installation is compatible, healthy,
+and safely configured:
+
+```text
+sbxflow doctor
+```
+
+`doctor` can run from any directory. It does not discover or read
+`sbxflow.yaml`; an absent or invalid repository declaration does not affect its
+results. The initial release supports `sbx` versions from v0.35.0 up to, but not
+including, v0.38.0.
+
+The command runs these ordered system checks:
+
+- Confirm that `sbx` is installed and its version is supported.
+- Summarize only the aggregate pass, warning, failure, and skipped totals from
+  Docker's machine-readable diagnostics. Run `sbx diagnose` for individual
+  results and remediation.
+- Check whether a global network policy is initialized or
+  organisation-managed without grading the selected policy preset.
+- Warn when the effective global `kit.allowedSources` value contains the
+  unrestricted `"*"` entry, with guidance based on the setting's reported
+  source.
+
+The checks are inspection-only: sbxflow does not initialize policy, change
+settings, start the daemon, or fix reported problems. Warnings and skipped
+advisory checks retain a successful exit status; a failed compatibility or
+Docker health check exits non-zero.
+
 ## Planned lifecycle commands
 
 ```text
@@ -72,7 +103,6 @@ sbxflow up
 sbxflow down
 sbxflow destroy
 sbxflow validate
-sbxflow doctor
 ```
 
 ### `sbxflow up` (planned)
@@ -99,12 +129,6 @@ on the host.
 Validate the configuration's syntax and semantics without changing sandbox
 state. Validation also reports the effective kit-source trust derived from the
 ordered selections.
-
-### `sbxflow doctor` (planned)
-
-Check whether the local environment can run the declaration, including the
-`sbx` installation, compatible version, authentication, daemon health, and
-local paths.
 
 ## Kit source trust
 

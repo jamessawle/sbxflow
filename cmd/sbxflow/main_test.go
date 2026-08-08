@@ -61,9 +61,64 @@ func TestExecutableStreamsAndExitStatuses(t *testing.T) {
 			t.Fatalf("stderr does not identify the unknown command: %s", stderr)
 		}
 	})
+
+	t.Run("doctor reports checks and required failure", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("fake sbx fixture uses a POSIX shell script")
+		}
+
+		fakeDirectory := t.TempDir()
+		fakeSbx := filepath.Join(fakeDirectory, "sbx")
+		script := `#!/bin/sh
+case "$1" in
+  version)
+    echo 'sbx version: v0.35.0 fake'
+    ;;
+  diagnose)
+    echo '{"version":"1.0","summary":{"pass":2,"warn":0,"fail":1,"skip":1}}'
+    exit 1
+    ;;
+  policy)
+    echo '{"rules":[]}'
+    ;;
+  settings)
+    echo '{"key":"kit.allowedSources","value":["*"],"type":"json","source":"env"}'
+    ;;
+  *)
+    echo 'unexpected fake sbx invocation' >&2
+    exit 2
+    ;;
+esac
+`
+		if err := os.WriteFile(fakeSbx, []byte(script), 0o700); err != nil {
+			t.Fatalf("write fake sbx: %v", err)
+		}
+
+		stdout, stderr, exitCode := runBinaryWithEnv(
+			t,
+			binary,
+			[]string{"doctor"},
+			[]string{"PATH=" + fakeDirectory},
+		)
+		if exitCode == 0 {
+			t.Fatalf("exit code = 0, want non-zero; stdout = %q", stdout)
+		}
+		for _, want := range []string{"[PASS] sbx-compatibility", "[FAIL] docker-diagnostics", "[WARN] network-policy", "[WARN] kit-sources"} {
+			if !strings.Contains(stdout, want) {
+				t.Errorf("stdout does not contain %q:\n%s", want, stdout)
+			}
+		}
+		if !strings.Contains(stderr, "required doctor checks failed") {
+			t.Fatalf("stderr does not report required failure: %q", stderr)
+		}
+	})
 }
 
 func runBinary(t *testing.T, binary string, args ...string) (string, string, int) {
+	return runBinaryWithEnv(t, binary, args, nil)
+}
+
+func runBinaryWithEnv(t *testing.T, binary string, args, environment []string) (string, string, int) {
 	t.Helper()
 
 	var stdout, stderr bytes.Buffer
@@ -71,6 +126,7 @@ func runBinary(t *testing.T, binary string, args ...string) (string, string, int
 	command.Stdout = &stdout
 	command.Stderr = &stderr
 	command.Env = append(os.Environ(), "TERM=dumb")
+	command.Env = append(command.Env, environment...)
 
 	err := command.Run()
 	if err == nil {

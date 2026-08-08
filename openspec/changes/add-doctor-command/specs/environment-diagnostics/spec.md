@@ -86,6 +86,13 @@ preset.
 - **WHEN** Docker Sandboxes reports an initialized global network policy
 - **THEN** the command reports the policy check as passed
 
+#### Scenario: Deny-all policy has no network rules
+
+- **WHEN** Docker Sandboxes reports an active global local policy whose
+  deny-all preset is represented without explicit network rules
+- **THEN** the command reports the policy check as passed
+- **AND** does not infer initialization solely from network-rule presence
+
 #### Scenario: Global policy is not initialized
 
 - **WHEN** Docker Sandboxes reports no initialized global network policy

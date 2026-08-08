@@ -14,8 +14,7 @@ repository declaration that a future `validate` command will own.
 
 **Goals:**
 
-- Establish a small strategy-based diagnostic runner that can grow through
-  independent checks.
+- Establish a small diagnostic runner that can grow through independent checks.
 - Keep command execution and Docker JSON parsing isolated from Cobra
   presentation.
 - Produce deterministic, plain-text results and reliable exit status from
@@ -36,12 +35,12 @@ repository declaration that a future `validate` command will own.
 
 ## Decisions
 
-### Run four ordered diagnostic strategies
+### Run four ordered diagnostic checks
 
-An internal doctor package will define a strategy contract that accepts context
-and a shared environment and returns one result. Results have a stable
+An internal doctor package will define a check contract that accepts context and
+a shared environment and returns one result. Results have a stable
 identifier, pass/warn/fail/skip status, concise summary, and optional guidance.
-The initial ordered strategies are:
+The initial ordered checks are:
 
 1. Compatibility: locate `sbx`, obtain its version, and compare it with
    sbxflow's centralized supported range.
@@ -50,18 +49,18 @@ The initial ordered strategies are:
 3. Network policy: inspect global policy initialization and management source.
 4. Kit sources: inspect the effective `kit.allowedSources` value and source.
 
-Later strategies can be registered without changing the runner or Cobra
-command. A single monolithic doctor function was considered, but it would mix
+Later checks can be registered without changing the runner or Cobra command. A
+single monolithic doctor function was considered, but it would mix
 prerequisites, Docker schemas, grading, and presentation. Modeling every
-individual Docker diagnostic as a strategy was also rejected because it would
+individual Docker diagnostic as a check was also rejected because it would
 duplicate Docker's ownership and make sbxflow fragile.
 
 ### Use explicit prerequisites and deterministic sequential execution
 
-The runner will execute strategies in registration order. Strategies declare
+The runner will execute checks in registration order. Checks declare
 the facts they require, and the runner marks them skipped when a prerequisite
 is unavailable. Compatibility supplies the executable and accepted-version
-facts required by the other three strategies. Docker diagnostics, policy, and
+facts required by the other three checks. Docker diagnostics, policy, and
 settings then run independently because aggregate diagnostic totals do not
 reveal whether any particular Docker check, including daemon health, passed.
 
@@ -88,7 +87,7 @@ sbxflow separately owns whether the installed pre-1.0 CLI exposes the commands
 and schemas this release supports. The supported lower and upper bounds will be
 centralized and compared using the semantic components parsed from `sbx
 version`. An unparseable or out-of-range version fails compatibility and skips
-strategies whose schemas cannot be trusted.
+checks whose schemas cannot be trusted.
 
 The initial bounds will be established from the versions verified against all
 four required commands during implementation and documented alongside the
@@ -97,13 +96,13 @@ current binary can still be outside sbxflow's tested contract.
 
 ### Decode only the Docker diagnostic summary envelope
 
-The diagnostic strategy will decode only the top-level schema version and the
+The diagnostic check will decode only the top-level schema version and the
 summary counts for pass, warning, failure, and skipped checks. Unknown JSON
 fields, including the individual `checks` collection, are ignored. A valid
 summary is parsed even if the subprocess exits non-zero, because Docker may use
 that status to represent diagnostic failures.
 
-Any failed total makes this required strategy fail; warnings without failures
+Any failed total makes this required check fail; warnings without failures
 make it warn. An unsupported envelope version, malformed summary, or execution
 failure produces one sbxflow failure with guidance to run `sbx diagnose`.
 Passing through names, details, or remediation from Docker was rejected because
@@ -111,14 +110,18 @@ those fields can evolve independently and Docker already presents them.
 
 ### Inspect network policy without grading valid presets
 
-The policy strategy will use Docker's machine-readable policy listing to decide
-whether a global local policy or organisation-managed policy is active. An
-active managed policy is informationally identified and accepted rather than
-prompting for a conflicting local setup. An absent policy produces an advisory
-warning; Open, Balanced, and Locked Down are not graded because their fitness
-depends on the user's environment.
+The policy check will use Docker's unfiltered machine-readable policy listing
+to decide whether a global local policy or organisation-managed policy is
+active. The JSON interface lists rules rather than policy objects, so the check
+will recognize an active global policy from any rule belonging to it, including
+the default filesystem rules. It will not require an explicit network rule:
+the deny-all preset is valid and can represent its default-deny posture without
+one. An active managed policy is informationally identified and accepted rather
+than prompting for a conflicting local setup. An absent policy produces an
+advisory warning; Open, Balanced, and Locked Down are not graded because their
+fitness depends on the user's environment.
 
-The policy strategy runs independently after compatibility. If Docker cannot
+The policy check runs independently after compatibility. If Docker cannot
 return machine-readable policy state, the result is an advisory warning that
 policy could not be inspected. It does not infer daemon health from aggregate
 diagnostic totals or turn a configuration-inspection failure into another
@@ -126,10 +129,10 @@ required health failure.
 
 ### Grade only the universally unsafe kit-source wildcard
 
-The kit-source strategy will run `sbx settings get --json kit.allowedSources`
+The kit-source check will run `sbx settings get --json kit.allowedSources`
 and decode only the evaluated value and its reported source. Any array member
 exactly equal to `"*"` makes the result an advisory warning even when narrower
-entries are also present; otherwise the result passes. The strategy does not
+entries are also present; otherwise the result passes. The check does not
 judge whether particular publisher prefixes are sufficient.
 
 Guidance varies by source: local overrides can be unset or narrowed,
@@ -141,7 +144,7 @@ verified, but do not make an otherwise healthy installation unusable.
 ### Render all results and fail only required health checks
 
 The Cobra command will render ordered plain-text results to stdout. It will
-continue independent strategies, include skipped checks, and return a non-zero
+continue independent checks, include skipped checks, and return a non-zero
 status when any result is a required failure. Advisory configuration warnings
 retain a successful status. Command construction receives the doctor runner as
 an injected dependency, while `Execute` wires the production runner.
@@ -174,6 +177,10 @@ contextual-help tests will continue to protect the public behavior.
 - **Policy output differs under organisation governance** -> Test local,
   managed, absent, and inactive-policy fixtures; never recommend overriding an
   active managed source.
+- **A deny-all preset has no explicit network rule** -> Inspect the unfiltered
+  rule listing and recognize its active global policy through the other rules
+  belonging to that policy rather than treating network-rule absence as
+  uninitialized state.
 - **A wildcard is intentional for local experimentation** -> Keep it advisory
   and non-fatal while explaining the supply-chain trade-off.
 - **Subprocess checks are slow or hang** -> Apply context-aware timeouts and run
@@ -185,7 +192,7 @@ contextual-help tests will continue to protect the public behavior.
 ## Migration Plan
 
 This adds a new command and no persistent sbxflow state. Register the command,
-remove the obsolete root help-rendering workaround, ship the strategy runner
+remove the obsolete root help-rendering workaround, ship the check runner
 and Docker adapter, update README documentation, and validate against supported
 `sbx` fixtures. Rollback consists of unregistering the command, restoring the
 sole-subcommand help workaround if `help` again becomes the only subcommand,
