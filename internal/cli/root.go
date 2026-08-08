@@ -7,6 +7,7 @@ import (
 	"io"
 
 	"github.com/jamessawle/sbxflow/internal/buildinfo"
+	"github.com/jamessawle/sbxflow/internal/doctor"
 	"github.com/spf13/cobra"
 )
 
@@ -20,7 +21,7 @@ type Streams struct {
 }
 
 // NewRootCommand returns a fresh sbxflow root command.
-func NewRootCommand(streams Streams) *cobra.Command {
+func NewRootCommand(streams Streams, doctorRunner DoctorRunner) *cobra.Command {
 	root := &cobra.Command{
 		Use:   "sbxflow",
 		Short: "Apply a repository's Docker Sandbox configuration and lifecycle",
@@ -58,24 +59,14 @@ func NewRootCommand(streams Streams) *cobra.Command {
 		return target.Help()
 	}
 	root.SetHelpCommand(help)
-	root.AddCommand(help)
-
-	defaultHelp := root.HelpFunc()
-	root.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		// Cobra normally omits its designated help command when it is the only
-		// subcommand. Treat it as an ordinary command while rendering so the
-		// documented `sbxflow help` interface remains discoverable.
-		root.SetHelpCommand(nil)
-		defer root.SetHelpCommand(help)
-		defaultHelp(cmd, args)
-	})
+	root.AddCommand(help, newDoctorCommand(doctorRunner))
 
 	return root
 }
 
 // Execute runs a fresh root command.
 func Execute(ctx context.Context, args []string, streams Streams, info buildinfo.Info) error {
-	root := NewRootCommand(streams)
+	root := NewRootCommand(streams, doctor.NewDefaultRunner())
 	root.Version = formatVersion(info)
 	root.SetArgs(args)
 
