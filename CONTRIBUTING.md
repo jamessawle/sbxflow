@@ -12,9 +12,23 @@ Development tools and Git hooks are managed with
 mise run setup
 ```
 
-The setup installs the pinned [OpenSpec](https://openspec.dev/) CLI. The
-repository also includes Codex skills for its spec-driven workflow; restart
-Codex after setup so it discovers them.
+The setup installs the pinned Go toolchain and
+[OpenSpec](https://openspec.dev/) CLI. The repository also includes Codex skills
+for its spec-driven workflow; restart Codex after setup so it discovers them.
+
+Use Mise to run one-off Go commands with the repository's pinned toolchain:
+
+```text
+mise exec -- go build ./...
+mise exec -- go test ./...
+```
+
+The existing project tasks cover the routine workflow:
+
+```text
+mise run fmt        Format Markdown and Go files
+mise run validate   Check Markdown, workflows, specs, Go formatting, vet, tests, and builds
+```
 
 Start a change with `$openspec-propose "describe the change"`. The usual flow is
 `$openspec-apply-change`, `$openspec-verify-change`, and
@@ -29,6 +43,10 @@ Markdown changes and run the repository checks:
 mise run fmt
 mise run validate
 ```
+
+Go changes must be formatted with `gofmt`; `mise run fmt` applies it alongside
+the repository's Markdown formatter. The aggregate validation task also runs
+`go vet ./...`, `go test ./...`, and `go build ./...`.
 
 The pre-commit hook also rejects staged whitespace errors and changes that do
 not pass repository validation.
