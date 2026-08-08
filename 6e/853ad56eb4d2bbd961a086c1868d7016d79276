@@ -1,0 +1,39 @@
+README.md
+  s_dafbcc1e1504cd::t_41fb43f8bcda68 68-98
+cmd/sbxflow/main_test.go
+  s_dafbcc1e1504cd::t_86b8716a91bc83 64-114,118-121,129
+internal/cli/doctor.go
+  s_dafbcc1e1504cd::t_a60b259b9c7377 1-51
+internal/cli/doctor_test.go
+  s_dafbcc1e1504cd::t_4673bb66589b08 1-126
+internal/cli/root.go
+  s_dafbcc1e1504cd::t_b84d7e66450d3e 10,24,62,69
+internal/cli/root_test.go
+  s_dafbcc1e1504cd::t_b85a3ebbf2494e 10,36,47,91,112-115,117,119,121-123,126-131
+internal/doctor/command.go
+  s_dafbcc1e1504cd::t_8d82aa4588be6e 1-69
+internal/doctor/command_test.go
+  s_dafbcc1e1504cd::t_ed5c624b060ae9 1-59
+internal/doctor/doctor.go
+  s_dafbcc1e1504cd::t_519129f2153c65 1-125
+internal/doctor/doctor_test.go
+  s_dafbcc1e1504cd::t_accecc685c9589 1-87
+openspec/changes/add-doctor-command/proposal.md
+  s_dafbcc1e1504cd::t_8d95ced177631d 20,43-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "6e853ad56eb4d2bbd961a086c1868d7016d79276",
+  "prompts": {},
+  "sessions": {
+    "s_dafbcc1e1504cd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe21c-53b3-7b70-a32a-efb05de1dc1d",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
