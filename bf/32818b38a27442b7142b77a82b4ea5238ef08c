@@ -1,0 +1,19 @@
+openspec/specs/cli-interface/spec.md
+  s_ea26a8bd002b86::t_2733236cd745d4 1-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "bf32818b38a27442b7142b77a82b4ea5238ef08c",
+  "prompts": {},
+  "sessions": {
+    "s_ea26a8bd002b86": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe1f3-73a7-7ff3-9a78-e8a9e4c4f007",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
