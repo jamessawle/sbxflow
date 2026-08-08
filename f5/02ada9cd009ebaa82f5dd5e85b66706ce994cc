@@ -1,0 +1,23 @@
+.github/pull_request_template.md
+  s_2285b673a9527e::t_cbe1eff9350b42 5-6,11
+AGENTS.md
+  s_2285b673a9527e::t_38ad8d686ca866 1-9
+CONTRIBUTING.md
+  s_2285b673a9527e::t_9c3fe649a1801f 1-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "f502ada9cd009ebaa82f5dd5e85b66706ce994cc",
+  "prompts": {},
+  "sessions": {
+    "s_2285b673a9527e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe183-56fd-7183-9967-955f6c0a8b9e",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
