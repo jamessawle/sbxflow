@@ -1,0 +1,26 @@
+.githooks/pre-commit
+  h_294897f403d554 1-9
+.gitignore
+  h_294897f403d554 1-10
+README.md
+  h_294897f403d554 1-120
+examples/README.md
+  h_294897f403d554 1-18
+examples/personal-site/sbxflow.yaml
+  h_294897f403d554 1-39
+examples/source-types/sbxflow.yaml
+  h_294897f403d554 1-35
+mise.toml
+  h_294897f403d554 1-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "bd64e4d99cc33b0e76c1d9fc00e59c226d2bba32",
+  "prompts": {},
+  "humans": {
+    "h_294897f403d554": {
+      "author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
