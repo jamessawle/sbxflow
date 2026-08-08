@@ -29,8 +29,5 @@ jobs:
         with:
           version: 2026.8.2 # Keep aligned with mise.toml min_version.
 
-      - name: Check whitespace
-        run: git diff --check
-
       - name: Validate repository
         run: mise run validate
