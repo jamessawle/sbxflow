@@ -438,6 +438,137 @@ esac
 			t.Fatalf("sbx calls = %q, want %q", got, want)
 		}
 	})
+
+	t.Run("destroy resolves the exact identity and preserves removal behavior", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("fake sbx fixture uses a POSIX shell script")
+		}
+
+		repository := t.TempDir()
+		configuration := `version: 1
+sandbox:
+  name: executable-destroy
+  agent: unsupported
+  kits:
+    sources:
+      local:
+        type: local
+        root: https://unavailable.example/kits
+    use:
+      - source: missing
+        kit: ../unsafe
+`
+		if err := os.WriteFile(filepath.Join(repository, "sbxflow.yaml"), []byte(configuration), 0o600); err != nil {
+			t.Fatalf("write declaration: %v", err)
+		}
+		nested := filepath.Join(repository, "nested", "work")
+		if err := os.MkdirAll(nested, 0o755); err != nil {
+			t.Fatalf("create nested work directory: %v", err)
+		}
+
+		fakeDirectory := t.TempDir()
+		fakeSbx := filepath.Join(fakeDirectory, "sbx")
+		script := `#!/bin/sh
+printf '%s\n' "$*" >> "$SBX_TEST_LOG"
+case "$1 $2" in
+  "ls --quiet")
+    if [ -n "${SBX_TEST_EXISTING:-}" ]; then
+      printf '%s\n' "$SBX_TEST_EXISTING"
+    fi
+    ;;
+  "rm executable-destroy")
+    printf 'confirm removal: '
+    IFS= read -r answer
+    printf 'answer=%s\n' "$answer"
+    echo 'docker remove diagnostic' >&2
+    exit "${SBX_TEST_REMOVE_EXIT:-0}"
+    ;;
+  "rm --force")
+    if [ "$3" != "executable-destroy" ]; then
+      echo 'unexpected force target' >&2
+      exit 8
+    fi
+    echo 'forced removal'
+    ;;
+  *)
+    echo 'unexpected fake sbx invocation' >&2
+    exit 8
+    ;;
+esac
+`
+		if err := os.WriteFile(fakeSbx, []byte(script), 0o700); err != nil {
+			t.Fatalf("write fake sbx: %v", err)
+		}
+
+		t.Run("confirmed removal forwards input output and failure", func(t *testing.T) {
+			logPath := filepath.Join(fakeDirectory, "confirmed-calls.log")
+			stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
+				t,
+				binary,
+				nested,
+				[]string{"destroy"},
+				[]string{
+					"PATH=" + fakeDirectory,
+					"SBX_TEST_LOG=" + logPath,
+					"SBX_TEST_EXISTING=other\nexecutable-destroy\nexecutable-destroy-extra",
+					"SBX_TEST_REMOVE_EXIT=7",
+				},
+				"yes\n",
+			)
+			if exitCode != 7 || stdout != "confirm removal: answer=yes\n" || stderr != "docker remove diagnostic\n" {
+				t.Fatalf("destroy exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+			}
+			calls, err := os.ReadFile(logPath)
+			if err != nil {
+				t.Fatalf("read fake sbx calls: %v", err)
+			}
+			if got, want := string(calls), "ls --quiet\nrm executable-destroy\n"; got != want {
+				t.Fatalf("sbx calls = %q, want %q", got, want)
+			}
+		})
+
+		t.Run("force forwards Docker force for only the declared target", func(t *testing.T) {
+			logPath := filepath.Join(fakeDirectory, "forced-calls.log")
+			stdout, stderr, exitCode := runBinaryInDirectory(
+				t,
+				binary,
+				nested,
+				[]string{"destroy", "-f"},
+				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_EXISTING=executable-destroy"},
+			)
+			if exitCode != 0 || stdout != "forced removal\n" || stderr != "" {
+				t.Fatalf("destroy --force exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+			}
+			calls, err := os.ReadFile(logPath)
+			if err != nil {
+				t.Fatalf("read fake sbx calls: %v", err)
+			}
+			if got, want := string(calls), "ls --quiet\nrm --force executable-destroy\n"; got != want {
+				t.Fatalf("sbx calls = %q, want %q", got, want)
+			}
+		})
+
+		t.Run("absent exact target is idempotent", func(t *testing.T) {
+			logPath := filepath.Join(fakeDirectory, "absent-calls.log")
+			stdout, stderr, exitCode := runBinaryInDirectory(
+				t,
+				binary,
+				nested,
+				[]string{"destroy", "--force"},
+				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_EXISTING=executable-destroy-extra"},
+			)
+			if exitCode != 0 || stdout != "" || stderr != "" {
+				t.Fatalf("absent destroy exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+			}
+			calls, err := os.ReadFile(logPath)
+			if err != nil {
+				t.Fatalf("read fake sbx calls: %v", err)
+			}
+			if got, want := string(calls), "ls --quiet\n"; got != want {
+				t.Fatalf("sbx calls = %q, want %q", got, want)
+			}
+		})
+	})
 }
 
 func runBinary(t *testing.T, binary string, args ...string) (string, string, int) {

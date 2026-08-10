@@ -34,6 +34,7 @@ func TestRootHelp(t *testing.T) {
 				"Usage:",
 				"sbxflow",
 				"Available Commands:",
+				"destroy ",
 				"down ",
 				"doctor ",
 				"help ",
@@ -48,7 +49,7 @@ func TestRootHelp(t *testing.T) {
 				}
 			}
 
-			for _, unavailable := range []string{"completion", "man", "destroy"} {
+			for _, unavailable := range []string{"completion", "man"} {
 				if strings.Contains(stdout, "\n  "+unavailable+" ") {
 					t.Errorf("stdout advertises unavailable command %q:\n%s", unavailable, stdout)
 				}
@@ -92,7 +93,7 @@ func TestVersionIncludesShortCommit(t *testing.T) {
 }
 
 func TestUnavailableCommands(t *testing.T) {
-	for _, name := range []string{"version", "completion", "man", "destroy", "unknown"} {
+	for _, name := range []string{"version", "completion", "man", "unknown"} {
 		t.Run(name, func(t *testing.T) {
 			stdout, stderr, err := execute([]string{name})
 			if err == nil {
@@ -124,6 +125,7 @@ func executeWithDoctor(args []string, info buildinfo.Info, runner DoctorRunner) 
 		fakeValidateRunner{report: validation.Report{}},
 		&fakeUpRunner{},
 		&fakeDownRunner{},
+		&fakeDestroyRunner{},
 	)
 	root.Version = formatVersion(info)
 	root.SetArgs(args)
