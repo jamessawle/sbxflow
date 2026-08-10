@@ -25,3 +25,6 @@ sandbox:
 
       - source: sbx-kits
         kit: kits/mise/network-go
+
+      - source: sbx-kits
+        kit: kits/mise/network-node
