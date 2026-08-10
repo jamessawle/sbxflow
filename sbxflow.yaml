@@ -11,7 +11,7 @@ sandbox:
         repo: https://github.com/docker/sbx-kits-contrib.git
         ref: v0.14.0
 
-      personal:
+      sbx-kits:
         type: git
         repo: https://github.com/jamessawle/sbx-kits.git
         ref: v2026.08.02
@@ -20,5 +20,8 @@ sandbox:
       - source: community
         kit: mise
 
-      - source: personal
+      - source: sbx-kits
+        kit: kits/harness/codex
+
+      - source: sbx-kits
         kit: kits/mise/network-go
