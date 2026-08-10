@@ -22,6 +22,8 @@ least-privilege kit-source settings that future lifecycle execution will use.
   through `sbx kit validate`, whether Docker interprets it as a directory or ZIP.
 - Derive and report the effective remote-source allowlist and local-kit setting
   required by the ordered selections without modifying Docker's global settings.
+- Render a cohesive human-readable report containing the declaration, derived
+  kit state, validation state, and actionable findings.
 - Keep Git and OCI validation offline: validate their declared reference shapes
   without fetching repositories, pulling artifacts, or testing credentials.
 - Add this repository's own declaration using the community Mise kit and the

@@ -41,10 +41,18 @@ func TestValidateRendersSuccessReport(t *testing.T) {
 	if err != nil || stderr != "" {
 		t.Fatalf("validate error = %v, stderr = %q", err, stderr)
 	}
-	for _, want := range []string{declaration, "[VALID] local kit local/tooling", "kit.allowedSources: [docker.io/, github.com/example/kits]", "kit.allowLocalKits: true"} {
-		if !strings.Contains(stdout, want) {
-			t.Errorf("stdout does not contain %q:\n%s", want, stdout)
-		}
+	want := "Declaration: " + declaration + "\n\n" +
+		"Derived State:\n" +
+		"  Kit:\n" +
+		"    Allowed Sources:\n" +
+		"      - docker.io/\n" +
+		"      - github.com/example/kits\n" +
+		"    Local Kits Allowed: true\n\n" +
+		"Validation:\n" +
+		"  State: pass\n" +
+		"  Findings: []\n"
+	if stdout != want {
+		t.Fatalf("stdout = %q, want %q", stdout, want)
 	}
 }
 
@@ -59,13 +67,33 @@ func TestValidateRendersActionableFailure(t *testing.T) {
 	if !errors.Is(err, errValidationFailed) {
 		t.Fatalf("error = %v, want validation failure", err)
 	}
-	if !strings.Contains(stdout, "Declaration:") || !strings.Contains(stdout, "kit.allowedSources") {
-		t.Fatalf("stdout missing declaration/trust: %q", stdout)
+	if stdout != "" {
+		t.Fatalf("stdout = %q, want empty cohesive failure output", stdout)
 	}
-	for _, want := range []string{"[INVALID] local kit local/bad", "missing metadata", "validation error: local kit local/bad", errValidationFailed.Error()} {
+	for _, want := range []string{"Declaration: /repo/sbxflow.yaml", "Derived State:", "State: fail", "Findings:", "local kit local/bad was rejected by sbx: missing metadata"} {
 		if !strings.Contains(stderr, want) {
 			t.Errorf("stderr does not contain %q:\n%s", want, stderr)
 		}
+	}
+	if strings.Contains(stderr, errValidationFailed.Error()) {
+		t.Fatalf("failure appends an unstructured Cobra error: %q", stderr)
+	}
+}
+
+func TestValidateRendersUnavailableDerivedState(t *testing.T) {
+	report := validation.Report{Errors: []error{errors.New("no sbxflow.yaml found")}}
+	stdout, stderr, err := executeWithValidate([]string{"validate"}, fakeValidateRunner{report: report})
+	if !errors.Is(err, errValidationFailed) || stdout != "" {
+		t.Fatalf("error = %v, stdout = %q", err, stdout)
+	}
+	want := "Declaration: unavailable\n\n" +
+		"Derived State: unavailable\n\n" +
+		"Validation:\n" +
+		"  State: fail\n" +
+		"  Findings:\n" +
+		"    - no sbxflow.yaml found\n"
+	if stderr != want {
+		t.Fatalf("stderr = %q, want %q", stderr, want)
 	}
 }
 

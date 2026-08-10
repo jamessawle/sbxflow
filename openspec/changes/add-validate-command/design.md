@@ -200,16 +200,26 @@ would couple unrelated domains. Duplicating the subprocess wrapper was rejected
 because future lifecycle commands will also need the same timeout, exit-code,
 and stream handling.
 
-### Use compact human-readable output in the initial command
+### Use structured human-readable output in the initial command
 
-The command will identify the discovered declaration, report local-kit results
-in selection order, and render the two derived Docker setting values. Validation
-errors will include the relevant field path or selection identity and return a
-non-zero status through the existing Cobra execution boundary.
+The command will render one cohesive, YAML-like report with three sections:
+the discovered declaration, derived kit trust state, and a terminal validation
+state plus findings. Allowed sources will be listed in first-selection order.
+Successful validation will report state `pass` and `Findings: []`; failed
+validation will report state `fail` with ordered actionable findings. If a
+gated phase stops before trust derivation, the report will state that derived
+state is unavailable instead of rendering misleading empty defaults.
+
+The complete report will use standard output on success and standard error on
+failure so one invocation never splits related state across streams. Cobra will
+still return a non-zero error through the existing execution boundary. Local-kit
+diagnostic text will be attached to its corresponding failure finding rather
+than repeated as a separate result block.
 
 The first release will not add `--json`. A machine-readable mode can be designed
 once the result model has a real automation consumer rather than freezing an
-unproven output schema now.
+unproven output schema now. The YAML-like presentation is human-readable and is
+not a stable machine interface.
 
 ## Risks / Trade-offs
 

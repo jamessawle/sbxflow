@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/jamessawle/sbxflow/internal/validation"
@@ -34,6 +34,7 @@ func newValidateCommand(runner ValidateRunner) *cobra.Command {
 			report := runner.Run(cmd.Context(), workingDirectory)
 			renderValidationReport(cmd, report)
 			if !report.Valid() {
+				cmd.Root().SilenceErrors = true
 				return errValidationFailed
 			}
 			return nil
@@ -42,29 +43,68 @@ func newValidateCommand(runner ValidateRunner) *cobra.Command {
 }
 
 func renderValidationReport(command *cobra.Command, report validation.Report) {
-	if report.Declaration != "" {
-		fmt.Fprintf(command.OutOrStdout(), "Declaration: %s\n", report.Declaration)
+	writer := io.Writer(command.OutOrStdout())
+	if !report.Valid() {
+		writer = command.ErrOrStderr()
 	}
+
+	declaration := report.Declaration
+	if declaration == "" {
+		declaration = "unavailable"
+	}
+	fmt.Fprintf(writer, "Declaration: %s\n\n", declaration)
+
+	if report.Linked.Configuration.Version == 0 {
+		fmt.Fprintln(writer, "Derived State: unavailable")
+	} else {
+		fmt.Fprintln(writer, "Derived State:")
+		fmt.Fprintln(writer, "  Kit:")
+		if len(report.Linked.Trust.AllowedSources) == 0 {
+			fmt.Fprintln(writer, "    Allowed Sources: []")
+		} else {
+			fmt.Fprintln(writer, "    Allowed Sources:")
+			for _, source := range report.Linked.Trust.AllowedSources {
+				fmt.Fprintf(writer, "      - %s\n", source)
+			}
+		}
+		fmt.Fprintf(writer, "    Local Kits Allowed: %t\n", report.Linked.Trust.AllowLocalKits)
+	}
+
+	state := "pass"
+	if !report.Valid() {
+		state = "fail"
+	}
+	fmt.Fprintf(writer, "\nValidation:\n  State: %s\n", state)
+	findings := validationFindings(report)
+	if len(findings) == 0 {
+		fmt.Fprintln(writer, "  Findings: []")
+		return
+	}
+	fmt.Fprintln(writer, "  Findings:")
+	for _, finding := range findings {
+		lines := strings.Split(finding, "\n")
+		fmt.Fprintf(writer, "    - %s\n", lines[0])
+		for _, line := range lines[1:] {
+			fmt.Fprintf(writer, "      %s\n", line)
+		}
+	}
+}
+
+func validationFindings(report validation.Report) []string {
+	findings := make([]string, 0, len(report.Errors))
+	for _, err := range report.Errors {
+		findings = append(findings, err.Error())
+	}
+
+	findingIndex := 0
 	for _, result := range report.LocalKits {
-		if result.Target.Path == "" {
+		if result.Err == nil {
 			continue
 		}
-		status := "VALID"
-		writer := command.OutOrStdout()
-		if !result.Valid {
-			status = "INVALID"
-			writer = command.ErrOrStderr()
+		if findingIndex < len(findings) && result.Diagnostics != "" {
+			findings[findingIndex] += ": " + result.Diagnostics
 		}
-		fmt.Fprintf(writer, "[%s] local kit %s/%s: %s\n", status, result.Target.Source, result.Target.Kit, result.Target.Path)
-		if result.Diagnostics != "" {
-			fmt.Fprintf(writer, "  %s\n", result.Diagnostics)
-		}
+		findingIndex++
 	}
-	if report.Linked.Configuration.Version != 0 {
-		fmt.Fprintf(command.OutOrStdout(), "kit.allowedSources: [%s]\n", strings.Join(report.Linked.Trust.AllowedSources, ", "))
-		fmt.Fprintf(command.OutOrStdout(), "kit.allowLocalKits: %s\n", strconv.FormatBool(report.Linked.Trust.AllowLocalKits))
-	}
-	for _, err := range report.Errors {
-		fmt.Fprintf(command.ErrOrStderr(), "validation error: %s\n", err)
-	}
+	return findings
 }

@@ -180,7 +180,7 @@ echo 'fixture accepted local kit'
 		if exitCode != 0 || stderr != "" {
 			t.Fatalf("validate exit = %d, stderr = %q, stdout = %q", exitCode, stderr, stdout)
 		}
-		for _, want := range []string{declaration, "[VALID] local kit local/tooling", "github.com/example/kits", "kit.allowLocalKits: true"} {
+		for _, want := range []string{declaration, "Derived State:", "github.com/example/kits", "Local Kits Allowed: true", "State: pass", "Findings: []"} {
 			if !strings.Contains(stdout, want) {
 				t.Errorf("stdout does not contain %q:\n%s", want, stdout)
 			}
@@ -197,15 +197,20 @@ echo 'fixture accepted local kit'
 			t.Fatalf("sbx calls = %q, want only local kit validation", got)
 		}
 
-		_, stderr, exitCode = runBinaryInDirectory(
+		stdout, stderr, exitCode = runBinaryInDirectory(
 			t,
 			binary,
 			nested,
 			[]string{"validate"},
 			[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_REJECT=1"},
 		)
-		if exitCode == 0 || !strings.Contains(stderr, "fixture rejected local kit") {
+		if exitCode == 0 || stdout != "" || !strings.Contains(stderr, "fixture rejected local kit") {
 			t.Fatalf("rejected validate exit = %d, stderr = %q", exitCode, stderr)
+		}
+		for _, want := range []string{"Derived State:", "State: fail", "Findings:"} {
+			if !strings.Contains(stderr, want) {
+				t.Errorf("failure stderr does not contain %q:\n%s", want, stderr)
+			}
 		}
 	})
 

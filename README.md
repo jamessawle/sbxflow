@@ -135,9 +135,17 @@ subprocesses:
 
 ```text
 Declaration: /work/my-project/sbxflow.yaml
-[VALID] local kit repository/tooling: /work/my-project/kits/tooling
-kit.allowedSources: [docker.io/, github.com/docker/sbx-kits-contrib]
-kit.allowLocalKits: true
+
+Derived State:
+  Kit:
+    Allowed Sources:
+      - docker.io/
+      - github.com/docker/sbx-kits-contrib
+    Local Kits Allowed: true
+
+Validation:
+  State: pass
+  Findings: []
 ```
 
 The command is inspection-only. It does not create or alter a sandbox, resolve
@@ -145,6 +153,12 @@ remote kits, or modify global Docker Sandbox settings. Structural, semantic,
 path, or local-kit failures are reported on standard error and produce a
 non-zero exit status. Configurations without selected local sources do not
 require or invoke `sbx`.
+
+The complete report is written to standard output on success or standard error
+on failure. If validation stops before trust derivation, it reports
+`Derived State: unavailable`; failures appear under `Validation.Findings`. This
+YAML-like presentation is intended for people rather than as a stable
+machine-readable interface.
 
 ## Planned lifecycle commands
 

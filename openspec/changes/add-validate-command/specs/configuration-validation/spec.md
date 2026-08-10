@@ -253,13 +253,17 @@ sandbox and SHALL NOT modify global Docker Sandbox settings.
 #### Scenario: Validation succeeds
 
 - **WHEN** a declaration and its selected local kits are valid
-- **THEN** the command reports the validated declaration and derived trust
-  settings
+- **THEN** the command reports the declaration and derived kit trust settings
+  on standard output
+- **AND** reports validation state `pass` with an empty findings list
 - **AND** exits successfully without changing sandbox or global settings state
 
 #### Scenario: Validation fails
 
 - **WHEN** structural, semantic, or local kit validation fails
-- **THEN** the command reports actionable validation errors
+- **THEN** the command reports one cohesive report on standard error
+- **AND** reports validation state `fail` with actionable findings
+- **AND** reports derived state as unavailable when validation stopped before
+  trust derivation
 - **AND** exits with a non-zero status without changing sandbox or global
   settings state

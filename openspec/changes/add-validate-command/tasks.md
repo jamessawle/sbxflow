@@ -70,3 +70,14 @@
       a repository validation fixture.
 - [x] 5.6 Run `mise run fmt`, validate the root declaration through the built
       command, and run `mise run validate` after the review changes.
+- [x] 5.7 End successful `validate` output with `Validation: passed`, update the
+      documented output, and cover the terminal result in command and executable
+      tests without emitting it on failure.
+- [x] 5.8 Run `mise run fmt`, exercise the root declaration, and run
+      `mise run validate` after the output clarification.
+- [x] 5.9 Replace the flat validation output with a cohesive structured report
+      containing declaration, derived kit state, validation state, and findings;
+      route the whole report to stdout on pass or stderr on fail and cover early
+      and post-derivation failures.
+- [x] 5.10 Update the documented output, run `mise run fmt`, exercise the root
+      declaration, and run `mise run validate` after the report redesign.
