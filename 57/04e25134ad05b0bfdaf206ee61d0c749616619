@@ -1,0 +1,21 @@
+openspec/specs/cli-interface/spec.md
+  s_9c0945f1f7e226::t_efbdf68679f206 168-181,184-199,209-210
+openspec/specs/sandbox-lifecycle/spec.md
+  s_9c0945f1f7e226::t_93291de3f78d71 13-14,29,36-37,42-45,50-52,56-57,61-67,72,75-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "5704e25134ad05b0bfdaf206ee61d0c749616619",
+  "prompts": {},
+  "sessions": {
+    "s_9c0945f1f7e226": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fed7e-c0df-71a1-bc83-29c51ef36b98",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
