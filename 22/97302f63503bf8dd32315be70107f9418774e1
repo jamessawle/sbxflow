@@ -1,0 +1,51 @@
+internal/command/interactive_test.go
+  s_7b8929ce62e636::t_ca7897b9071217 1-72
+README.md
+  s_7b8929ce62e636::t_87afc6718c112f 6-9,13-15,77-79,165-168,174-194,196,198-203
+cmd/sbxflow/main.go
+  s_7b8929ce62e636::t_87ac3b022a882e 5,7,21-24
+cmd/sbxflow/main_test.go
+  s_7b8929ce62e636::t_cda5de35bb339b 224-368,380-383,389
+internal/cli/root.go
+  s_7b8929ce62e636::t_46cf6825c4bf6e 11,26,64,71
+internal/cli/root_test.go
+  s_7b8929ce62e636::t_efb5558c2f2b8a 11,39,50,94,123-124
+internal/cli/up.go
+  s_7b8929ce62e636::t_5832256cefa880 1-48
+internal/cli/up_test.go
+  s_7b8929ce62e636::t_6feb6cf1b75581 1-108
+internal/cli/validate_test.go
+  s_7b8929ce62e636::t_20584f38067cd2 107
+internal/command/interactive.go
+  s_7b8929ce62e636::t_0d010e14b837c6 1-60
+internal/config/link.go
+  s_7b8929ce62e636::t_56a55b49895099 98-101,103,105,110-131
+internal/config/link_test.go
+  s_7b8929ce62e636::t_b1a13a352a6917 73,81-127
+internal/lifecycle/plan.go
+  s_7b8929ce62e636::t_25d5f1854e3343 1-75
+internal/lifecycle/plan_test.go
+  s_7b8929ce62e636::t_685247ad0c8a08 1-68
+internal/lifecycle/run.go
+  s_7b8929ce62e636::t_beed3c49678a62 1-134
+internal/lifecycle/run_test.go
+  s_7b8929ce62e636::t_9864fa72679fbc 1-175
+openspec/changes/add-up-command/tasks.md
+  s_7b8929ce62e636::t_9d4992c3f368c6 3,5,8,13,16,19,25,28,31,33,36,42,44,46,52,55-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "2297302f63503bf8dd32315be70107f9418774e1",
+  "prompts": {},
+  "sessions": {
+    "s_7b8929ce62e636": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019febd1-a9b6-7131-9514-6abee59826d6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
