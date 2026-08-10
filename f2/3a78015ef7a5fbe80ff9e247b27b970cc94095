@@ -1,0 +1,29 @@
+openspec/changes/add-destroy-command/.openspec.yaml
+  s_73ddf869ffb59a::t_caccf2efa5bfd0 1-2
+openspec/changes/add-destroy-command/specs/cli-interface/spec.md
+  s_73ddf869ffb59a::t_45d49da68d352f 1-68
+openspec/changes/add-destroy-command/specs/sandbox-lifecycle/spec.md
+  s_73ddf869ffb59a::t_6a4ce6bcbdf1dc 1-135
+openspec/changes/add-destroy-command/design.md
+  s_73ddf869ffb59a::t_311f5ebeb22265 1-108
+openspec/changes/add-destroy-command/proposal.md
+  s_73ddf869ffb59a::t_46a535092eca91 1-46
+openspec/changes/add-destroy-command/tasks.md
+  s_73ddf869ffb59a::t_179009701108dd 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "f23a78015ef7a5fbe80ff9e247b27b970cc94095",
+  "prompts": {},
+  "sessions": {
+    "s_73ddf869ffb59a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fec2b-2acc-7bf3-9226-6882dc435b57",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
