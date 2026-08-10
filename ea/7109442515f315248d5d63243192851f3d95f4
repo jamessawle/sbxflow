@@ -1,0 +1,25 @@
+openspec/changes/add-validate-command/design.md
+  s_829d54d4cb7bc1::t_fa0b0f5e21fd60 10-17,120,122-128,131-142,145-148
+openspec/changes/add-validate-command/proposal.md
+  s_829d54d4cb7bc1::t_af0dfd970795e8 16-21,45-47
+openspec/changes/add-validate-command/specs/configuration-validation/spec.md
+  s_829d54d4cb7bc1::t_6777eba6ec575b 120-146,148-155,163,169-175,199
+openspec/changes/add-validate-command/tasks.md
+  s_829d54d4cb7bc1::t_60cbb724f6b293 31-34,38-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "ea7109442515f315248d5d63243192851f3d95f4",
+  "prompts": {},
+  "sessions": {
+    "s_829d54d4cb7bc1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019feacf-2f97-7561-91fc-1d537e9c863f",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
