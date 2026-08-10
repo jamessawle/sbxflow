@@ -8,6 +8,7 @@ import (
 
 	"github.com/jamessawle/sbxflow/internal/buildinfo"
 	"github.com/jamessawle/sbxflow/internal/doctor"
+	"github.com/jamessawle/sbxflow/internal/validation"
 )
 
 func TestRootHelp(t *testing.T) {
@@ -35,6 +36,7 @@ func TestRootHelp(t *testing.T) {
 				"Available Commands:",
 				"doctor ",
 				"help ",
+				"up ",
 				"validate ",
 				"Flags:",
 				"-h, --help",
@@ -45,7 +47,7 @@ func TestRootHelp(t *testing.T) {
 				}
 			}
 
-			for _, unavailable := range []string{"completion", "man", "up", "down", "destroy"} {
+			for _, unavailable := range []string{"completion", "man", "down", "destroy"} {
 				if strings.Contains(stdout, "\n  "+unavailable+" ") {
 					t.Errorf("stdout advertises unavailable command %q:\n%s", unavailable, stdout)
 				}
@@ -89,7 +91,7 @@ func TestVersionIncludesShortCommit(t *testing.T) {
 }
 
 func TestUnavailableCommands(t *testing.T) {
-	for _, name := range []string{"version", "completion", "man", "up", "down", "destroy", "unknown"} {
+	for _, name := range []string{"version", "completion", "man", "down", "destroy", "unknown"} {
 		t.Run(name, func(t *testing.T) {
 			stdout, stderr, err := execute([]string{name})
 			if err == nil {
@@ -118,6 +120,8 @@ func executeWithDoctor(args []string, info buildinfo.Info, runner DoctorRunner) 
 	root := NewRootCommand(
 		Streams{In: strings.NewReader(""), Out: &stdout, Err: &stderr},
 		runner,
+		fakeValidateRunner{report: validation.Report{}},
+		&fakeUpRunner{},
 	)
 	root.Version = formatVersion(info)
 	root.SetArgs(args)
