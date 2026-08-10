@@ -8,6 +8,7 @@ import (
 
 	"github.com/jamessawle/sbxflow/internal/buildinfo"
 	"github.com/jamessawle/sbxflow/internal/doctor"
+	"github.com/jamessawle/sbxflow/internal/lifecycle"
 	"github.com/jamessawle/sbxflow/internal/validation"
 	"github.com/spf13/cobra"
 )
@@ -22,7 +23,7 @@ type Streams struct {
 }
 
 // NewRootCommand returns a fresh sbxflow root command.
-func NewRootCommand(streams Streams, doctorRunner DoctorRunner, validateRunners ...ValidateRunner) *cobra.Command {
+func NewRootCommand(streams Streams, doctorRunner DoctorRunner, validateRunner ValidateRunner, upRunner UpRunner) *cobra.Command {
 	root := &cobra.Command{
 		Use:   "sbxflow",
 		Short: "Apply a repository's Docker Sandbox configuration and lifecycle",
@@ -60,18 +61,14 @@ func NewRootCommand(streams Streams, doctorRunner DoctorRunner, validateRunners 
 		return target.Help()
 	}
 	root.SetHelpCommand(help)
-	validateRunner := ValidateRunner(validation.NewDefaultRunner())
-	if len(validateRunners) > 0 {
-		validateRunner = validateRunners[0]
-	}
-	root.AddCommand(help, newDoctorCommand(doctorRunner), newValidateCommand(validateRunner))
+	root.AddCommand(help, newDoctorCommand(doctorRunner), newUpCommand(upRunner), newValidateCommand(validateRunner))
 
 	return root
 }
 
 // Execute runs a fresh root command.
 func Execute(ctx context.Context, args []string, streams Streams, info buildinfo.Info) error {
-	root := NewRootCommand(streams, doctor.NewDefaultRunner(), validation.NewDefaultRunner())
+	root := NewRootCommand(streams, doctor.NewDefaultRunner(), validation.NewDefaultRunner(), lifecycle.NewDefaultRunner())
 	root.Version = formatVersion(info)
 	root.SetArgs(args)
 

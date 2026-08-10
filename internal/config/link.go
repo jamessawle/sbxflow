@@ -95,12 +95,38 @@ func normalizeGit(repository, ref, kit string) (string, string, error) {
 	if err != nil {
 		return "", "", fmt.Errorf("source Git repository %q is invalid: %w", repository, err)
 	}
+	executionRepository, err := gitExecutionRepository(repository)
+	if err != nil {
+		return "", "", fmt.Errorf("source Git repository %q is invalid: %w", repository, err)
+	}
 	prefix := host + "/" + repositoryPath
-	reference := prefix + "@" + ref
+	reference := executionRepository + "#ref=" + url.QueryEscape(ref)
 	if kit != "" {
-		reference += ":" + path.Clean(kit)
+		reference += "&dir=" + url.QueryEscape(path.Clean(kit))
 	}
 	return reference, prefix, nil
+}
+
+func gitExecutionRepository(repository string) (string, error) {
+	repository = strings.TrimSpace(repository)
+	if strings.Contains(repository, "://") {
+		parsed, err := url.Parse(repository)
+		if err != nil || parsed.Host == "" {
+			return "", fmt.Errorf("expected a repository URL with a host")
+		}
+		if parsed.RawQuery != "" || parsed.Fragment != "" {
+			return "", fmt.Errorf("repository URL must not contain a query or fragment")
+		}
+		if strings.HasPrefix(strings.ToLower(parsed.Scheme), "git+") {
+			return repository, nil
+		}
+		return "git+" + repository, nil
+	}
+
+	if colon := strings.Index(repository, ":"); colon > 0 {
+		return "git+ssh://" + repository[:colon] + "/" + strings.TrimPrefix(repository[colon+1:], "/"), nil
+	}
+	return "git+https://" + strings.TrimPrefix(repository, "//"), nil
 }
 
 func splitGitRepository(repository string) (string, string, error) {

@@ -124,3 +124,60 @@ help that describes its repository configuration validation purpose.
 - **THEN** the CLI displays validate usage and its configuration validation
   purpose
 - **AND** exits successfully
+
+### Requirement: Up reports successful configuration validation
+
+After the complete repository validation pipeline succeeds, the `up` command
+SHALL write `Configuration valid: <declaration path>` followed by a newline to
+standard error before inspecting or changing Docker Sandbox state.
+
+#### Scenario: Up validation succeeds
+
+- **WHEN** `sbxflow up` completes validation of the nearest declaration
+  successfully
+- **THEN** the command writes `Configuration valid: <declaration path>` to
+  standard error
+- **AND** writes the status before attempting to list, create, restart, or enter
+  a sandbox
+
+#### Scenario: Up validation fails
+
+- **WHEN** `sbxflow up` cannot complete validation successfully
+- **THEN** the command does not write the successful configuration-validation
+  status
+- **AND** reports the validation failure according to the existing error
+  contract
+
+### Requirement: Up command is discoverable
+
+The CLI SHALL register `up` as an available command and provide contextual help
+that describes its repository-aware interactive sandbox purpose.
+
+#### Scenario: Root help lists up
+
+- **WHEN** a user displays root help
+- **THEN** the available commands include `up`
+
+#### Scenario: Up help is requested
+
+- **WHEN** a user invokes `sbxflow up --help` or `sbxflow help up`
+- **THEN** the CLI displays `up` usage and its create-or-enter purpose
+- **AND** exits successfully without discovering a declaration or invoking
+  Docker Sandboxes
+
+### Requirement: Up accepts no arguments
+
+The `up` command SHALL accept no positional arguments or command-specific flags
+other than help in its initial interface.
+
+#### Scenario: Positional argument is supplied
+
+- **WHEN** a user invokes `sbxflow up` with a positional argument
+- **THEN** the CLI reports the invalid invocation on standard error
+- **AND** exits with a non-zero status without invoking Docker Sandboxes
+
+#### Scenario: Unsupported flag is supplied
+
+- **WHEN** a user invokes `sbxflow up` with an unsupported flag
+- **THEN** the CLI reports the unknown flag on standard error
+- **AND** exits with a non-zero status without invoking Docker Sandboxes

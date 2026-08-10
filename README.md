@@ -3,15 +3,16 @@
 > sbxflow applies a repository's declared Docker Sandbox configuration and
 > lifecycle.
 
-`sbxflow` is a configuration-driven CLI for creating and managing a repository's
-[Docker Sandbox](https://docs.docker.com/ai/sandboxes/). It keeps the sandbox
-running with the declared agent and ordered set of kits, recreating it when its
-build inputs change.
+`sbxflow` is a configuration-driven CLI for creating and entering a repository's
+[Docker Sandbox](https://docs.docker.com/ai/sandboxes/). It validates the
+declared agent and ordered set of kits before creating a missing sandbox or
+interactively entering an existing one.
 
 > [!NOTE]
 > sbxflow is in early development. Its foundational CLI and configuration
-> validation are available, but the lifecycle commands described below are not
-> implemented yet.
+> validation and the interactive `up` lifecycle command are available. Existing
+> sandboxes are not yet reconciled with declaration changes, and `down` and
+> `destroy` are not implemented.
 
 ## Configuration
 
@@ -73,8 +74,9 @@ Use `sbxflow -v` or `sbxflow --version` to display the build identity. Local
 builds report an explicit development version. A `version` subcommand is not
 available.
 
-Completion, man-page, and lifecycle commands are intentionally absent from the
-foundational executable. The repository-aware `validate` command is available.
+Completion and man-page commands are intentionally absent from the foundational
+executable. The repository-aware `validate` and `up` commands are available;
+`down` and `destroy` remain planned.
 
 ### `sbxflow doctor`
 
@@ -160,22 +162,47 @@ on failure. If validation stops before trust derivation, it reports
 YAML-like presentation is intended for people rather than as a stable
 machine-readable interface.
 
-## Planned lifecycle commands
+### `sbxflow up`
+
+Validate the nearest repository declaration, then create or enter its named
+Docker Sandbox and attach the declared agent to the current terminal:
 
 ```text
 sbxflow up
+```
+
+`up` searches the current directory and its ancestors for `sbxflow.yaml`, using
+the declaration directory as the repository workspace. Complete validation
+runs before Docker inspects or changes sandbox state. On success, `up` writes
+`Configuration valid: <declaration path>` to standard error before continuing
+with Docker Sandbox inspection and lifecycle execution.
+
+When the declared name does not exist, `up` creates it with the declared agent,
+workspace, and every selected kit in declaration order. Git and OCI selections
+use their linked remote references; local selections use their validated
+canonical host paths. The derived kit-source allowlist and local-kit permission
+are applied only to the interactive `sbx run` process, without modifying global
+Docker Sandbox settings.
+
+When the name already exists, `up` enters it through Docker Sandboxes. Docker
+attaches when it is running or restarts it when stopped, and verifies that it
+uses the declared agent. Existing sandbox workspace and kits are not inspected
+or reconciled: changing their declaration does not update, recreate, or grade
+the existing sandbox. Remove the sandbox explicitly before running `up` if it
+must be created again from the current declaration.
+
+The agent process receives the terminal's standard input, standard output,
+standard error, and normal signals directly. `up` imposes no session timeout and
+returns the Docker process result.
+
+`up` accepts no positional arguments or command-specific flags.
+
+## Planned lifecycle commands
+
+```text
 sbxflow down
 sbxflow destroy
 ```
-
-### `sbxflow up` (planned)
-
-Bring the declared sandbox up:
-
-- Create it when it does not exist.
-- Start it when it is stopped.
-- Recreate it when its build inputs are out of date.
-- Leave it unchanged when it is current and running.
 
 ### `sbxflow down` (planned)
 

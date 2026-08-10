@@ -70,11 +70,58 @@ func TestLinkPreservesOrderAndDerivesTrust(t *testing.T) {
 	if !linked.Trust.AllowLocalKits {
 		t.Fatal("AllowLocalKits = false, want true")
 	}
-	if got := linked.Selections[0].RemoteReference; got != "github.com/example/kits@v1:tooling" {
+	if got := linked.Selections[0].RemoteReference; got != "git+https://github.com/example/kits.git#ref=v1&dir=tooling" {
 		t.Fatalf("Git RemoteReference = %q", got)
 	}
 	if got := linked.Selections[1].RemoteReference; got != "ghcr.io/example/image:v1" {
 		t.Fatalf("OCI RemoteReference = %q", got)
+	}
+}
+
+func TestNormalizeGitBuildsDockerExecutionReferences(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		repository string
+		want       string
+	}{
+		{
+			name:       "HTTPS URL",
+			repository: "https://github.com/docker/sbx-kits-contrib.git",
+			want:       "git+https://github.com/docker/sbx-kits-contrib.git#ref=v0.14.0&dir=mise",
+		},
+		{
+			name:       "SSH URL",
+			repository: "ssh://git@github.com/docker/sbx-kits-contrib.git",
+			want:       "git+ssh://git@github.com/docker/sbx-kits-contrib.git#ref=v0.14.0&dir=mise",
+		},
+		{
+			name:       "SCP style",
+			repository: "git@github.com:docker/sbx-kits-contrib.git",
+			want:       "git+ssh://git@github.com/docker/sbx-kits-contrib.git#ref=v0.14.0&dir=mise",
+		},
+		{
+			name:       "host path",
+			repository: "github.com/docker/sbx-kits-contrib.git",
+			want:       "git+https://github.com/docker/sbx-kits-contrib.git#ref=v0.14.0&dir=mise",
+		},
+		{
+			name:       "already prefixed",
+			repository: "git+https://github.com/docker/sbx-kits-contrib.git",
+			want:       "git+https://github.com/docker/sbx-kits-contrib.git#ref=v0.14.0&dir=mise",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got, trust, err := normalizeGit(test.repository, "v0.14.0", "mise")
+			if err != nil {
+				t.Fatalf("normalizeGit() error = %v", err)
+			}
+			if got != test.want {
+				t.Fatalf("normalizeGit() = %q, want %q", got, test.want)
+			}
+			if trust != "github.com/docker/sbx-kits-contrib" {
+				t.Fatalf("trust prefix = %q", trust)
+			}
+		})
 	}
 }
 

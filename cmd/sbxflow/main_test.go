@@ -221,6 +221,153 @@ echo 'fixture accepted local kit'
 			t.Fatalf("exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
 		}
 	})
+
+	t.Run("up creates or enters interactively with scoped trust", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("fake sbx fixture uses a POSIX shell script")
+		}
+
+		repository := t.TempDir()
+		localKit := filepath.Join(repository, "kits", "tooling")
+		if err := os.MkdirAll(localKit, 0o755); err != nil {
+			t.Fatalf("create local kit: %v", err)
+		}
+		configuration := `version: 1
+sandbox:
+  name: executable-up
+  agent: codex
+  kits:
+    sources:
+      remote:
+        type: git
+        repo: https://github.com/example/kits.git
+        ref: v1
+      local:
+        type: local
+        root: ./kits
+    use:
+      - source: remote
+        kit: remote-tooling
+      - source: local
+        kit: tooling
+`
+		declaration := filepath.Join(repository, "sbxflow.yaml")
+		if err := os.WriteFile(declaration, []byte(configuration), 0o600); err != nil {
+			t.Fatalf("write declaration: %v", err)
+		}
+		nested := filepath.Join(repository, "nested", "work")
+		if err := os.MkdirAll(nested, 0o755); err != nil {
+			t.Fatalf("create nested work directory: %v", err)
+		}
+
+		fakeDirectory := t.TempDir()
+		fakeSbx := filepath.Join(fakeDirectory, "sbx")
+		script := `#!/bin/sh
+printf '%s\n' "$*" >> "$SBX_TEST_LOG"
+case "$1 $2" in
+  "kit validate")
+    exit 0
+    ;;
+  "ls --quiet")
+    if [ -n "${SBX_TEST_EXISTING:-}" ]; then
+      printf '%s\n' "$SBX_TEST_EXISTING"
+    fi
+    ;;
+  *)
+    if [ "$1" != "run" ]; then
+      echo 'unexpected fake sbx invocation' >&2
+      exit 8
+    fi
+    printf 'allowed=%s\nlocal=%s\n' "$DOCKER_SANDBOXES_KIT_ALLOWED_SOURCES" "$DOCKER_SANDBOXES_KIT_ALLOW_LOCAL" >> "$SBX_TEST_ENV_LOG"
+    read input
+    printf 'agent received: %s\n' "$input"
+    echo 'docker run diagnostic' >&2
+    exit "${SBX_TEST_RUN_EXIT:-0}"
+    ;;
+esac
+`
+		if err := os.WriteFile(fakeSbx, []byte(script), 0o700); err != nil {
+			t.Fatalf("write fake sbx: %v", err)
+		}
+		canonicalLocalKit, err := filepath.EvalSymlinks(localKit)
+		if err != nil {
+			t.Fatalf("canonicalize local kit: %v", err)
+		}
+		canonicalRepository, err := filepath.EvalSymlinks(repository)
+		if err != nil {
+			t.Fatalf("canonicalize repository: %v", err)
+		}
+		validationStatus := "Configuration valid: " + filepath.Join(canonicalRepository, "sbxflow.yaml") + "\n"
+
+		t.Run("missing sandbox", func(t *testing.T) {
+			logPath := filepath.Join(fakeDirectory, "missing-calls.log")
+			environmentPath := filepath.Join(fakeDirectory, "missing-env.log")
+			stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
+				t,
+				binary,
+				nested,
+				[]string{"up"},
+				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath},
+				"hello creation\n",
+			)
+			if exitCode != 0 || !strings.Contains(stdout, "agent received: hello creation") || stderr != validationStatus+"docker run diagnostic\n" {
+				t.Fatalf("up exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+			}
+			calls, err := os.ReadFile(logPath)
+			if err != nil {
+				t.Fatalf("read calls: %v", err)
+			}
+			wantRun := "run --name executable-up --kit git+https://github.com/example/kits.git#ref=v1&dir=remote-tooling --kit " + canonicalLocalKit + " codex " + canonicalRepository
+			for _, want := range []string{"kit validate " + canonicalLocalKit, "ls --quiet", wantRun} {
+				if !strings.Contains(string(calls), want+"\n") {
+					t.Errorf("calls do not contain %q:\n%s", want, calls)
+				}
+			}
+			environment, err := os.ReadFile(environmentPath)
+			if err != nil {
+				t.Fatalf("read environment: %v", err)
+			}
+			wantEnvironment := "allowed=[\"docker.io/\",\"github.com/example/kits\"]\nlocal=true\n"
+			if string(environment) != wantEnvironment {
+				t.Fatalf("environment = %q, want %q", environment, wantEnvironment)
+			}
+		})
+
+		t.Run("existing sandbox and failed session", func(t *testing.T) {
+			logPath := filepath.Join(fakeDirectory, "existing-calls.log")
+			environmentPath := filepath.Join(fakeDirectory, "existing-env.log")
+			stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
+				t,
+				binary,
+				nested,
+				[]string{"up"},
+				[]string{
+					"PATH=" + fakeDirectory,
+					"SBX_TEST_LOG=" + logPath,
+					"SBX_TEST_ENV_LOG=" + environmentPath,
+					"SBX_TEST_EXISTING=executable-up",
+					"SBX_TEST_RUN_EXIT=7",
+				},
+				"hello existing\n",
+			)
+			if exitCode != 7 || !strings.Contains(stdout, "agent received: hello existing") {
+				t.Fatalf("up exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+			}
+			if stderr != validationStatus+"docker run diagnostic\n" {
+				t.Fatalf("stderr = %q, want validation status followed by Docker diagnostic", stderr)
+			}
+			calls, err := os.ReadFile(logPath)
+			if err != nil {
+				t.Fatalf("read calls: %v", err)
+			}
+			if !strings.Contains(string(calls), "run codex --name executable-up\n") {
+				t.Fatalf("calls do not contain existing invocation:\n%s", calls)
+			}
+			if strings.Contains(string(calls), "run codex --name executable-up --kit") || strings.Contains(string(calls), "run codex --name executable-up "+canonicalRepository) {
+				t.Fatalf("existing invocation contains creation inputs:\n%s", calls)
+			}
+		})
+	})
 }
 
 func runBinary(t *testing.T, binary string, args ...string) (string, string, int) {
@@ -232,11 +379,16 @@ func runBinaryWithEnv(t *testing.T, binary string, args, environment []string) (
 }
 
 func runBinaryInDirectory(t *testing.T, binary, directory string, args, environment []string) (string, string, int) {
+	return runBinaryInDirectoryWithInput(t, binary, directory, args, environment, "")
+}
+
+func runBinaryInDirectoryWithInput(t *testing.T, binary, directory string, args, environment []string, input string) (string, string, int) {
 	t.Helper()
 
 	var stdout, stderr bytes.Buffer
 	command := exec.Command(binary, args...)
 	command.Dir = directory
+	command.Stdin = strings.NewReader(input)
 	command.Stdout = &stdout
 	command.Stderr = &stderr
 	command.Env = append(os.Environ(), "TERM=dumb")
