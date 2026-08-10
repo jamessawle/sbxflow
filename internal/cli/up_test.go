@@ -86,6 +86,7 @@ func executeWithUp(args []string, runner UpRunner) (string, string, error) {
 		fakeDoctorRunner{},
 		fakeValidateRunner{},
 		runner,
+		&fakeDownRunner{},
 	)
 	root.SetArgs(args)
 	err := root.ExecuteContext(context.Background())

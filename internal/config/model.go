@@ -16,6 +16,11 @@ type Configuration struct {
 	Sandbox Sandbox `json:"sandbox" yaml:"sandbox"`
 }
 
+// LifecycleTarget is the declaration identity needed by teardown operations.
+type LifecycleTarget struct {
+	Name string
+}
+
 // Sandbox declares the sandbox identity and ordered kit configuration.
 type Sandbox struct {
 	Name  string `json:"name" yaml:"name"`

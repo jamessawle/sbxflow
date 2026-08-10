@@ -368,6 +368,76 @@ esac
 			}
 		})
 	})
+
+	t.Run("down resolves identity only and preserves Docker stop failure", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("fake sbx fixture uses a POSIX shell script")
+		}
+
+		repository := t.TempDir()
+		configuration := `version: 1
+sandbox:
+  name: executable-down
+  agent: unsupported
+  kits:
+    sources:
+      local:
+        type: local
+        root: https://unavailable.example/kits
+    use:
+      - source: missing
+        kit: ../unsafe
+`
+		if err := os.WriteFile(filepath.Join(repository, "sbxflow.yaml"), []byte(configuration), 0o600); err != nil {
+			t.Fatalf("write declaration: %v", err)
+		}
+		nested := filepath.Join(repository, "nested", "work")
+		if err := os.MkdirAll(nested, 0o755); err != nil {
+			t.Fatalf("create nested work directory: %v", err)
+		}
+
+		fakeDirectory := t.TempDir()
+		logPath := filepath.Join(fakeDirectory, "calls.log")
+		fakeSbx := filepath.Join(fakeDirectory, "sbx")
+		script := `#!/bin/sh
+printf '%s\n' "$*" >> "$SBX_TEST_LOG"
+case "$1 $2" in
+  "ls --quiet")
+    echo 'executable-down'
+    ;;
+  "stop executable-down")
+    echo 'stopping executable-down'
+    echo 'docker stop diagnostic' >&2
+    exit 7
+    ;;
+  *)
+    echo 'unexpected fake sbx invocation' >&2
+    exit 8
+    ;;
+esac
+`
+		if err := os.WriteFile(fakeSbx, []byte(script), 0o700); err != nil {
+			t.Fatalf("write fake sbx: %v", err)
+		}
+
+		stdout, stderr, exitCode := runBinaryInDirectory(
+			t,
+			binary,
+			nested,
+			[]string{"down"},
+			[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath},
+		)
+		if exitCode != 7 || stdout != "stopping executable-down\n" || stderr != "docker stop diagnostic\n" {
+			t.Fatalf("down exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+		}
+		calls, err := os.ReadFile(logPath)
+		if err != nil {
+			t.Fatalf("read fake sbx calls: %v", err)
+		}
+		if got, want := string(calls), "ls --quiet\nstop executable-down\n"; got != want {
+			t.Fatalf("sbx calls = %q, want %q", got, want)
+		}
+	})
 }
 
 func runBinary(t *testing.T, binary string, args ...string) (string, string, int) {

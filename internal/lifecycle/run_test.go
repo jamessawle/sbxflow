@@ -196,12 +196,14 @@ func (r *fakeCommandRunner) Run(_ context.Context, _ string, args ...string) com
 
 type fakeInteractiveRunner struct {
 	calls      int
+	ctx        context.Context
 	invocation command.InteractiveInvocation
 	err        error
 }
 
-func (r *fakeInteractiveRunner) Run(_ context.Context, invocation command.InteractiveInvocation) error {
+func (r *fakeInteractiveRunner) Run(ctx context.Context, invocation command.InteractiveInvocation) error {
 	r.calls++
+	r.ctx = ctx
 	r.invocation = invocation
 	return r.err
 }

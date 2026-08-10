@@ -138,3 +138,71 @@ sandbox:
 		})
 	}
 }
+
+func TestLoadLifecycleTarget(t *testing.T) {
+	target, err := LoadLifecycleTarget([]byte(`version: 1
+sandbox:
+  name: exact-project
+`))
+	if err != nil || target.Name != "exact-project" {
+		t.Fatalf("LoadLifecycleTarget() = %#v, %v", target, err)
+	}
+}
+
+func TestLoadLifecycleTargetRejectsUnsafeIdentity(t *testing.T) {
+	valid := `version: 1
+sandbox:
+  name: demo
+`
+	tests := map[string]struct {
+		document string
+		want     string
+	}{
+		"empty":                 {document: "", want: "empty"},
+		"malformed YAML":        {document: "version: [", want: "parse YAML"},
+		"duplicate key":         {document: "version: 1\nversion: 1\nsandbox:\n  name: demo\n", want: "already defined"},
+		"multiple documents":    {document: valid + "---\n" + valid, want: "exactly one"},
+		"root is not object":    {document: "- version\n- sandbox\n", want: "must be an object"},
+		"missing version":       {document: "sandbox:\n  name: demo\n", want: "missing version"},
+		"non-integer version":   {document: "version: one\nsandbox:\n  name: demo\n", want: "must be an integer"},
+		"unsupported version":   {document: "version: 2\nsandbox:\n  name: demo\n", want: "unsupported"},
+		"missing sandbox":       {document: "version: 1\n", want: "missing sandbox"},
+		"sandbox is not object": {document: "version: 1\nsandbox: demo\n", want: "must be an object"},
+		"missing name":          {document: "version: 1\nsandbox: {}\n", want: "missing sandbox.name"},
+		"name is not string":    {document: "version: 1\nsandbox:\n  name: 7\n", want: "must be a string"},
+		"empty name":            {document: "version: 1\nsandbox:\n  name: ''\n", want: "must not be empty"},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, err := LoadLifecycleTarget([]byte(test.document))
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("LoadLifecycleTarget() error = %v, want substring %q", err, test.want)
+			}
+		})
+	}
+}
+
+func TestLoadLifecycleTargetIgnoresNonIdentityConfiguration(t *testing.T) {
+	document := `version: 1
+sandbox:
+  name: demo
+  agent: unsupported
+  kits:
+    sources:
+      local:
+        type: local
+        root: https://unavailable.example/kits
+    use:
+      - source: missing
+        kit: ../unsafe
+unknown: true
+`
+	if _, err := Load([]byte(document)); err == nil {
+		t.Fatal("Load() error = nil, want complete validation failure")
+	}
+	target, err := LoadLifecycleTarget([]byte(document))
+	if err != nil || target.Name != "demo" {
+		t.Fatalf("LoadLifecycleTarget() = %#v, %v", target, err)
+	}
+}
