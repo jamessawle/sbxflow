@@ -11,8 +11,8 @@ interactively entering an existing one.
 > [!NOTE]
 > sbxflow is in early development. Its foundational CLI and configuration
 > validation and the interactive `up` lifecycle command are available. Existing
-> sandboxes are not yet reconciled with declaration changes, and `destroy` is
-> not implemented. The state-preserving `down` command is available.
+> sandboxes are not yet reconciled with declaration changes. The
+> state-preserving `down` and permanent `destroy` commands are available.
 
 ## Configuration
 
@@ -75,8 +75,8 @@ builds report an explicit development version. A `version` subcommand is not
 available.
 
 Completion and man-page commands are intentionally absent from the foundational
-executable. The repository-aware `validate`, `up`, and `down` commands are
-available; `destroy` remains planned.
+executable. The repository-aware `validate`, `up`, `down`, and `destroy`
+commands are available.
 
 ### `sbxflow doctor`
 
@@ -224,16 +224,37 @@ attached to the terminal, and its exit status is preserved.
 
 `down` accepts no positional arguments or command-specific flags.
 
-## Planned lifecycle commands
+### `sbxflow destroy`
 
 ```text
 sbxflow destroy
+sbxflow destroy --force
 ```
 
-### `sbxflow destroy` (planned)
+Permanently remove the sandbox declared by the nearest repository
+configuration and all of its persisted Docker Sandbox state. Like `down`,
+`destroy` resolves only the supported configuration version and exact non-empty
+`sandbox.name`; unrelated agent or kit errors do not prevent removal. It lists
+Docker Sandboxes by quiet name and removes only an exact match, so similarly
+named sandboxes are never selected. If the declared sandbox is absent,
+`destroy` succeeds without invoking removal.
 
-Remove the sandbox and its persisted state completely. Repository files remain
-on the host.
+By default, `destroy` runs `sbx rm <declared-name>` with the command's input,
+output, and error streams attached. Docker owns the confirmation prompt and
+active-session protection, and sbxflow preserves its output and exit status. If
+the user declines or Docker refuses removal, sbxflow does not retry with force.
+
+Use `--force` or `-f` to run `sbx rm --force <declared-name>`, skipping Docker's
+confirmation and permitting removal while the sandbox has an active session.
+Force does not broaden the target beyond the exact declared name. `destroy`
+accepts no positional arguments or other command-specific flags.
+
+Successful destruction permanently removes the sandbox's installed tools,
+Docker images, agent history, configuration changes, and other persisted state.
+The repository's host workspace remains intact; Docker-managed worktrees remain
+subject to Docker's removal behavior. A later `up` creates a new sandbox from
+the current declaration. Use `down` instead when the sandbox and its state
+should be preserved for a later session.
 
 ## Kit source trust
 
