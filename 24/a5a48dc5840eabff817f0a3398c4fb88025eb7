@@ -1,0 +1,33 @@
+internal/adapters/inbound/cli/up_test.go
+  s_1ec47c466d959f::t_2e2f44abf1abe8 25,36-38,50-71,119,123,126
+internal/application/lifecycle/up_test.go
+  s_1ec47c466d959f::t_5c9046002744fd 14,56,79,92,121,138-241,248,311-339
+README.md
+  s_1ec47c466d959f::t_e30efa47f28931 172,192-207,213-214
+cmd/sbxflow/main.go
+  s_1ec47c466d959f::t_2d54013289d938 38
+cmd/sbxflow/main_test.go
+  s_1ec47c466d959f::t_35c7ef7b6df0b5 9,40-51,289-294,389-423
+internal/adapters/inbound/cli/up.go
+  s_1ec47c466d959f::t_b97f907e6d1ad0 15,19-20,24-25,32,49-50
+internal/application/lifecycle/up.go
+  s_1ec47c466d959f::t_a8f198b58366c7 32-36,42,58,75-87
+openspec/changes/add-up-recreate-flag/tasks.md
+  s_1ec47c466d959f::t_d78b30bcb57aa7 3,6,10,17,21,24,30,37-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "24a5a48dc5840eabff817f0a3398c4fb88025eb7",
+  "prompts": {},
+  "sessions": {
+    "s_1ec47c466d959f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fed75-ed2b-7563-b574-49d9fb5430a0",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
