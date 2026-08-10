@@ -1,0 +1,19 @@
+sbxflow.yaml
+  s_96cdefcd74ffee::t_ea19a24ea20b19 14,23-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "d9620adc07cf614f5255a559500220d256f304e1",
+  "prompts": {},
+  "sessions": {
+    "s_96cdefcd74ffee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fec78-4573-7fb2-a4d6-8315fe7f8c5e",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
