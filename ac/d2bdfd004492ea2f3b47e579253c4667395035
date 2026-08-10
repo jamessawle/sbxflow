@@ -1,0 +1,29 @@
+openspec/changes/add-up-command/.openspec.yaml
+  s_6160d743556115::t_97e960216ff6b2 1-2
+openspec/changes/add-up-command/tasks.md
+  s_6160d743556115::t_c37b845514b395 1-57
+openspec/changes/add-up-command/design.md
+  s_6160d743556115::t_6c16b6f7845497 1-137
+openspec/changes/add-up-command/proposal.md
+  s_6160d743556115::t_daab12d14dd7f5 1-44
+openspec/changes/add-up-command/specs/cli-interface/spec.md
+  s_6160d743556115::t_9f9989df47fe64 1-35
+openspec/changes/add-up-command/specs/sandbox-lifecycle/spec.md
+  s_6160d743556115::t_48e72a096934b9 1-178
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "acd2bdfd004492ea2f3b47e579253c4667395035",
+  "prompts": {},
+  "sessions": {
+    "s_6160d743556115": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019febad-77cc-7311-be01-d530a7858f51",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
