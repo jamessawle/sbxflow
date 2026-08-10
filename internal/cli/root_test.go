@@ -35,6 +35,7 @@ func TestRootHelp(t *testing.T) {
 				"Available Commands:",
 				"doctor ",
 				"help ",
+				"validate ",
 				"Flags:",
 				"-h, --help",
 				"-v, --version",
@@ -44,7 +45,7 @@ func TestRootHelp(t *testing.T) {
 				}
 			}
 
-			for _, unavailable := range []string{"completion", "man", "up", "down", "destroy", "validate"} {
+			for _, unavailable := range []string{"completion", "man", "up", "down", "destroy"} {
 				if strings.Contains(stdout, "\n  "+unavailable+" ") {
 					t.Errorf("stdout advertises unavailable command %q:\n%s", unavailable, stdout)
 				}
@@ -88,7 +89,7 @@ func TestVersionIncludesShortCommit(t *testing.T) {
 }
 
 func TestUnavailableCommands(t *testing.T) {
-	for _, name := range []string{"version", "completion", "man", "up", "down", "destroy", "validate", "unknown"} {
+	for _, name := range []string{"version", "completion", "man", "up", "down", "destroy", "unknown"} {
 		t.Run(name, func(t *testing.T) {
 			stdout, stderr, err := execute([]string{name})
 			if err == nil {

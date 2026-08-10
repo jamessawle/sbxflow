@@ -9,8 +9,9 @@ running with the declared agent and ordered set of kits, recreating it when its
 build inputs change.
 
 > [!NOTE]
-> sbxflow is in early development. Its foundational CLI is available, but the
-> lifecycle commands described below are not implemented yet.
+> sbxflow is in early development. Its foundational CLI and configuration
+> validation are available, but the lifecycle commands described below are not
+> implemented yet.
 
 ## Configuration
 
@@ -44,8 +45,18 @@ source type determines how each selection is resolved:
 - Local sources declare a root directory; `kit` selects a directory or ZIP file
   beneath it.
 
+`agent` must be one of the identifiers supported across sbxflow's compatible
+Docker Sandboxes range: `claude`, `codex`, `copilot`, `cursor`, `docker-agent`,
+`droid`, `gemini`, `kiro`, `opencode`, or `shell`. The schema pins this set so
+validation remains deterministic and does not require an installed `sbx`;
+`shell` supports manual or custom agent setups.
+
 See [`examples`](examples/) for complete configurations, including the
 configuration derived from a working `personal-site` sandbox script.
+
+The published [Draft 2020-12 JSON Schema](schema/sbxflow.schema.json) is the
+structural contract used by the CLI and can also be used by editors and CI
+tooling.
 
 ## Foundational CLI
 
@@ -63,7 +74,7 @@ builds report an explicit development version. A `version` subcommand is not
 available.
 
 Completion, man-page, and lifecycle commands are intentionally absent from the
-foundational executable.
+foundational executable. The repository-aware `validate` command is available.
 
 ### `sbxflow doctor`
 
@@ -96,13 +107,65 @@ settings, start the daemon, or fix reported problems. Warnings and skipped
 advisory checks retain a successful exit status; a failed compatibility or
 Docker health check exits non-zero.
 
+### `sbxflow validate`
+
+Validate the nearest repository declaration before lifecycle commands rely on
+it:
+
+```text
+sbxflow validate
+```
+
+`validate` searches the current directory and then its ancestors for the
+nearest `sbxflow.yaml`. It rejects malformed or multi-document YAML, duplicate
+mapping keys, unsupported versions, unknown fields, invalid source shapes,
+duplicate selections, unknown source references, and source-specific selection
+errors.
+
+Git and OCI references are normalized and checked offline. Validation does not
+clone Git repositories, pull OCI artifacts, test credentials, or check remote
+availability. Kits selected from local sources are the only artifacts passed to
+Docker: after rejecting URI-like, absolute, unavailable, and source-escaping
+paths, sbxflow runs `sbx kit validate <absolute-path>` for each selected local
+directory or ZIP in declaration order.
+
+Successful output identifies the declaration and reports the least-privilege
+settings future lifecycle commands will apply to their own Docker Sandbox
+subprocesses:
+
+```text
+Declaration: /work/my-project/sbxflow.yaml
+
+Derived State:
+  Kit:
+    Allowed Sources:
+      - docker.io/
+      - github.com/docker/sbx-kits-contrib
+    Local Kits Allowed: true
+
+Validation:
+  State: pass
+  Findings: []
+```
+
+The command is inspection-only. It does not create or alter a sandbox, resolve
+remote kits, or modify global Docker Sandbox settings. Structural, semantic,
+path, or local-kit failures are reported on standard error and produce a
+non-zero exit status. Configurations without selected local sources do not
+require or invoke `sbx`.
+
+The complete report is written to standard output on success or standard error
+on failure. If validation stops before trust derivation, it reports
+`Derived State: unavailable`; failures appear under `Validation.Findings`. This
+YAML-like presentation is intended for people rather than as a stable
+machine-readable interface.
+
 ## Planned lifecycle commands
 
 ```text
 sbxflow up
 sbxflow down
 sbxflow destroy
-sbxflow validate
 ```
 
 ### `sbxflow up` (planned)
@@ -123,12 +186,6 @@ history, and other sandbox state.
 
 Remove the sandbox and its persisted state completely. Repository files remain
 on the host.
-
-### `sbxflow validate` (planned)
-
-Validate the configuration's syntax and semantics without changing sandbox
-state. Validation also reports the effective kit-source trust derived from the
-ordered selections.
 
 ## Kit source trust
 
