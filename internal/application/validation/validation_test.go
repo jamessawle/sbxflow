@@ -1,4 +1,4 @@
-package validation
+package validation_test
 
 import (
 	"context"
@@ -9,7 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jamessawle/sbxflow/internal/sbx"
+	"github.com/jamessawle/sbxflow/internal/adapters/outbound/declaration"
+	"github.com/jamessawle/sbxflow/internal/adapters/outbound/sbx"
+	"github.com/jamessawle/sbxflow/internal/application/validation"
+	"github.com/jamessawle/sbxflow/internal/domain/configuration"
 )
 
 func TestRunnerGatesPhasesAndReportsTrust(t *testing.T) {
@@ -29,7 +32,9 @@ sandbox:
         kit: tooling
 `)
 	commands := &recordingRunner{lookupErr: errors.New("must not look up sbx")}
-	report := (Runner{Sandboxes: sbx.Client{Commands: commands}}).Run(context.Background(), repository)
+	declarations := declaration.NewRepository()
+	configurations := configuration.Resolver{Declarations: declarations, LocalPaths: declarations}
+	report := validation.NewValidator(configurations, sbx.Client{Commands: commands}).Run(context.Background(), repository)
 	if !report.Valid() {
 		t.Fatalf("Run() errors = %v", report.Errors)
 	}
@@ -76,7 +81,9 @@ sandbox:
 		{Err: errors.New("invalid"), Stderr: []byte("bad one"), ExitCode: 1},
 		{},
 	}}
-	report := (Runner{Sandboxes: sbx.Client{Commands: commands}}).Run(context.Background(), repository)
+	declarations := declaration.NewRepository()
+	configurations := configuration.Resolver{Declarations: declarations, LocalPaths: declarations}
+	report := validation.NewValidator(configurations, sbx.Client{Commands: commands}).Run(context.Background(), repository)
 	if report.Valid() || len(report.Errors) != 1 || len(report.LocalKits) != 2 || !report.LocalKits[1].Valid {
 		t.Fatalf("Run() report = %#v", report)
 	}
@@ -101,7 +108,9 @@ sandbox:
         kit: one
 `)
 	commands := &recordingRunner{}
-	report := (Runner{Sandboxes: sbx.Client{Commands: commands}}).Run(context.Background(), repository)
+	declarations := declaration.NewRepository()
+	configurations := configuration.Resolver{Declarations: declarations, LocalPaths: declarations}
+	report := validation.NewValidator(configurations, sbx.Client{Commands: commands}).Run(context.Background(), repository)
 	if report.Valid() || !strings.Contains(report.Errors[0].Error(), "host filesystem path") {
 		t.Fatalf("Run() report = %#v", report)
 	}

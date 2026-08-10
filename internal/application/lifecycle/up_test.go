@@ -9,9 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jamessawle/sbxflow/internal/application/validation"
-	"github.com/jamessawle/sbxflow/internal/configuration"
-	"github.com/jamessawle/sbxflow/internal/sbx"
+	"github.com/jamessawle/sbxflow/internal/adapters/outbound/sbx"
+	"github.com/jamessawle/sbxflow/internal/domain/configuration"
 )
 
 func TestSandboxExistsUsesExactNonemptyLines(t *testing.T) {
@@ -50,7 +49,7 @@ func TestRunnerValidationGatesLifecycleLookup(t *testing.T) {
 	commands := &fakeCommandRunner{}
 	var stderr bytes.Buffer
 	runner := UpRunner{
-		Validation: fakeValidator{report: validation.Report{Errors: []error{errors.New("invalid")}}},
+		Validation: fakeValidator{report: configuration.Validation{Errors: []error{errors.New("invalid")}}},
 		Sandboxes:  sbx.Client{Commands: commands, Interactive: &fakeInteractiveRunner{}},
 	}
 	_, err := runner.Run(context.Background(), "/repo", Streams{Err: &stderr})
@@ -148,8 +147,8 @@ func TestRunnerMarksAttachedProcessFailureAsRendered(t *testing.T) {
 	}
 }
 
-func validReport() validation.Report {
-	return validation.Report{
+func validReport() configuration.Validation {
+	return configuration.Validation{
 		Declaration: "/repo/sbxflow.yaml",
 		Linked: configuration.LinkedConfiguration{
 			Configuration: configuration.Configuration{Sandbox: configuration.Sandbox{Name: "project", Agent: "codex"}},
@@ -163,9 +162,9 @@ func validReport() validation.Report {
 	}
 }
 
-type fakeValidator struct{ report validation.Report }
+type fakeValidator struct{ report configuration.Validation }
 
-func (v fakeValidator) Run(context.Context, string) validation.Report { return v.report }
+func (v fakeValidator) Run(context.Context, string) configuration.Validation { return v.report }
 
 type fakeCommandRunner struct {
 	path     string

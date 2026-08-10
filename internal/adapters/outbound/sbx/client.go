@@ -1,15 +1,15 @@
-// Package sbx provides the repository's sole adapter to the Docker Sandboxes
-// executable.
+// Package sbx adapts Docker Sandboxes subprocesses to sbxflow workflows.
 package sbx
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 	"time"
+
+	sandboxport "github.com/jamessawle/sbxflow/internal/ports/sandbox"
 )
 
 const (
@@ -17,12 +17,7 @@ const (
 	allowLocalEnvironment     = "DOCKER_SANDBOXES_KIT_ALLOW_LOCAL"
 )
 
-// Streams are attached directly to interactive sbx processes.
-type Streams struct {
-	In  io.Reader
-	Out io.Writer
-	Err io.Writer
-}
+type Streams = sandboxport.Streams
 
 // Client invokes Docker Sandboxes through injected captured and interactive
 // process runners.
@@ -30,6 +25,15 @@ type Client struct {
 	Commands    Runner
 	Interactive InteractiveRunner
 }
+
+var (
+	_ sandboxport.KitValidator = Client{}
+	_ sandboxport.Inspector    = Client{}
+	_ sandboxport.Lookup       = Client{}
+	_ sandboxport.Runner       = Client{}
+	_ sandboxport.Stopper      = Client{}
+	_ sandboxport.Remover      = Client{}
+)
 
 // NewClient constructs a production client with the supplied timeout for
 // captured inspection commands. Interactive commands have no client timeout.
@@ -40,26 +44,11 @@ func NewClient(timeout time.Duration) Client {
 	}
 }
 
-// RunRequest contains the inputs needed to create or enter a sandbox.
-type RunRequest struct {
-	Name           string
-	Agent          string
-	Workspace      string
-	Kits           []string
-	AllowedSources []string
-	AllowLocalKits bool
-	Exists         bool
-}
-
-// RemoveRequest contains the safeguards and streams for sandbox removal.
-type RemoveRequest struct {
-	Name    string
-	Force   bool
-	Streams Streams
-}
+type RunRequest = sandboxport.RunRequest
+type RemoveRequest = sandboxport.RemoveRequest
 
 // ValidateKits validates local kit paths sequentially.
-func (c Client) ValidateKits(ctx context.Context, paths []string) ([]Output, error) {
+func (c Client) ValidateKits(ctx context.Context, paths []string) ([]sandboxport.Output, error) {
 	if len(paths) == 0 {
 		return nil, nil
 	}
@@ -67,7 +56,7 @@ func (c Client) ValidateKits(ctx context.Context, paths []string) ([]Output, err
 	if err != nil {
 		return nil, err
 	}
-	outputs := make([]Output, 0, len(paths))
+	outputs := make([]sandboxport.Output, 0, len(paths))
 	for _, path := range paths {
 		outputs = append(outputs, c.Commands.Run(ctx, executable, "kit", "validate", path))
 	}

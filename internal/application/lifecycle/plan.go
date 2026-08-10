@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/jamessawle/sbxflow/internal/application/validation"
-	"github.com/jamessawle/sbxflow/internal/configuration"
+	"github.com/jamessawle/sbxflow/internal/domain/configuration"
 )
 
 // Plan contains the validated inputs needed to create or enter a sandbox.
@@ -21,7 +20,7 @@ type Plan struct {
 
 // NewPlan converts a successful validation report into ordered Docker
 // execution inputs without resolving any source a second time.
-func NewPlan(report validation.Report) (Plan, error) {
+func NewPlan(report configuration.Validation) (Plan, error) {
 	if !report.Valid() {
 		return Plan{}, fmt.Errorf("cannot plan lifecycle from an invalid declaration")
 	}

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/jamessawle/sbxflow/internal/application/doctor"
-	"github.com/jamessawle/sbxflow/internal/buildinfo"
+	buildinfo "github.com/jamessawle/sbxflow/internal/ports/buildInfo"
 )
 
 func TestDoctorHelp(t *testing.T) {

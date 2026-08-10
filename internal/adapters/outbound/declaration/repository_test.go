@@ -1,4 +1,4 @@
-package lifecycle
+package declaration
 
 import (
 	"errors"
@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/jamessawle/sbxflow/internal/configuration"
 )
 
 func TestRepositoryTargetResolverSelectsNearestAncestor(t *testing.T) {
@@ -20,18 +18,18 @@ func TestRepositoryTargetResolverSelectsNearestAncestor(t *testing.T) {
 	near := filepath.Join(root, "nested")
 	writeTargetDeclaration(t, near, "exact-inner")
 
-	target, err := NewDefaultTargetResolver().Resolve(nested)
+	target, err := NewRepository().Resolve(nested)
 	if err != nil {
 		t.Fatalf("Resolve() error = %v", err)
 	}
-	wantDeclaration := filepath.Join(near, configuration.Filename)
+	wantDeclaration := filepath.Join(near, Filename)
 	if target.Declaration != wantDeclaration || target.Name != "exact-inner" {
 		t.Fatalf("Resolve() = %#v, want declaration %q and exact name", target, wantDeclaration)
 	}
 }
 
 func TestRepositoryTargetResolverReportsDiscoveryFailure(t *testing.T) {
-	_, err := NewDefaultTargetResolver().Resolve(t.TempDir())
+	_, err := NewRepository().Resolve(t.TempDir())
 	if err == nil || !strings.Contains(err.Error(), "no sbxflow.yaml found") {
 		t.Fatalf("Resolve() error = %v, want absent declaration", err)
 	}
@@ -39,7 +37,7 @@ func TestRepositoryTargetResolverReportsDiscoveryFailure(t *testing.T) {
 
 func TestRepositoryTargetResolverReportsReadFailure(t *testing.T) {
 	want := errors.New("permission denied")
-	resolver := RepositoryTargetResolver{
+	resolver := Repository{
 		Discover: func(string) (string, error) { return "/repo/sbxflow.yaml", nil },
 		ReadFile: func(string) ([]byte, error) { return nil, want },
 	}
@@ -50,7 +48,7 @@ func TestRepositoryTargetResolverReportsReadFailure(t *testing.T) {
 }
 
 func TestRepositoryTargetResolverReportsIdentityFailure(t *testing.T) {
-	resolver := RepositoryTargetResolver{
+	resolver := Repository{
 		Discover: func(string) (string, error) { return "/repo/sbxflow.yaml", nil },
 		ReadFile: func(string) ([]byte, error) {
 			return []byte("version: 2\nsandbox:\n  name: project\n"), nil
@@ -65,7 +63,7 @@ func TestRepositoryTargetResolverReportsIdentityFailure(t *testing.T) {
 func writeTargetDeclaration(t *testing.T, directory, name string) {
 	t.Helper()
 	contents := "version: 1\nsandbox:\n  name: " + name + "\n"
-	if err := os.WriteFile(filepath.Join(directory, configuration.Filename), []byte(contents), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(directory, Filename), []byte(contents), 0o600); err != nil {
 		t.Fatal(err)
 	}
 }

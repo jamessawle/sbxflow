@@ -8,7 +8,7 @@ import (
 
 	"github.com/jamessawle/sbxflow/internal/application/doctor"
 	"github.com/jamessawle/sbxflow/internal/application/validation"
-	"github.com/jamessawle/sbxflow/internal/buildinfo"
+	buildinfo "github.com/jamessawle/sbxflow/internal/ports/buildInfo"
 )
 
 func TestRootHelp(t *testing.T) {

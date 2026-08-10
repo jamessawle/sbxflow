@@ -1,4 +1,4 @@
-package configuration
+package declaration
 
 import (
 	"fmt"
@@ -6,55 +6,45 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-)
 
-// LocalKit identifies one safely resolved local kit selection.
-type LocalKit struct {
-	Index  int
-	Source string
-	Kit    string
-	Path   string
-}
+	declarationport "github.com/jamessawle/sbxflow/internal/ports/declaration"
+)
 
 // ResolveLocalKits checks selected local filesystem references and returns
 // their canonical targets in declaration order.
-func ResolveLocalKits(declarationPath string, linked LinkedConfiguration) ([]LocalKit, error) {
+func ResolveLocalKits(declarationPath string, requests []declarationport.LocalKitRequest) ([]declarationport.LocalKit, error) {
 	declarationDirectory := filepath.Dir(declarationPath)
 	canonicalRoots := make(map[string]string)
-	targets := make([]LocalKit, 0)
+	targets := make([]declarationport.LocalKit, 0, len(requests))
 
-	for _, selection := range linked.Selections {
-		if selection.Source.Type != SourceLocal {
-			continue
-		}
-
-		root, ok := canonicalRoots[selection.Selection.Source]
+	for _, request := range requests {
+		root, ok := canonicalRoots[request.Source]
 		if !ok {
 			var err error
-			root, err = resolveLocalRoot(declarationDirectory, selection.Selection.Source, selection.Source.Root)
+			root, err = resolveLocalRoot(declarationDirectory, request.Source, request.Root)
 			if err != nil {
 				return nil, err
 			}
-			canonicalRoots[selection.Selection.Source] = root
+			canonicalRoots[request.Source] = root
 		}
 
-		kit := selection.Selection.Kit
+		kit := request.Kit
 		if filepath.IsAbs(kit) || filepath.VolumeName(kit) != "" || isURIReference(kit) {
-			return nil, fmt.Errorf("sandbox.kits.use[%d].kit for local source %q must be a relative host filesystem path", selection.Index, selection.Selection.Source)
+			return nil, fmt.Errorf("sandbox.kits.use[%d].kit for local source %q must be a relative host filesystem path", request.Index, request.Source)
 		}
 		candidate := filepath.Join(root, filepath.FromSlash(kit))
 		canonicalTarget, err := filepath.EvalSymlinks(candidate)
 		if err != nil {
-			return nil, fmt.Errorf("sandbox.kits.use[%d].kit %q is unavailable: %w", selection.Index, kit, err)
+			return nil, fmt.Errorf("sandbox.kits.use[%d].kit %q is unavailable: %w", request.Index, kit, err)
 		}
 		canonicalTarget, err = filepath.Abs(canonicalTarget)
 		if err != nil {
-			return nil, fmt.Errorf("resolve sandbox.kits.use[%d].kit %q: %w", selection.Index, kit, err)
+			return nil, fmt.Errorf("resolve sandbox.kits.use[%d].kit %q: %w", request.Index, kit, err)
 		}
 		if !containedBy(root, canonicalTarget) {
-			return nil, fmt.Errorf("sandbox.kits.use[%d].kit %q escapes local source root %q", selection.Index, kit, selection.Source.Root)
+			return nil, fmt.Errorf("sandbox.kits.use[%d].kit %q escapes local source root %q", request.Index, kit, request.Root)
 		}
-		targets = append(targets, LocalKit{Index: selection.Index, Source: selection.Selection.Source, Kit: kit, Path: canonicalTarget})
+		targets = append(targets, declarationport.LocalKit{Index: request.Index, Source: request.Source, Kit: kit, Path: canonicalTarget})
 	}
 
 	return targets, nil

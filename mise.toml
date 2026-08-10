@@ -3,6 +3,7 @@ min_version = "2026.8.2"
 [tools]
 actionlint = "1.7.12"
 go = "1.26.5"
+"go:github.com/fe3dback/go-arch-lint" = "1.16.0"
 node = "24.18.0"
 "npm:@fission-ai/openspec" = "1.8.0"
 "npm:prettier" = "3.9.6"
@@ -27,6 +28,10 @@ prettier --write "**/*.md"
 gofmt -w .
 '''
 
+[tasks."test:architecture"]
+description = "Check production package dependency boundaries"
+run = "go-arch-lint check"
+
 [tasks.validate]
 description = "Run all repository checks"
 run = '''
@@ -43,5 +48,6 @@ fi
 
 go vet ./...
 go test ./...
+mise run test:architecture
 go build ./...
 '''

@@ -3,20 +3,15 @@ package lifecycle
 import (
 	"context"
 
-	"github.com/jamessawle/sbxflow/internal/sbx"
+	sandboxport "github.com/jamessawle/sbxflow/internal/ports/sandbox"
 )
 
 // DownRunner resolves and stops an existing repository sandbox.
 type DownRunner struct {
 	Targets   TargetResolver
-	Sandboxes sbx.Client
-}
-
-// NewDefaultDownRunner constructs production down lifecycle dependencies.
-func NewDefaultDownRunner() DownRunner {
-	return DownRunner{
-		Targets:   NewDefaultTargetResolver(),
-		Sandboxes: sbx.NewClient(defaultSandboxLookupTimeout),
+	Sandboxes interface {
+		sandboxport.Lookup
+		sandboxport.Stopper
 	}
 }
 
@@ -34,7 +29,7 @@ func (r DownRunner) Run(ctx context.Context, start string, streams Streams) erro
 		return nil
 	}
 
-	err = r.Sandboxes.StopSandbox(ctx, target.Name, sbx.Streams{Out: streams.Out, Err: streams.Err})
+	err = r.Sandboxes.StopSandbox(ctx, target.Name, sandboxport.Streams{Out: streams.Out, Err: streams.Err})
 	if err != nil {
 		return AttachedProcessError{Err: err}
 	}

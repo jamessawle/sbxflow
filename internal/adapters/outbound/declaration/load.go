@@ -1,4 +1,4 @@
-package configuration
+package declaration
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/goccy/go-yaml"
+	declarationport "github.com/jamessawle/sbxflow/internal/ports/declaration"
 	publicschema "github.com/jamessawle/sbxflow/schema"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
@@ -23,71 +24,71 @@ var (
 
 // Load parses exactly one YAML document, validates it against the published
 // schema, and returns its typed representation.
-func Load(data []byte) (Configuration, error) {
+func Load(data []byte) (declarationport.Configuration, error) {
 	document, jsonData, err := decodeDocument(data)
 	if err != nil {
-		return Configuration{}, err
+		return declarationport.Configuration{}, err
 	}
 
 	schema, err := configurationSchema()
 	if err != nil {
-		return Configuration{}, err
+		return declarationport.Configuration{}, err
 	}
 	if err := schema.Validate(document); err != nil {
-		return Configuration{}, fmt.Errorf("configuration schema validation failed: %w", err)
+		return declarationport.Configuration{}, fmt.Errorf("configuration schema validation failed: %w", err)
 	}
 
-	var configuration Configuration
-	if err := json.Unmarshal(jsonData, &configuration); err != nil {
-		return Configuration{}, fmt.Errorf("decode validated configuration: %w", err)
+	var documentConfiguration declarationport.Configuration
+	if err := json.Unmarshal(jsonData, &documentConfiguration); err != nil {
+		return declarationport.Configuration{}, fmt.Errorf("decode validated configuration: %w", err)
 	}
-	return configuration, nil
+	return documentConfiguration, nil
 }
 
 // LoadLifecycleTarget parses only the supported declaration version and
 // sandbox name needed by teardown lifecycle operations.
-func LoadLifecycleTarget(data []byte) (LifecycleTarget, error) {
+func LoadLifecycleTarget(data []byte) (declarationport.LifecycleTarget, error) {
 	document, _, err := decodeDocument(data)
 	if err != nil {
-		return LifecycleTarget{}, err
+		return declarationport.LifecycleTarget{}, err
 	}
 
 	root, ok := document.(map[string]any)
 	if !ok {
-		return LifecycleTarget{}, errors.New("configuration identity must be an object")
+		return declarationport.LifecycleTarget{}, errors.New("configuration identity must be an object")
 	}
 	version, ok := root["version"]
 	if !ok {
-		return LifecycleTarget{}, errors.New("configuration identity is missing version")
+		return declarationport.LifecycleTarget{}, errors.New("configuration identity is missing version")
 	}
 	versionNumber, ok := version.(float64)
 	if !ok {
-		return LifecycleTarget{}, errors.New("configuration identity version must be an integer")
+		return declarationport.LifecycleTarget{}, errors.New("configuration identity version must be an integer")
 	}
 	if versionNumber != 1 {
-		return LifecycleTarget{}, fmt.Errorf("unsupported configuration version %v", version)
+		return declarationport.LifecycleTarget{}, fmt.Errorf("unsupported configuration version %v", version)
 	}
 
 	sandbox, ok := root["sandbox"]
 	if !ok {
-		return LifecycleTarget{}, errors.New("configuration identity is missing sandbox")
+		return declarationport.LifecycleTarget{}, errors.New("configuration identity is missing sandbox")
 	}
 	sandboxObject, ok := sandbox.(map[string]any)
 	if !ok {
-		return LifecycleTarget{}, errors.New("configuration identity sandbox must be an object")
+		return declarationport.LifecycleTarget{}, errors.New("configuration identity sandbox must be an object")
 	}
 	name, ok := sandboxObject["name"]
 	if !ok {
-		return LifecycleTarget{}, errors.New("configuration identity is missing sandbox.name")
+		return declarationport.LifecycleTarget{}, errors.New("configuration identity is missing sandbox.name")
 	}
 	nameString, ok := name.(string)
 	if !ok {
-		return LifecycleTarget{}, errors.New("configuration identity sandbox.name must be a string")
+		return declarationport.LifecycleTarget{}, errors.New("configuration identity sandbox.name must be a string")
 	}
 	if nameString == "" {
-		return LifecycleTarget{}, errors.New("configuration identity sandbox.name must not be empty")
+		return declarationport.LifecycleTarget{}, errors.New("configuration identity sandbox.name must not be empty")
 	}
-	return LifecycleTarget{Name: nameString}, nil
+	return declarationport.LifecycleTarget{Name: nameString}, nil
 }
 
 func decodeDocument(data []byte) (any, []byte, error) {

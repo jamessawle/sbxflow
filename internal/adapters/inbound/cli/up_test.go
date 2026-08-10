@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/jamessawle/sbxflow/internal/application/lifecycle"
-	"github.com/jamessawle/sbxflow/internal/application/validation"
+	"github.com/jamessawle/sbxflow/internal/domain/configuration"
 )
 
 func TestUpHelpDoesNotInvokeRunner(t *testing.T) {
@@ -59,7 +59,7 @@ func TestUpInjectsWorkingDirectoryAndStreams(t *testing.T) {
 
 func TestUpRendersValidationFailureOnce(t *testing.T) {
 	runner := &fakeUpRunner{
-		report: validation.Report{Errors: []error{errors.New("invalid declaration")}},
+		report: configuration.Validation{Errors: []error{errors.New("invalid declaration")}},
 		err:    lifecycle.ErrValidationFailed,
 	}
 	stdout, stderr, err := executeWithUp([]string{"up"}, runner)
@@ -95,7 +95,7 @@ func executeWithUp(args []string, runner UpRunner) (string, string, error) {
 }
 
 type fakeUpRunner struct {
-	report  validation.Report
+	report  configuration.Validation
 	err     error
 	stdout  string
 	stderr  string
@@ -104,7 +104,7 @@ type fakeUpRunner struct {
 	streams lifecycle.Streams
 }
 
-func (r *fakeUpRunner) Run(_ context.Context, start string, streams lifecycle.Streams) (validation.Report, error) {
+func (r *fakeUpRunner) Run(_ context.Context, start string, streams lifecycle.Streams) (configuration.Validation, error) {
 	r.calls++
 	r.start = start
 	r.streams = streams

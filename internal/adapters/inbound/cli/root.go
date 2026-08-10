@@ -1,4 +1,5 @@
-// Package cli constructs and executes the sbxflow command tree.
+// Package cli adapts Cobra commands and terminal streams to application and
+// domain services.
 package cli
 
 import (
@@ -6,10 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/jamessawle/sbxflow/internal/application/doctor"
-	"github.com/jamessawle/sbxflow/internal/application/lifecycle"
-	"github.com/jamessawle/sbxflow/internal/application/validation"
-	"github.com/jamessawle/sbxflow/internal/buildinfo"
+	buildinfo "github.com/jamessawle/sbxflow/internal/ports/buildInfo"
 	"github.com/spf13/cobra"
 )
 
@@ -67,14 +65,14 @@ func NewRootCommand(streams Streams, doctorRunner DoctorRunner, validateRunner V
 }
 
 // Execute runs a fresh root command.
-func Execute(ctx context.Context, args []string, streams Streams, info buildinfo.Info) error {
+func Execute(ctx context.Context, args []string, streams Streams, info buildinfo.Info, doctorRunner DoctorRunner, validateRunner ValidateRunner, upRunner UpRunner, downRunner DownRunner, destroyRunner DestroyRunner) error {
 	root := NewRootCommand(
 		streams,
-		doctor.NewDefaultRunner(),
-		validation.NewDefaultRunner(),
-		lifecycle.NewDefaultUpRunner(),
-		lifecycle.NewDefaultDownRunner(),
-		lifecycle.NewDefaultDestroyRunner(),
+		doctorRunner,
+		validateRunner,
+		upRunner,
+		downRunner,
+		destroyRunner,
 	)
 	root.Version = formatVersion(info)
 	root.SetArgs(args)

@@ -1,4 +1,4 @@
-package configuration
+package declaration
 
 import (
 	"os"

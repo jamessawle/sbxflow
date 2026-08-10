@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/jamessawle/sbxflow/internal/application/validation"
-	"github.com/jamessawle/sbxflow/internal/buildinfo"
-	"github.com/jamessawle/sbxflow/internal/configuration"
+	"github.com/jamessawle/sbxflow/internal/domain/configuration"
+	buildinfo "github.com/jamessawle/sbxflow/internal/ports/buildInfo"
 )
 
 func TestValidateHelp(t *testing.T) {
@@ -34,7 +34,7 @@ func TestValidateRendersSuccessReport(t *testing.T) {
 			Configuration: configuration.Configuration{Version: 1},
 			Trust:         configuration.Trust{AllowedSources: []string{"docker.io/", "github.com/example/kits"}, AllowLocalKits: true},
 		},
-		LocalKits: []validation.LocalKitResult{{Target: configuration.LocalKit{Source: "local", Kit: "tooling", Path: "/repo/kits/tooling"}, Valid: true}},
+		LocalKits: []configuration.LocalKitValidation{{Target: configuration.LocalKit{Source: "local", Kit: "tooling", Path: "/repo/kits/tooling"}, Valid: true}},
 	}
 	stdout, stderr, err := executeWithValidate([]string{"validate"}, fakeValidateRunner{report: report})
 	if err != nil || stderr != "" {
@@ -59,7 +59,7 @@ func TestValidateRendersActionableFailure(t *testing.T) {
 	report := validation.Report{
 		Declaration: "/repo/sbxflow.yaml",
 		Linked:      configuration.LinkedConfiguration{Configuration: configuration.Configuration{Version: 1}, Trust: configuration.Trust{AllowedSources: []string{"docker.io/"}, AllowLocalKits: true}},
-		LocalKits:   []validation.LocalKitResult{{Target: configuration.LocalKit{Source: "local", Kit: "bad", Path: "/repo/kits/bad"}, Diagnostics: "missing metadata", Err: errors.New("rejected")}},
+		LocalKits:   []configuration.LocalKitValidation{{Target: configuration.LocalKit{Source: "local", Kit: "bad", Path: "/repo/kits/bad"}, Diagnostics: "missing metadata", Err: errors.New("rejected")}},
 		Errors:      []error{errors.New("local kit local/bad was rejected by sbx")},
 	}
 	stdout, stderr, err := executeWithValidate([]string{"validate"}, fakeValidateRunner{report: report})

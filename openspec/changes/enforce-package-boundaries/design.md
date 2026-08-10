@@ -1,170 +1,231 @@
 ## Context
 
-The production code currently follows the dependency direction described in
-`docs/structure.md`, but no automated check prevents a future import from
-crossing those boundaries. The repository uses Mise for pinned development
-tools and aggregate validation, has a small and explicit package graph, and
-keeps tooling dependencies out of the runtime module where possible. See
-`proposal.md` for the motivation and scope.
+The implemented Arch-Go prototype checks exact outbound dependencies for the
+current packages. Exploration exposed two problems with that approach:
 
-Two documented constraints have different levels of mechanical enforceability:
-direct import relationships can be checked reliably, while responsibility
-statements such as keeping policy out of `cli` still require design review.
+- The policy describes package instances and their exceptions instead of a
+  small set of architectural types and relationships.
+- Arch-Go v2.1.2 treats an empty allowed-dependency list as no restriction and
+  its configuration validator rejects rules that combine allowed and
+  prohibited dependencies, even though its default check executes the current
+  file.
+
+The current code also mixes roles. `cli.Execute` performs dependency wiring,
+application validation combines domain rules with filesystem and Docker I/O,
+configuration combines its model and semantic rules with declaration adapters,
+and lifecycle depends on the peer validation workflow. See `proposal.md` for
+the motivation to make these boundaries reliable for contributors.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Fail validation when production Go code introduces an unapproved first-party
-  package dependency.
-- Detect Cobra imports from application packages.
-- Fail when a production package is not covered by the architecture policy.
-- Keep the check visibly separate from ordinary Go tests while making it
-  mandatory in aggregate validation.
-- Use a pinned, maintained enforcement engine and a small declarative policy
-  rather than owning package loading and dependency analysis code.
+- Give every production package exactly one architectural type derived from
+  its import path.
+- Enforce a small relationship matrix between types, including relationships
+  involving packages added later.
+- Make new unclassified packages and disallowed dependencies fail with source,
+  target, and applicable-rule diagnostics.
+- Keep configuration rules in the domain and make validation an application
+  use case without changing product behavior.
+- Introduce explicit, capability-scoped ports so adapters do not depend on
+  domain or application packages, including a self-contained BuildInfo port.
+- Keep architecture validation separate and mandatory in aggregate validation.
 
 **Non-Goals:**
 
-- Classify business policy or presentation logic by inspecting function bodies.
-- Restrict test-only dependencies used for fixtures, fakes, and integration
-  coverage.
-- Replace Go's compiler, `go vet`, or human architectural review.
-- Add an application runtime dependency or a custom architecture test engine.
-- Add external approval controls such as CODEOWNERS or branch protection before
-  the project identifies the appropriate owners and policy.
+- Change any public command, configuration field, lifecycle behavior, or
+  diagnostic result.
+- Apply production dependency restrictions to test-only imports.
+- Introduce marker files or require particular Go source filenames.
+- Infer semantic concerns such as presentation or business policy from
+  function bodies.
 
 ## Decisions
 
-### Use pinned Arch-Go as the enforcement engine
+### Classify packages by architectural type
 
-Use the Arch-Go v2 command-line tool, initially pinned to v2.1.2 through Mise,
-and keep it out of the application's `go.mod`. Arch-Go owns module package
-discovery, dependency analysis, package matching, coverage calculation, and
-failure reporting. The repository owns only the architecture policy in
-`arch-go.yml`.
+Use package paths, which are Go's native compilation and dependency units, as
+the source of architectural classification. Directory containers such as
+`adapters/inbound` and `adapters/outbound` make types visible to contributors;
+they do not contain Go files themselves.
 
-Arch-Go is preferred over a custom `go/parser` or `go/packages` implementation
-because those approaches would make the repository responsible for build
-constraints, package discovery, test-package handling, matching semantics, and
-diagnostics. `go-arch-lint` was also considered; its component model maps well
-to the documented layers, but Arch-Go's explicit package coverage threshold is
-a stronger fit for the requirement that new packages fail until classified.
-Depguard would require adopting a broader lint runner for a narrower import
-rule and would still need path-specific policy configuration.
-
-Changing the pinned Arch-Go major or minor version is an architecture-tooling
-change and must be reviewed together with any configuration compatibility
-updates.
-
-### Store the complete dependency policy in `arch-go.yml`
-
-Set both Arch-Go thresholds to 100 percent:
-
-- `compliance: 100` requires every evaluated dependency rule to pass.
-- `coverage: 100` requires every production module package to be evaluated by
-  at least one rule, so a newly introduced package cannot silently avoid the
-  policy.
-
-Define exact package rules for the current graph:
-
-| Source package                                 | Allowed first-party dependencies                                            |
-| ---------------------------------------------- | --------------------------------------------------------------------------- |
-| `cmd/sbxflow`                                  | `internal/cli`, `internal/buildinfo`                                        |
-| `internal/cli`                                 | the three current application packages and `internal/buildinfo`             |
-| `internal/application/lifecycle`               | `internal/application/validation`, `internal/configuration`, `internal/sbx` |
-| `internal/application/validation`              | `internal/configuration`, `internal/sbx`                                    |
-| `internal/application/doctor`                  | `internal/sbx`                                                              |
-| `internal/configuration`                       | `schema`                                                                    |
-| `internal/sbx`, `internal/buildinfo`, `schema` | none                                                                        |
-
-The rules use the full module package paths and direct dependency allowlists.
-Application package rules also explicitly prohibit the external
-`github.com/spf13/cobra` dependency. The semantic constraint that application
-code must not construct raw `sbx` arguments remains a review concern;
-identifier or string matching would be brittle.
-
-Arch-Go should evaluate production module packages without applying dependency
-rules to test-only imports. The current repository provides a useful acceptance
-case: CLI tests import `internal/configuration`, while production `internal/cli`
-does not and the policy forbids that production edge. The dedicated check must
-pass this existing test-only relationship before the task is considered
-complete.
-
-### Run architecture validation as a dedicated mandatory task
-
-Add `mise run test:architecture` as the direct entry point for Arch-Go. Keep the
-ordinary `go test ./...` command focused on Go tests, then invoke both commands
-from `mise run validate`:
+The target structure is:
 
 ```text
-mise run validate
-├── go test ./...
-├── mise run test:architecture
-├── go vet ./...
-└── go build ./...
+cmd/sbxflow/                              entrypoint and wiring
+
+internal/
+├── adapters/
+│   ├── inbound/
+│   │   └── cli/                          Cobra and rendering
+│   └── outbound/
+│       ├── declaration/                  discovery, decoding, filesystem
+│       └── sbx/                          Docker Sandbox subprocesses
+├── application/
+│   ├── doctor/                           workflow
+│   ├── lifecycle/                        workflows
+│   └── validation/                       validation use case
+├── domain/
+│   └── configuration/                    linking, trust, rules
+├── ports/
+│   ├── buildInfo/                        linker-provided build identity
+│   ├── declaration/                      declaration boundary and DTOs
+│   └── sandbox/                          Docker Sandbox capabilities
+
+schema/                                   published resource
 ```
 
-This gives architecture failures a clear command and output boundary without
-making the policy optional in the normal contributor or CI workflow. A
-separate CI job is not required initially because the existing required
-`Validate` job invokes the aggregate task; it can be split later if independent
-branch protection becomes useful.
+The entrypoint is an existing package, not a new `composition` package. It is
+the sole startup and wiring boundary and may import concrete implementations
+that normal architectural types cannot. Wiring currently performed by
+`cli.Execute` moves to `cmd/sbxflow`; CLI construction remains independently
+testable through injected runner interfaces.
 
-### Keep documentation authoritative for architectural intent
+Alternatives considered:
 
-Update `docs/structure.md` to show the existing `cmd/sbxflow` to `buildinfo`
-and `configuration` to `schema` edges, distinguish Arch-Go-enforced import rules
-from review-only responsibility rules, and document the dedicated command. The
-declarative policy mirrors the graph, while the document continues to explain
-why the boundaries exist.
+- Required marker files were rejected because Go packages are defined by
+  directories and imports; marker filenames add ceremony without defining
+  dependency semantics.
+- Keeping the current directories and mapping every package in policy was
+  rejected because it recreates the instance-specific graph.
 
-### Protect architecture policy from incidental fixes
+### Enforce relationships between types
 
-Update `AGENTS.md` to prohibit changing `arch-go.yml`, the pinned enforcement
-tool, or the documented graph merely to make an unrelated change pass. When a
-requested implementation conflicts with a boundary, an agent must stop and
-request an explicit architecture decision. `CONTRIBUTING.md` will identify the
-dedicated command and explain that changes to the governed graph require
-deliberate architectural review.
+Every production file must be assigned to an architectural component.
+Recursive patterns let subpackages inherit their enclosing type while a new
+top-level architectural concept must be added deliberately. Where component
+globs overlap, go-arch-lint assigns the most-specific match.
 
-The dedicated task and declarative configuration make policy changes visible,
-but cannot by themselves distinguish an intentional decision from a weakened
-rule. CODEOWNERS or a separately required CI job can add external approval
-controls later.
+The allowed direct dependency matrix is:
+
+| Source type      | Allowed first-party targets    |
+| ---------------- | ------------------------------ |
+| Entry point      | Any production package         |
+| Inbound adapter  | Application and BuildInfo port |
+| Application      | Domain and Sandbox port        |
+| Domain           | General ports                  |
+| Port             | None                           |
+| Outbound adapter | General ports and resources    |
+| Resource         | None                           |
+
+Additional invariants are:
+
+- Inbound adapters never import domain, general ports, or outbound adapters.
+- Application packages never import peer application packages.
+- Application packages access no general port; Sandbox is their one explicit
+  port capability.
+- Domain packages never import peer domain packages, adapters, application, or
+  presentation.
+- Ports have no first-party dependencies and contain no business rules;
+  BuildInfo's linker values are the documented implementation exception.
+- Outbound adapters depend on ports rather than domain or application callers.
+- Outbound adapters never import one another.
+- Cobra may be imported only by inbound adapters.
+- The entrypoint's broader imports are for startup and wiring; semantic use of
+  those implementations remains outside automated inspection.
+
+Direct imports are evaluated. Transitive flow such as entrypoint to CLI to
+lifecycle is expected and does not create an additional direct relationship.
+
+### Make configuration the domain and validation the use case
+
+Split validation and configuration responsibilities around capability-scoped
+ports:
+
+- The declaration port owns the decoded declaration boundary model and narrow
+  loading, local-path resolution, and lifecycle-target interfaces.
+- The sandbox port owns narrow kit-validation, inspection, and lifecycle
+  interfaces plus their boundary request and result types.
+- The BuildInfo port directly owns linker-provided identity because a separate
+  adapter would only forward immutable process values.
+- Domain configuration owns source linking, trust derivation, semantic rules,
+  safe path resolution, and the resulting configuration validity model.
+- The declaration adapter owns nearest-file discovery, file reads, YAML and
+  JSON Schema decoding, and local filesystem resolution.
+- Application validation coordinates resolved configuration with the Sandbox
+  port's local-kit validation capability.
+- Lifecycle owns a validator interface that application validation satisfies,
+  avoiding a dependency between peer application packages.
+- Application lifecycle and doctor consume sandbox ports rather than the
+  concrete `sbx` adapter.
+
+The entrypoint constructs the declaration and `sbx` adapters, supplies them to
+configuration and validation, constructs application workflows, and passes
+those workflows to the CLI command tree. The CLI consumes the BuildInfo port
+directly for version rendering. Wiring narrows concrete adapters to their port
+interfaces before injection so deep dependency analysis observes the same
+boundary as direct-import analysis.
+
+Generic shared contracts were rejected because they would create an
+unbounded dumping ground. Port packages remain narrow and capability-specific,
+and each contains only interfaces and boundary data required to cross that
+port.
+
+### Replace the package-specific Arch-Go prototype
+
+Use pinned go-arch-lint and its declarative component configuration instead of
+maintaining either a package-instance allowlist or a repository-owned checker.
+Recursive component globs classify future packages by architectural type, and
+unmatched production files fail the check. Test files are excluded explicitly.
+
+The policy classifies `internal/ports/**` separately from domain, application,
+and adapter packages, with more-specific BuildInfo and Sandbox components for
+the two declared shortcuts. Vendor rules allow Cobra only from the inbound
+component and allow decoding libraries only from outbound adapters.
+
+Keep the check behind `mise run test:architecture` and invoke it from
+`mise run validate`. Review the tool's component mapping when changing package
+roots or overlapping component patterns. Arch-Go, its Mise pin, and
+`arch-go.yml` are removed only after go-arch-lint passes the reorganized
+repository, avoiding a validation gap during migration.
+
+### Keep intent and enforcement reviewable
+
+Update `docs/structure.md` to document types, responsibilities, ports, and the
+dependency matrix rather than a snapshot of imports.
+`CONTRIBUTING.md` and `AGENTS.md` continue to require deliberate review of
+architecture policy changes. The existing required `Validate` CI job and
+pre-commit hook remain the enforcement entry points.
+
+External ownership controls such as CODEOWNERS remain deferred until the
+repository has named maintainers.
 
 ## Risks / Trade-offs
 
-- **[A third-party tool becomes part of repository validation]** → Pin Arch-Go
-  through Mise, keep it out of the runtime module, and review upgrades as
-  architecture-tooling changes.
-- **[The graph is represented in documentation and configuration]** → Keep both
-  representations small and require them to change in the same architecture
-  decision.
-- **[A legitimate new package fails the 100 percent coverage threshold]** →
-  Treat this as the intended review point and classify the package explicitly.
-- **[An agent could edit the policy to silence a failure]** → Add an explicit
-  repository instruction to stop and request an architecture decision instead;
-  add external ownership controls later if needed.
-- **[The dedicated task could be omitted from an ad hoc test run]** → Keep it
-  mandatory in `mise run validate` and document its direct command.
-- **[Tool package loading may depend on the active build context]** → There are
-  currently no platform-specific production files; expand the architecture
-  task to a build-context matrix if such files are introduced.
-- **[Semantic responsibility violations remain possible]** → Continue using
-  code review for policy placement and raw adapter argument construction.
+- **[The refactor touches most internal imports without changing behavior]** →
+  Move one architectural type at a time, retain tests during each move, and run
+  the full suite after every stage.
+- **[Architecture enforcement could become bespoke and brittle]** → Use a
+  pinned component linter with a small declarative policy and no
+  repository-owned checker implementation.
+- **[The entrypoint can import broadly]** → Limit it to startup, wiring, stream
+  setup, build metadata, and exit handling through documentation and review.
+- **[Ports could become a generic shared-types layer]** → Split them by external
+  capability and prohibit first-party dependencies, rules, and implementations
+  within port packages, except for BuildInfo's explicitly documented linker
+  values.
+- **[Configuration responsibilities may be difficult to split mechanically]**
+  → Move pure models and rules first, then adapt discovery and parsing around
+  their stable inputs and outputs.
+- **[Type directories add path depth]** → Accept the additional nesting because
+  it makes classification automatic and contributor placement explicit.
 
 ## Migration Plan
 
-1. Pin Arch-Go v2.1.2 in Mise and add `arch-go.yml` with 100 percent compliance
-   and coverage thresholds.
-2. Encode the complete current internal dependency graph and Cobra restriction,
-   then confirm the current production graph passes despite broader test-only
-   imports.
-3. Add `mise run test:architecture`, require it from aggregate validation, and
-   update `docs/structure.md`, `CONTRIBUTING.md`, and `AGENTS.md`.
-4. Run formatting and the full Mise validation task.
+1. Introduce declaration, sandbox, and BuildInfo ports plus the domain
+   configuration and application validation packages with tests while the
+   current packages compile.
+2. Introduce declaration, `sbx`, and CLI adapter paths, then migrate callers and
+   tests incrementally onto the ports.
+3. Move dependency construction from CLI to the existing `cmd/sbxflow`
+   entrypoint and remove obsolete package paths.
+4. Add the type-based go-arch-lint policy, review its component mapping, and
+   confirm the refactored repository passes.
+5. Remove Arch-Go, revise architecture documentation, format, and run aggregate
+   validation.
 
-The current production graph already conforms, so no package refactor or
-runtime migration is expected. Rollback consists of removing the pinned tool,
-policy file, Mise task, and associated documentation.
+Rollback before the final removal step consists of retaining the current
+package paths and Arch-Go task. After migration, normal version control can
+revert the package moves and checker together; no data or runtime migration is
+involved.

@@ -7,9 +7,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
-
-	"github.com/jamessawle/sbxflow/internal/sbx"
 )
 
 const (
@@ -18,22 +15,9 @@ const (
 	// the next minor until its pre-1.0 schemas have been deliberately verified.
 	SupportedSbxMinimum          = "v0.35.0"
 	SupportedSbxMaximumExclusive = "v0.38.0"
-	defaultCommandTimeout        = 15 * time.Second
 )
 
 var sbxVersionPattern = regexp.MustCompile(`(?m)^sbx version:\s*v?(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.-]+)?(?:\s|$)`)
-
-// NewDefaultRunner constructs the production system diagnostic runner.
-func NewDefaultRunner() Runner {
-	sandboxes := sbx.NewClient(defaultCommandTimeout)
-	return NewRunner(
-		sandboxes,
-		compatibilityCheck{},
-		diagnosticsCheck{},
-		networkPolicyCheck{},
-		kitSourcesCheck{},
-	)
-}
 
 type compatibilityCheck struct{}
 

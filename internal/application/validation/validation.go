@@ -1,74 +1,40 @@
-// Package validation runs the gated repository declaration validation
-// pipeline.
+// Package validation coordinates repository configuration validation.
 package validation
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"time"
 
-	"github.com/jamessawle/sbxflow/internal/configuration"
-	"github.com/jamessawle/sbxflow/internal/sbx"
+	"github.com/jamessawle/sbxflow/internal/domain/configuration"
+	sandboxport "github.com/jamessawle/sbxflow/internal/ports/sandbox"
 )
 
-const defaultLocalKitTimeout = 30 * time.Second
+// Report is the complete repository configuration validation state.
+type Report = configuration.Validation
 
-// Report contains the ordered, human-renderable validation result.
-type Report struct {
-	Declaration string
-	Linked      configuration.LinkedConfiguration
-	LocalKits   []LocalKitResult
-	Errors      []error
+// Validator coordinates configuration-domain resolution with the external
+// local-kit validation capability.
+type Validator struct {
+	Configurations configuration.ConfigurationResolver
+	LocalKits      sandboxport.KitValidator
 }
 
-// Valid reports whether every validation phase succeeded.
-func (r Report) Valid() bool { return len(r.Errors) == 0 }
-
-// Runner executes repository validation using injected subprocess execution.
-type Runner struct {
-	Sandboxes sbx.Client
+// NewValidator constructs the repository validation use case.
+func NewValidator(configurations configuration.ConfigurationResolver, localKits sandboxport.KitValidator) Validator {
+	return Validator{Configurations: configurations, LocalKits: localKits}
 }
 
-// NewDefaultRunner constructs the production validation runner.
-func NewDefaultRunner() Runner {
-	return Runner{Sandboxes: sbx.NewClient(defaultLocalKitTimeout)}
-}
-
-// Run discovers and validates the nearest declaration. Each unsafe phase gates
-// later phases; independent Docker local-kit failures are accumulated.
-func (r Runner) Run(ctx context.Context, start string) Report {
-	report := Report{}
-	declaration, err := configuration.Discover(start)
-	if err != nil {
-		report.Errors = append(report.Errors, err)
+// Run validates the repository containing start.
+func (v Validator) Run(ctx context.Context, start string) Report {
+	resolution := v.Configurations.Resolve(start)
+	report := Report{
+		Declaration: resolution.Declaration,
+		Linked:      resolution.Linked,
+		Errors:      append([]error(nil), resolution.Errors...),
+	}
+	if !resolution.Valid() {
 		return report
 	}
-	report.Declaration = declaration
-
-	data, err := os.ReadFile(declaration)
-	if err != nil {
-		report.Errors = append(report.Errors, fmt.Errorf("read repository declaration %q: %w", declaration, err))
-		return report
-	}
-	document, err := configuration.Load(data)
-	if err != nil {
-		report.Errors = append(report.Errors, err)
-		return report
-	}
-	linked, err := configuration.Link(document)
-	if err != nil {
-		report.Errors = append(report.Errors, err)
-		return report
-	}
-	report.Linked = linked
-
-	targets, err := configuration.ResolveLocalKits(declaration, linked)
-	if err != nil {
-		report.Errors = append(report.Errors, err)
-		return report
-	}
-	report.LocalKits = validateLocalKits(ctx, targets, r.Sandboxes)
+	report.LocalKits = validateLocalKits(ctx, resolution.LocalKits, v.LocalKits)
 	for _, result := range report.LocalKits {
 		if result.Err != nil {
 			report.Errors = append(report.Errors, result.Err)

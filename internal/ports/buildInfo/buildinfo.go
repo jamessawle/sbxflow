@@ -1,4 +1,7 @@
-// Package buildinfo provides the identity of the current sbxflow build.
+// Package buildinfo exposes the identity of the current sbxflow build.
+//
+// Build identity is an intentionally self-contained port: linker-injected
+// values need no outbound adapter, and inbound adapters may read them directly.
 package buildinfo
 
 // Version and Commit may be replaced at build time with -ldflags -X values.

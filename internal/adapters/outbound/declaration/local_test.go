@@ -1,10 +1,12 @@
-package configuration
+package declaration
 
 import (
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	declarationport "github.com/jamessawle/sbxflow/internal/ports/declaration"
 )
 
 func TestResolveLocalTargets(t *testing.T) {
@@ -18,9 +20,9 @@ func TestResolveLocalTargets(t *testing.T) {
 	if err := os.WriteFile(zip, []byte("fixture"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	linked := linkedLocal(t, "./kits", "directory", "packaged.zip")
+	requests := localRequests("./kits", "directory", "packaged.zip")
 
-	targets, err := ResolveLocalKits(filepath.Join(repository, Filename), linked)
+	targets, err := ResolveLocalKits(filepath.Join(repository, Filename), requests)
 	if err != nil {
 		t.Fatalf("ResolveLocalKits() error = %v", err)
 	}
@@ -66,7 +68,7 @@ func TestResolveRejectsUnsafeLocalReferences(t *testing.T) {
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			_, err := ResolveLocalKits(declaration, linkedLocal(t, test.root, test.kit))
+			_, err := ResolveLocalKits(declaration, localRequests(test.root, test.kit))
 			if err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("ResolveLocalKits() error = %v, want %q", err, test.want)
 			}
@@ -74,17 +76,10 @@ func TestResolveRejectsUnsafeLocalReferences(t *testing.T) {
 	}
 }
 
-func linkedLocal(t *testing.T, root string, kits ...string) LinkedConfiguration {
-	t.Helper()
-	document := Configuration{Version: 1, Sandbox: Sandbox{Name: "demo", Agent: "codex", Kits: Kits{
-		Sources: map[string]Source{"local": {Type: SourceLocal, Root: root}},
-	}}}
-	for _, kit := range kits {
-		document.Sandbox.Kits.Use = append(document.Sandbox.Kits.Use, Selection{Source: "local", Kit: kit})
+func localRequests(root string, kits ...string) []declarationport.LocalKitRequest {
+	requests := make([]declarationport.LocalKitRequest, 0, len(kits))
+	for index, kit := range kits {
+		requests = append(requests, declarationport.LocalKitRequest{Index: index, Source: "local", Root: root, Kit: kit})
 	}
-	linked, err := Link(document)
-	if err != nil {
-		t.Fatalf("Link() error = %v", err)
-	}
-	return linked
+	return requests
 }

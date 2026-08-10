@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jamessawle/sbxflow/internal/sbx"
+	"github.com/jamessawle/sbxflow/internal/adapters/outbound/sbx"
 )
 
 func TestDestroyRunnerResolutionFailurePreventsDockerLookup(t *testing.T) {

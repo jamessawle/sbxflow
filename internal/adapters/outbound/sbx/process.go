@@ -6,15 +6,12 @@ import (
 	"errors"
 	"os/exec"
 	"time"
+
+	sandboxport "github.com/jamessawle/sbxflow/internal/ports/sandbox"
 )
 
-// Output preserves the observable result of one subprocess invocation.
-type Output struct {
-	Stdout   []byte
-	Stderr   []byte
-	ExitCode int
-	Err      error
-}
+// Output is the captured sandbox port result.
+type Output = sandboxport.Output
 
 // Runner locates and invokes executables without a shell.
 type Runner interface {

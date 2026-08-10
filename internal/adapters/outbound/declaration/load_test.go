@@ -1,4 +1,4 @@
-package configuration
+package declaration
 
 import (
 	"os"
@@ -13,7 +13,7 @@ func TestLoadRepositoryExamples(t *testing.T) {
 	if !ok {
 		t.Fatal("locate test source")
 	}
-	repositoryRoot := filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
+	repositoryRoot := filepath.Clean(filepath.Join(filepath.Dir(file), "..", "..", "..", ".."))
 
 	paths, err := filepath.Glob(filepath.Join(repositoryRoot, "examples", "*", "sbxflow.yaml"))
 	if err != nil {
@@ -78,7 +78,7 @@ func TestLoadRepositoryDeclaration(t *testing.T) {
 	if !ok {
 		t.Fatal("locate test source")
 	}
-	path := filepath.Join(filepath.Dir(file), "..", "..", Filename)
+	path := filepath.Join(filepath.Dir(file), "..", "..", "..", "..", Filename)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read repository declaration: %v", err)

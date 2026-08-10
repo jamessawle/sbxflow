@@ -1,19 +1,17 @@
 package doctor
 
 import (
-	"context"
-
-	"github.com/jamessawle/sbxflow/internal/sbx"
+	sandboxport "github.com/jamessawle/sbxflow/internal/ports/sandbox"
 )
 
 // CommandOutput is the captured output from one Docker Sandboxes inspection.
-type CommandOutput = sbx.Output
+type CommandOutput = sandboxport.Output
 
-// Inspector is the subset of the Docker Sandboxes adapter used by doctor.
-type Inspector interface {
-	Locate() (string, error)
-	Version(context.Context, string) CommandOutput
-	Diagnose(context.Context, string) CommandOutput
-	ListPolicies(context.Context, string) CommandOutput
-	GetKitAllowedSources(context.Context, string) CommandOutput
+// Inspector is the read-only sandbox port used by doctor.
+type Inspector = sandboxport.Inspector
+
+// NewDefaultChecks returns the production diagnostic checks in execution
+// order. Their infrastructure dependency is supplied separately.
+func NewDefaultChecks() []Check {
+	return []Check{compatibilityCheck{}, diagnosticsCheck{}, networkPolicyCheck{}, kitSourcesCheck{}}
 }

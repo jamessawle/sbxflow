@@ -4,12 +4,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/jamessawle/sbxflow/internal/application/validation"
-	"github.com/jamessawle/sbxflow/internal/configuration"
+	"github.com/jamessawle/sbxflow/internal/domain/configuration"
 )
 
 func TestNewPlanPreservesKitOrderAndTrust(t *testing.T) {
-	report := validation.Report{
+	report := configuration.Validation{
 		Declaration: "/repo/sbxflow.yaml",
 		Linked: configuration.LinkedConfiguration{
 			Configuration: configuration.Configuration{Sandbox: configuration.Sandbox{Name: "project", Agent: "codex"}},
@@ -23,7 +22,7 @@ func TestNewPlanPreservesKitOrderAndTrust(t *testing.T) {
 				AllowLocalKits: true,
 			},
 		},
-		LocalKits: []validation.LocalKitResult{{
+		LocalKits: []configuration.LocalKitValidation{{
 			Target: configuration.LocalKit{Index: 1, Path: "/canonical/repo/kits/local-kit"},
 			Valid:  true,
 		}},
@@ -50,7 +49,7 @@ func TestNewPlanPreservesKitOrderAndTrust(t *testing.T) {
 }
 
 func TestNewPlanRejectsMissingLocalValidationResult(t *testing.T) {
-	report := validation.Report{
+	report := configuration.Validation{
 		Declaration: "/repo/sbxflow.yaml",
 		Linked: configuration.LinkedConfiguration{
 			Configuration: configuration.Configuration{Sandbox: configuration.Sandbox{Name: "project", Agent: "codex"}},

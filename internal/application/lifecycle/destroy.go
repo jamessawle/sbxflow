@@ -3,20 +3,15 @@ package lifecycle
 import (
 	"context"
 
-	"github.com/jamessawle/sbxflow/internal/sbx"
+	sandboxport "github.com/jamessawle/sbxflow/internal/ports/sandbox"
 )
 
 // DestroyRunner resolves and removes an existing repository sandbox.
 type DestroyRunner struct {
 	Targets   TargetResolver
-	Sandboxes sbx.Client
-}
-
-// NewDefaultDestroyRunner constructs production destroy lifecycle dependencies.
-func NewDefaultDestroyRunner() DestroyRunner {
-	return DestroyRunner{
-		Targets:   NewDefaultTargetResolver(),
-		Sandboxes: sbx.NewClient(defaultSandboxLookupTimeout),
+	Sandboxes interface {
+		sandboxport.Lookup
+		sandboxport.Remover
 	}
 }
 
@@ -34,10 +29,10 @@ func (r DestroyRunner) Run(ctx context.Context, start string, force bool, stream
 		return nil
 	}
 
-	err = r.Sandboxes.RemoveSandbox(ctx, sbx.RemoveRequest{
+	err = r.Sandboxes.RemoveSandbox(ctx, sandboxport.RemoveRequest{
 		Name:  target.Name,
 		Force: force,
-		Streams: sbx.Streams{
+		Streams: sandboxport.Streams{
 			In: streams.In, Out: streams.Out, Err: streams.Err,
 		},
 	})

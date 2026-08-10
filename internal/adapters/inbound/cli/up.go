@@ -7,13 +7,12 @@ import (
 	"os"
 
 	"github.com/jamessawle/sbxflow/internal/application/lifecycle"
-	"github.com/jamessawle/sbxflow/internal/application/validation"
 	"github.com/spf13/cobra"
 )
 
 // UpRunner validates and enters the repository's declared sandbox.
 type UpRunner interface {
-	Run(ctx context.Context, start string, streams lifecycle.Streams) (validation.Report, error)
+	Run(ctx context.Context, start string, streams lifecycle.Streams) (lifecycle.ValidationReport, error)
 }
 
 func newUpCommand(runner UpRunner) *cobra.Command {

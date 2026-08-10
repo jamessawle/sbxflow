@@ -29,6 +29,8 @@ The existing project tasks cover the routine workflow:
 
 ```text
 mise run fmt        Format Markdown and Go files
+mise run test:architecture
+                    Check production package dependency boundaries
 mise run validate   Check Markdown, workflows, specs, Go formatting, vet, tests, and builds
 ```
 
@@ -48,7 +50,24 @@ mise run validate
 
 Go changes must be formatted with `gofmt`; `mise run fmt` applies it alongside
 the repository's Markdown formatter. The aggregate validation task also runs
-`go vet ./...`, `go test ./...`, and `go build ./...`.
+`go vet ./...`, `go test ./...`, `mise run test:architecture`, and
+`go build ./...`.
+
+The architecture check classifies every production package by the type encoded
+in its path and enforces the relationship matrix documented in
+[`docs/structure.md`](docs/structure.md). Before adding a package, decide
+whether it is an inbound adapter, application workflow, domain concept, port,
+outbound adapter, entrypoint, or resource and place it accordingly.
+Keep `go test ./...` and `mise run test:architecture` as separate checks so
+failures remain clear. Changes to the type rules or relationship matrix are
+deliberate architecture decisions and must update the declarative policy and
+documentation together; do not broaden policy to make an unrelated change
+pass.
+
+The matrix has two capability-specific shortcuts: inbound adapters may consume
+the BuildInfo port, and application workflows may consume the Sandbox port.
+They avoid pass-through layers that would add no behavior; they do not permit
+either source type to consume arbitrary ports.
 
 The pre-commit hook also rejects staged whitespace errors and changes that do
 not pass repository validation.

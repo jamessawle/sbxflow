@@ -1,6 +1,6 @@
-// Package configuration discovers, parses, and resolves sbxflow repository
-// declarations without invoking external processes.
-package configuration
+// Package declaration defines the port used to load and resolve repository
+// declarations without coupling adapters to domain services.
+package declaration
 
 // SourceType identifies how a kit source is addressed.
 type SourceType string
@@ -11,7 +11,7 @@ const (
 	SourceLocal SourceType = "local"
 )
 
-// Configuration is the typed version 1 sbxflow declaration.
+// Configuration is the boundary representation of a version 1 declaration.
 type Configuration struct {
 	Version int     `json:"version" yaml:"version"`
 	Sandbox Sandbox `json:"sandbox" yaml:"sandbox"`
@@ -19,7 +19,24 @@ type Configuration struct {
 
 // LifecycleTarget is the declaration identity needed by teardown operations.
 type LifecycleTarget struct {
-	Name string
+	Declaration string
+	Name        string
+}
+
+// LocalKit identifies one safely resolved local kit selection.
+type LocalKit struct {
+	Index  int
+	Source string
+	Kit    string
+	Path   string
+}
+
+// LocalKitRequest describes one local kit path that an adapter must resolve.
+type LocalKitRequest struct {
+	Index  int
+	Source string
+	Root   string
+	Kit    string
 }
 
 // Sandbox declares the sandbox identity and ordered kit configuration.
