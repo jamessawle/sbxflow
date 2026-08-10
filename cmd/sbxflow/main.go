@@ -35,6 +35,7 @@ func main() {
 	var localKitValidator sandboxport.KitValidator = lifecycleSandboxes
 	var upSandboxes interface {
 		sandboxport.Lookup
+		sandboxport.Remover
 		sandboxport.Runner
 	} = lifecycleSandboxes
 	var downSandboxes interface {

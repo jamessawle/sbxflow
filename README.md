@@ -169,6 +169,7 @@ Docker Sandbox and attach the declared agent to the current terminal:
 
 ```text
 sbxflow up
+sbxflow up --recreate
 ```
 
 `up` searches the current directory and its ancestors for `sbxflow.yaml`, using
@@ -188,14 +189,29 @@ When the name already exists, `up` enters it through Docker Sandboxes. Docker
 attaches when it is running or restarts it when stopped, and verifies that it
 uses the declared agent. Existing sandbox workspace and kits are not inspected
 or reconciled: changing their declaration does not update, recreate, or grade
-the existing sandbox. Remove the sandbox explicitly before running `up` if it
-must be created again from the current declaration.
+the existing sandbox.
+
+Use `up --recreate` to replace an existing exact-name sandbox from the current
+declaration. After complete validation and exact-name lookup succeed, sbxflow
+runs `sbx rm --force <declared-name>` without confirmation, then creates and
+enters the replacement with the declared workspace, agent, kits, and derived
+trust. There is no `-r` shorthand. If the declared sandbox is absent, the flag
+follows the ordinary create-and-enter path without attempting removal.
+
+Recreation permanently removes the sandbox's installed tools, Docker images,
+agent history, configuration changes, and other persisted state, including for
+a stopped sandbox. It does not delete files from the repository's host
+workspace. A lookup or removal failure stops before creation or entry. Removal
+and replacement are not transactional: if removal succeeds but creation fails,
+the old sandbox remains absent and a later ordinary `up` can create it from the
+current declaration.
 
 The agent process receives the terminal's standard input, standard output,
 standard error, and normal signals directly. `up` imposes no session timeout and
 returns the Docker process result.
 
-`up` accepts no positional arguments or command-specific flags.
+`up` accepts no positional arguments. Its only command-specific flag is the
+long-form `--recreate` option.
 
 ### `sbxflow down`
 

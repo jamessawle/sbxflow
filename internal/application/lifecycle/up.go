@@ -29,11 +29,17 @@ type Streams struct {
 	Err io.Writer
 }
 
+// UpOptions selects optional behavior for the up lifecycle.
+type UpOptions struct {
+	Recreate bool
+}
+
 // UpRunner validates, inspects, and enters the declared sandbox.
 type UpRunner struct {
 	Validation Validator
 	Sandboxes  interface {
 		sandboxport.Lookup
+		sandboxport.Remover
 		sandboxport.Runner
 	}
 }
@@ -49,7 +55,7 @@ func (e AttachedProcessError) Unwrap() error { return e.Err }
 
 // Run validates the repository, chooses the creation or existing-sandbox
 // invocation, and remains attached until Docker exits.
-func (r UpRunner) Run(ctx context.Context, start string, streams Streams) (ValidationReport, error) {
+func (r UpRunner) Run(ctx context.Context, start string, options UpOptions, streams Streams) (ValidationReport, error) {
 	report := r.Validation.Run(ctx, start)
 	if !report.Valid() {
 		return report, ErrValidationFailed
@@ -65,6 +71,19 @@ func (r UpRunner) Run(ctx context.Context, start string, streams Streams) (Valid
 	exists, err := r.Sandboxes.SandboxExists(ctx, plan.Name)
 	if err != nil {
 		return report, err
+	}
+	if exists && options.Recreate {
+		err = r.Sandboxes.RemoveSandbox(ctx, sandboxport.RemoveRequest{
+			Name:  plan.Name,
+			Force: true,
+			Streams: sandboxport.Streams{
+				In: streams.In, Out: streams.Out, Err: streams.Err,
+			},
+		})
+		if err != nil {
+			return report, AttachedProcessError{Err: err}
+		}
+		exists = false
 	}
 	err = r.Sandboxes.RunSandbox(ctx, sandboxport.RunRequest{
 		Name:           plan.Name,
