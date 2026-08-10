@@ -1,0 +1,29 @@
+openspec/changes/add-validate-command/.openspec.yaml
+  s_829d54d4cb7bc1::t_573ea64ee88532 1-2
+openspec/changes/add-validate-command/design.md
+  s_829d54d4cb7bc1::t_8fffb045f10b9d 1-198
+openspec/changes/add-validate-command/proposal.md
+  s_829d54d4cb7bc1::t_1982e66228a797 1-44
+openspec/changes/add-validate-command/specs/cli-interface/spec.md
+  s_829d54d4cb7bc1::t_7d74d8bc656c79 1-19
+openspec/changes/add-validate-command/specs/configuration-validation/spec.md
+  s_829d54d4cb7bc1::t_91ec664ddc39ae 1-215
+openspec/changes/add-validate-command/tasks.md
+  s_829d54d4cb7bc1::t_2266df2e8670d1 1-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "3a1304df5e77a1d1534c55a325e0682199132f7a",
+  "prompts": {},
+  "sessions": {
+    "s_829d54d4cb7bc1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019feacf-2f97-7561-91fc-1d537e9c863f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
