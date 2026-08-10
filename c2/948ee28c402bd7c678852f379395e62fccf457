@@ -1,0 +1,31 @@
+openspec/changes/add-down-command/.openspec.yaml
+  s_39d6faf5a64e45::t_5942348219ef10 1-2
+openspec/changes/add-down-command/specs/configuration-validation/spec.md
+  s_39d6faf5a64e45::t_5aaf55b77c5571 1-39
+openspec/changes/add-down-command/specs/sandbox-lifecycle/spec.md
+  s_39d6faf5a64e45::t_73168abc4c7df3 1-88
+openspec/changes/add-down-command/design.md
+  s_39d6faf5a64e45::t_e7f2c00af51ec8 1-142
+openspec/changes/add-down-command/proposal.md
+  s_39d6faf5a64e45::t_f12fccb6485824 1-47
+openspec/changes/add-down-command/specs/cli-interface/spec.md
+  s_39d6faf5a64e45::t_2dd916be5a2423 1-35
+openspec/changes/add-down-command/tasks.md
+  s_39d6faf5a64e45::t_745c1814585707 1-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "c2948ee28c402bd7c678852f379395e62fccf457",
+  "prompts": {},
+  "sessions": {
+    "s_39d6faf5a64e45": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fec03-c81b-7271-addf-ef5cf540de78",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
