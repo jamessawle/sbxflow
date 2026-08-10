@@ -1,0 +1,48 @@
+version: 3
+workdir: .
+
+allow:
+  depOnAnyVendor: false
+  ignoreNotFoundComponents: false
+
+excludeFiles:
+  - "^.*_test\\.go$"
+
+components:
+  entrypoint: { in: cmd/** }
+  inbound: { in: internal/adapters/inbound/** }
+  application: { in: internal/application/** }
+  domain: { in: internal/domain/** }
+  ports: { in: internal/ports/** }
+  buildInfoPort: { in: internal/ports/buildInfo/** }
+  sandboxPort: { in: internal/ports/sandbox/** }
+  outbound: { in: internal/adapters/outbound/** }
+  resource: { in: schema }
+
+vendors:
+  cobra: { in: github.com/spf13/cobra }
+  yaml: { in: github.com/goccy/go-yaml }
+  json-schema: { in: github.com/santhosh-tekuri/jsonschema/v6 }
+
+deps:
+  entrypoint:
+    # Startup is the composition boundary and may wire every concrete package.
+    anyProjectDeps: true
+
+  inbound:
+    # Input adapters call use cases; BuildInfo avoids a behavior-free use case.
+    mayDependOn: [application, buildInfoPort]
+    canUse: [cobra]
+
+  application:
+    # Workflows use the domain; Sandbox avoids a behavior-free domain wrapper.
+    mayDependOn: [domain, sandboxPort]
+
+  domain:
+    # Domain rules consume general capabilities but no peer domain packages.
+    mayDependOn: [ports]
+
+  outbound:
+    # Implementations know only their ports and leaf resources.
+    mayDependOn: [ports, resource]
+    canUse: [yaml, json-schema]
