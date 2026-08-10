@@ -1,0 +1,71 @@
+go.mod
+  s_408ddc177b9b7b::t_64d3e620d0a80c 5-9,14
+go.sum
+  s_408ddc177b9b7b::t_e76715354e1e23 2-5,9-10,16-17
+internal/cli/validate_test.go
+  s_408ddc177b9b7b::t_18fd964fb14493 1-88
+internal/config/link.go
+  s_b0fe1e2ffad17c::t_8ce6f20674d946 1-148
+internal/config/link_test.go
+  s_408ddc177b9b7b::t_75a2dc05fe4daa 1-119
+internal/config/load_test.go
+  s_408ddc177b9b7b::t_d62bf55a74733b 1-140
+internal/localkit/localkit_test.go
+  s_408ddc177b9b7b::t_2546bbcb04db3d 1-160
+cmd/sbxflow/main_test.go
+  s_408ddc177b9b7b::t_3bf97107759c40 115-218,226-229,234
+examples/README.md
+  s_408ddc177b9b7b::t_c61602b696d9fa 6-9,14-15,23-31
+internal/cli/root.go
+  s_408ddc177b9b7b::t_e71c23ba75990e 11,25,63-67,74
+internal/cli/root_test.go
+  s_408ddc177b9b7b::t_9f2a9499b9664c 38,48,92
+internal/cli/validate.go
+  s_408ddc177b9b7b::t_c78037cf837b15 1-70
+internal/command/command.go
+  s_408ddc177b9b7b::t_b9754908ce14a2 1-71
+internal/command/command_test.go
+  s_408ddc177b9b7b::t_b78574adecfe9f 1-41
+internal/config/discover.go
+  s_408ddc177b9b7b::t_4845689f5e5377 1-44
+internal/config/discover_test.go
+  s_408ddc177b9b7b::t_a7a7ee18d5bd88 1-62
+internal/config/load.go
+  s_408ddc177b9b7b::t_6794e58176b6d0 1-89
+internal/config/model.go
+  s_408ddc177b9b7b::t_2e609676950dd1 1-46
+internal/doctor/command.go
+  s_408ddc177b9b7b::t_c9081d46ce6f04 3,5-9
+internal/localkit/localkit.go
+  s_408ddc177b9b7b::t_d6234e7616b70b 1-153
+internal/validation/validation.go
+  s_408ddc177b9b7b::t_0d1a1db1ed6d0e 1-79
+internal/validation/validation_test.go
+  s_408ddc177b9b7b::t_ab4f2353f3cbde 1-138
+schema/schema.go
+  s_408ddc177b9b7b::t_5baa4a6f9c2bda 1-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "1243b5da434ced0c5c014e001e958341ce7418a7",
+  "prompts": {},
+  "sessions": {
+    "s_408ddc177b9b7b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019feaf4-1958-7e11-a265-b5f3befd91ad",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    },
+    "s_b0fe1e2ffad17c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fca57615-2e46-471e-9f7e-ed3c6ed3e78b",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
