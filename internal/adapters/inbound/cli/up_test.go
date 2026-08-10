@@ -22,7 +22,7 @@ func TestUpHelpDoesNotInvokeRunner(t *testing.T) {
 			if err != nil || stderr != "" || runner.calls != 0 {
 				t.Fatalf("up help error = %v, stderr = %q, calls = %d", err, stderr, runner.calls)
 			}
-			for _, want := range []string{"sbxflow up", "interactively create or enter", "without reconciling"} {
+			for _, want := range []string{"sbxflow up", "interactively create or enter", "without reconciling", "--recreate", "force-removed", "persisted state"} {
 				if !strings.Contains(stdout, want) {
 					t.Errorf("stdout does not contain %q:\n%s", want, stdout)
 				}
@@ -33,8 +33,9 @@ func TestUpHelpDoesNotInvokeRunner(t *testing.T) {
 
 func TestUpRejectsArgumentsAndFlagsWithoutInvokingRunner(t *testing.T) {
 	for name, args := range map[string][]string{
-		"argument": {"up", "extra"},
-		"flag":     {"up", "--agent", "other"},
+		"argument":            {"up", "extra"},
+		"short recreate flag": {"up", "-r"},
+		"unrelated flag":      {"up", "--agent", "other"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			runner := &fakeUpRunner{}
@@ -46,14 +47,28 @@ func TestUpRejectsArgumentsAndFlagsWithoutInvokingRunner(t *testing.T) {
 	}
 }
 
-func TestUpInjectsWorkingDirectoryAndStreams(t *testing.T) {
-	runner := &fakeUpRunner{stdout: "agent output\n", stderr: "Configuration valid: /repo/sbxflow.yaml\n"}
-	stdout, stderr, err := executeWithUp([]string{"up"}, runner)
-	if err != nil || stdout != "agent output\n" || stderr != "Configuration valid: /repo/sbxflow.yaml\n" || runner.calls != 1 || runner.start == "" {
-		t.Fatalf("up error = %v, stdout = %q, stderr = %q, runner = %#v", err, stdout, stderr, runner)
-	}
-	if runner.streams.In == nil || runner.streams.Out == nil || runner.streams.Err == nil {
-		t.Fatalf("streams = %#v", runner.streams)
+func TestUpInjectsWorkingDirectoryOptionsAndStreams(t *testing.T) {
+	for _, test := range []struct {
+		name         string
+		args         []string
+		wantRecreate bool
+	}{
+		{name: "default", args: []string{"up"}},
+		{name: "recreate", args: []string{"up", "--recreate"}, wantRecreate: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			runner := &fakeUpRunner{stdout: "agent output\n", stderr: "Configuration valid: /repo/sbxflow.yaml\n"}
+			stdout, stderr, err := executeWithUp(test.args, runner)
+			if err != nil || stdout != "agent output\n" || stderr != "Configuration valid: /repo/sbxflow.yaml\n" || runner.calls != 1 || runner.start == "" {
+				t.Fatalf("up error = %v, stdout = %q, stderr = %q, runner = %#v", err, stdout, stderr, runner)
+			}
+			if runner.options.Recreate != test.wantRecreate {
+				t.Fatalf("options = %#v, want recreate %v", runner.options, test.wantRecreate)
+			}
+			if runner.streams.In == nil || runner.streams.Out == nil || runner.streams.Err == nil {
+				t.Fatalf("streams = %#v", runner.streams)
+			}
+		})
 	}
 }
 
@@ -101,12 +116,14 @@ type fakeUpRunner struct {
 	stderr  string
 	calls   int
 	start   string
+	options lifecycle.UpOptions
 	streams lifecycle.Streams
 }
 
-func (r *fakeUpRunner) Run(_ context.Context, start string, streams lifecycle.Streams) (configuration.Validation, error) {
+func (r *fakeUpRunner) Run(_ context.Context, start string, options lifecycle.UpOptions, streams lifecycle.Streams) (configuration.Validation, error) {
 	r.calls++
 	r.start = start
+	r.options = options
 	r.streams = streams
 	_, _ = streams.Out.Write([]byte(r.stdout))
 	_, _ = streams.Err.Write([]byte(r.stderr))

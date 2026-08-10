@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -33,6 +34,18 @@ func TestExecutableStreamsAndExitStatuses(t *testing.T) {
 		}
 		if stderr != "" {
 			t.Fatalf("stderr = %q, want empty", stderr)
+		}
+	})
+
+	t.Run("up help advertises recreation", func(t *testing.T) {
+		stdout, stderr, exitCode := runBinary(t, binary, "up", "--help")
+		if exitCode != 0 || stderr != "" {
+			t.Fatalf("exit code = %d, stderr = %q", exitCode, stderr)
+		}
+		for _, want := range []string{"--recreate", "force-removed", "persisted state"} {
+			if !strings.Contains(stdout, want) {
+				t.Errorf("stdout does not contain %q:\n%s", want, stdout)
+			}
 		}
 	})
 
@@ -273,6 +286,12 @@ case "$1 $2" in
       printf '%s\n' "$SBX_TEST_EXISTING"
     fi
     ;;
+  "rm --force")
+    if [ "$3" != "executable-up" ]; then
+      echo 'unexpected sandbox removal target' >&2
+      exit 8
+    fi
+    ;;
   *)
     if [ "$1" != "run" ]; then
       echo 'unexpected fake sbx invocation' >&2
@@ -365,6 +384,41 @@ esac
 			}
 			if strings.Contains(string(calls), "run codex --name executable-up --kit") || strings.Contains(string(calls), "run codex --name executable-up "+canonicalRepository) {
 				t.Fatalf("existing invocation contains creation inputs:\n%s", calls)
+			}
+		})
+
+		t.Run("existing sandbox is force-recreated before creation", func(t *testing.T) {
+			logPath := filepath.Join(fakeDirectory, "recreate-calls.log")
+			environmentPath := filepath.Join(fakeDirectory, "recreate-env.log")
+			stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
+				t,
+				binary,
+				nested,
+				[]string{"up", "--recreate"},
+				[]string{
+					"PATH=" + fakeDirectory,
+					"SBX_TEST_LOG=" + logPath,
+					"SBX_TEST_ENV_LOG=" + environmentPath,
+					"SBX_TEST_EXISTING=executable-up",
+				},
+				"hello replacement\n",
+			)
+			if exitCode != 0 || !strings.Contains(stdout, "agent received: hello replacement") || stderr != validationStatus+"docker run diagnostic\n" {
+				t.Fatalf("up --recreate exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+			}
+			calls, err := os.ReadFile(logPath)
+			if err != nil {
+				t.Fatalf("read calls: %v", err)
+			}
+			wantRun := "run --name executable-up --kit git+https://github.com/example/kits.git#ref=v1&dir=remote-tooling --kit " + canonicalLocalKit + " codex " + canonicalRepository
+			wantCalls := []string{
+				"kit validate " + canonicalLocalKit,
+				"ls --quiet",
+				"rm --force executable-up",
+				wantRun,
+			}
+			if got := strings.Split(strings.TrimSpace(string(calls)), "\n"); !reflect.DeepEqual(got, wantCalls) {
+				t.Fatalf("calls = %#v, want %#v", got, wantCalls)
 			}
 		})
 	})
