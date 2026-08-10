@@ -281,9 +281,15 @@ case "$1 $2" in
   "kit validate")
     exit 0
     ;;
-  "ls --quiet")
+  "ls --json")
+    if [ -n "${SBX_TEST_LS_FAIL:-}" ]; then
+      echo 'state unavailable' >&2
+      exit 6
+    fi
     if [ -n "${SBX_TEST_EXISTING:-}" ]; then
-      printf '%s\n' "$SBX_TEST_EXISTING"
+      printf '{"sandboxes":[{"name":"%s","status":"%s"}]}\n' "$SBX_TEST_EXISTING" "${SBX_TEST_STATUS:-stopped}"
+    else
+      printf '{"sandboxes":[]}\n'
     fi
     ;;
   "rm --force")
@@ -337,7 +343,7 @@ esac
 				t.Fatalf("read calls: %v", err)
 			}
 			wantRun := "run --name executable-up --kit git+https://github.com/example/kits.git#ref=v1&dir=remote-tooling --kit " + canonicalLocalKit + " codex " + canonicalRepository
-			for _, want := range []string{"kit validate " + canonicalLocalKit, "ls --quiet", wantRun} {
+			for _, want := range []string{"kit validate " + canonicalLocalKit, "ls --json", wantRun} {
 				if !strings.Contains(string(calls), want+"\n") {
 					t.Errorf("calls do not contain %q:\n%s", want, calls)
 				}
@@ -413,12 +419,69 @@ esac
 			wantRun := "run --name executable-up --kit git+https://github.com/example/kits.git#ref=v1&dir=remote-tooling --kit " + canonicalLocalKit + " codex " + canonicalRepository
 			wantCalls := []string{
 				"kit validate " + canonicalLocalKit,
-				"ls --quiet",
+				"ls --json",
 				"rm --force executable-up",
 				wantRun,
 			}
 			if got := strings.Split(strings.TrimSpace(string(calls)), "\n"); !reflect.DeepEqual(got, wantCalls) {
 				t.Fatalf("calls = %#v, want %#v", got, wantCalls)
+			}
+		})
+
+		t.Run("running sandbox requires confirmation and preserves later input", func(t *testing.T) {
+			logPath := filepath.Join(fakeDirectory, "running-approved-calls.log")
+			environmentPath := filepath.Join(fakeDirectory, "running-approved-env.log")
+			stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
+				t, binary, nested, []string{"up", "--recreate"},
+				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath, "SBX_TEST_EXISTING=executable-up", "SBX_TEST_STATUS=running"},
+				"yes\nhello approved replacement\n",
+			)
+			if exitCode != 0 || !strings.Contains(stdout, "agent received: hello approved replacement") {
+				t.Fatalf("up --recreate exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+			}
+			for _, want := range []string{validationStatus, "running sandbox \"executable-up\"", "other attached terminal sessions", "[y/N]", "docker run diagnostic"} {
+				if !strings.Contains(stderr, want) {
+					t.Errorf("stderr does not contain %q: %q", want, stderr)
+				}
+			}
+		})
+
+		t.Run("running sandbox decline stops before mutation", func(t *testing.T) {
+			logPath := filepath.Join(fakeDirectory, "running-declined-calls.log")
+			environmentPath := filepath.Join(fakeDirectory, "running-declined-env.log")
+			_, stderr, exitCode := runBinaryInDirectoryWithInput(
+				t, binary, nested, []string{"up", "--recreate"},
+				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath, "SBX_TEST_EXISTING=executable-up", "SBX_TEST_STATUS=running"},
+				"no\n",
+			)
+			if exitCode == 0 || !strings.Contains(stderr, "recreation cancelled") {
+				t.Fatalf("up --recreate exit = %d, stderr = %q", exitCode, stderr)
+			}
+			calls, err := os.ReadFile(logPath)
+			if err != nil {
+				t.Fatalf("read calls: %v", err)
+			}
+			if strings.Contains(string(calls), "rm ") || strings.Contains(string(calls), "run ") {
+				t.Fatalf("declined calls contain mutation: %s", calls)
+			}
+		})
+
+		t.Run("inspection failure stops before mutation", func(t *testing.T) {
+			logPath := filepath.Join(fakeDirectory, "inspection-failed-calls.log")
+			environmentPath := filepath.Join(fakeDirectory, "inspection-failed-env.log")
+			_, stderr, exitCode := runBinaryInDirectoryWithInput(
+				t, binary, nested, []string{"up", "--recreate"},
+				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath, "SBX_TEST_LS_FAIL=1"}, "",
+			)
+			if exitCode == 0 || !strings.Contains(stderr, "state unavailable") {
+				t.Fatalf("up --recreate exit = %d, stderr = %q", exitCode, stderr)
+			}
+			calls, err := os.ReadFile(logPath)
+			if err != nil {
+				t.Fatalf("read calls: %v", err)
+			}
+			if strings.Contains(string(calls), "rm ") || strings.Contains(string(calls), "run ") {
+				t.Fatalf("failed inspection calls contain mutation: %s", calls)
 			}
 		})
 	})

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"strings"
 	"testing"
 
@@ -93,6 +94,44 @@ func TestUpDoesNotAppendAttachedProcessError(t *testing.T) {
 		t.Fatalf("up error = %v, stdout = %q, stderr = %q", err, stdout, stderr)
 	}
 }
+
+func TestRunningRecreationConfirmationUsesCommandStreamsAndDefaultsNegative(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		input     string
+		want      bool
+		wantError bool
+	}{
+		{name: "lowercase yes", input: "yes\n", want: true},
+		{name: "uppercase short", input: "Y\n", want: true},
+		{name: "negative", input: "no\n"},
+		{name: "empty", input: "\n"},
+		{name: "malformed", input: "approve\n"},
+		{name: "EOF", input: "", wantError: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var stderr bytes.Buffer
+			got, err := (recreationConfirmer{}).ConfirmRunningSandboxRecreation("project", lifecycle.Streams{In: strings.NewReader(test.input), Err: &stderr})
+			if got != test.want || (err != nil) != test.wantError {
+				t.Fatalf("confirmation = %v, %v", got, err)
+			}
+			for _, want := range []string{"project", "permanently removes", "other attached terminal sessions", "[y/N]"} {
+				if !strings.Contains(stderr.String(), want) {
+					t.Errorf("warning does not contain %q: %s", want, stderr.String())
+				}
+			}
+		})
+	}
+	var stderr bytes.Buffer
+	_, err := (recreationConfirmer{}).ConfirmRunningSandboxRecreation("project", lifecycle.Streams{In: errorReader{}, Err: &stderr})
+	if err == nil || !strings.Contains(err.Error(), "read confirmation") {
+		t.Fatalf("read error = %v", err)
+	}
+}
+
+type errorReader struct{}
+
+func (errorReader) Read([]byte) (int, error) { return 0, io.ErrUnexpectedEOF }
 
 func executeWithUp(args []string, runner UpRunner) (string, string, error) {
 	var stdout, stderr bytes.Buffer
