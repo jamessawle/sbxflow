@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jamessawle/sbxflow/internal/doctor"
+	"github.com/jamessawle/sbxflow/internal/application/doctor"
 	"github.com/spf13/cobra"
 )
 

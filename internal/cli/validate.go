@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jamessawle/sbxflow/internal/validation"
+	"github.com/jamessawle/sbxflow/internal/application/validation"
 	"github.com/spf13/cobra"
 )
 

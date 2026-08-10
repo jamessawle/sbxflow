@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jamessawle/sbxflow/internal/application/doctor"
 	"github.com/jamessawle/sbxflow/internal/buildinfo"
-	"github.com/jamessawle/sbxflow/internal/doctor"
 )
 
 func TestDoctorHelp(t *testing.T) {

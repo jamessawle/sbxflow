@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/jamessawle/sbxflow/internal/application/doctor"
+	"github.com/jamessawle/sbxflow/internal/application/lifecycle"
+	"github.com/jamessawle/sbxflow/internal/application/validation"
 	"github.com/jamessawle/sbxflow/internal/buildinfo"
-	"github.com/jamessawle/sbxflow/internal/doctor"
-	"github.com/jamessawle/sbxflow/internal/lifecycle"
-	"github.com/jamessawle/sbxflow/internal/validation"
 	"github.com/spf13/cobra"
 )
 
@@ -72,7 +72,7 @@ func Execute(ctx context.Context, args []string, streams Streams, info buildinfo
 		streams,
 		doctor.NewDefaultRunner(),
 		validation.NewDefaultRunner(),
-		lifecycle.NewDefaultRunner(),
+		lifecycle.NewDefaultUpRunner(),
 		lifecycle.NewDefaultDownRunner(),
 		lifecycle.NewDefaultDestroyRunner(),
 	)

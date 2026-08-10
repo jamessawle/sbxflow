@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jamessawle/sbxflow/internal/lifecycle"
+	"github.com/jamessawle/sbxflow/internal/application/lifecycle"
 	"github.com/spf13/cobra"
 )
 

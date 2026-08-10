@@ -7,10 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jamessawle/sbxflow/internal/application/validation"
 	"github.com/jamessawle/sbxflow/internal/buildinfo"
-	"github.com/jamessawle/sbxflow/internal/config"
-	"github.com/jamessawle/sbxflow/internal/localkit"
-	"github.com/jamessawle/sbxflow/internal/validation"
+	"github.com/jamessawle/sbxflow/internal/configuration"
 )
 
 func TestValidateHelp(t *testing.T) {
@@ -31,11 +30,11 @@ func TestValidateRendersSuccessReport(t *testing.T) {
 	declaration := filepath.Join("repo", "sbxflow.yaml")
 	report := validation.Report{
 		Declaration: declaration,
-		Linked: config.LinkedConfiguration{
-			Configuration: config.Configuration{Version: 1},
-			Trust:         config.Trust{AllowedSources: []string{"docker.io/", "github.com/example/kits"}, AllowLocalKits: true},
+		Linked: configuration.LinkedConfiguration{
+			Configuration: configuration.Configuration{Version: 1},
+			Trust:         configuration.Trust{AllowedSources: []string{"docker.io/", "github.com/example/kits"}, AllowLocalKits: true},
 		},
-		LocalKits: []localkit.Result{{Target: localkit.Target{Source: "local", Kit: "tooling", Path: "/repo/kits/tooling"}, Valid: true}},
+		LocalKits: []validation.LocalKitResult{{Target: configuration.LocalKit{Source: "local", Kit: "tooling", Path: "/repo/kits/tooling"}, Valid: true}},
 	}
 	stdout, stderr, err := executeWithValidate([]string{"validate"}, fakeValidateRunner{report: report})
 	if err != nil || stderr != "" {
@@ -59,8 +58,8 @@ func TestValidateRendersSuccessReport(t *testing.T) {
 func TestValidateRendersActionableFailure(t *testing.T) {
 	report := validation.Report{
 		Declaration: "/repo/sbxflow.yaml",
-		Linked:      config.LinkedConfiguration{Configuration: config.Configuration{Version: 1}, Trust: config.Trust{AllowedSources: []string{"docker.io/"}, AllowLocalKits: true}},
-		LocalKits:   []localkit.Result{{Target: localkit.Target{Source: "local", Kit: "bad", Path: "/repo/kits/bad"}, Diagnostics: "missing metadata", Err: errors.New("rejected")}},
+		Linked:      configuration.LinkedConfiguration{Configuration: configuration.Configuration{Version: 1}, Trust: configuration.Trust{AllowedSources: []string{"docker.io/"}, AllowLocalKits: true}},
+		LocalKits:   []validation.LocalKitResult{{Target: configuration.LocalKit{Source: "local", Kit: "bad", Path: "/repo/kits/bad"}, Diagnostics: "missing metadata", Err: errors.New("rejected")}},
 		Errors:      []error{errors.New("local kit local/bad was rejected by sbx")},
 	}
 	stdout, stderr, err := executeWithValidate([]string{"validate"}, fakeValidateRunner{report: report})

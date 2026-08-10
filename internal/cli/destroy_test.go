@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jamessawle/sbxflow/internal/lifecycle"
+	"github.com/jamessawle/sbxflow/internal/application/lifecycle"
 )
 
 func TestDestroyHelpDoesNotInvokeRunner(t *testing.T) {

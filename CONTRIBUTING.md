@@ -1,7 +1,9 @@
 # Contributing
 
 Thank you for contributing to sbxflow. Read [`README.md`](README.md) first for
-the project's purpose, current interface, and lifecycle scope.
+the project's purpose, current interface, and lifecycle scope. See
+[`docs/structure.md`](docs/structure.md) for the internal package boundaries and
+code placement guidance.
 
 ## Development setup
 

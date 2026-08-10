@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jamessawle/sbxflow/internal/lifecycle"
-	"github.com/jamessawle/sbxflow/internal/validation"
+	"github.com/jamessawle/sbxflow/internal/application/lifecycle"
+	"github.com/jamessawle/sbxflow/internal/application/validation"
 )
 
 func TestUpHelpDoesNotInvokeRunner(t *testing.T) {

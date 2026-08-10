@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jamessawle/sbxflow/internal/application/doctor"
+	"github.com/jamessawle/sbxflow/internal/application/validation"
 	"github.com/jamessawle/sbxflow/internal/buildinfo"
-	"github.com/jamessawle/sbxflow/internal/doctor"
-	"github.com/jamessawle/sbxflow/internal/validation"
 )
 
 func TestRootHelp(t *testing.T) {
