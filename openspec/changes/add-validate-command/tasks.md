@@ -28,15 +28,18 @@
 
 - [ ] 3.1 Move the generic subprocess runner and output types into a neutral
       internal package, adapt doctor to use it, and preserve doctor test coverage.
-- [ ] 3.2 Resolve local source roots from the declaration directory, canonicalize
-      selected targets through symbolic links, and reject missing or escaping
-      paths with filesystem-focused tests.
+- [ ] 3.2 Require local roots and selections to be host filesystem references,
+      reject URI-like roots plus URI-like or absolute kit paths, resolve roots
+      from the declaration directory, and reject unavailable roots or targets
+      that escape through traversal or symbolic links.
 - [ ] 3.3 Implement ordered `sbx kit validate <absolute-path>` execution with a
       bounded timeout, captured diagnostics, continued independent checks, and
       no executable lookup when no local kit is selected.
-- [ ] 3.4 Add local-validator tests for valid directories and ZIPs, Docker
-      validation failures, unavailable or timed-out executables, multiple
-      selections, and proof that Git and OCI selections never invoke Docker.
+- [ ] 3.4 Add local-validator tests proving that source provenance, rather than
+      directory or ZIP packaging, controls invocation; cover URI rejection,
+      unavailable roots, valid filesystem artifacts, Docker validation failures,
+      unavailable or timed-out executables, multiple selections, and proof that
+      Git and OCI selections never invoke Docker.
 
 ## 4. Validate Command
 

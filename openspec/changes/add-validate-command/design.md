@@ -7,10 +7,14 @@ sources plus an ordered `use` list. JSON Schema can describe both sides of that
 document but cannot follow a selection's dynamic source name to enforce rules
 based on the referenced source type.
 
-Selected local kits are a deliberate exception to offline reference validation:
-Docker Sandboxes already provides `sbx kit validate` for directories and ZIP
-files. The implementation must call that interface without allowing invalid
-configuration or path traversal to choose an arbitrary reference.
+Kits selected through a source declared as local are a deliberate exception to
+offline reference validation. Docker Sandboxes already provides
+`sbx kit validate` for filesystem artifacts, which it may interpret as
+directories or ZIP files. Packaging does not establish provenance: the local
+source type and a safely resolved host path are the only reasons sbxflow invokes
+the local validator. The implementation must call that interface without
+allowing invalid configuration, URI-like references, or path traversal to choose
+an arbitrary reference.
 
 ## Goals / Non-Goals
 
@@ -113,25 +117,35 @@ selection was considered but would discard named-source reuse. Non-standard
 schema data-reference extensions were rejected to keep the published schema
 portable.
 
-### Canonicalize and contain local paths before invoking Docker
+### Require host filesystem references and contain them before invoking Docker
 
-A relative local source root will be resolved from the directory containing
-`sbxflow.yaml`; an absolute root remains absolute. Each selected `kit` is joined
-to that root, cleaned, and resolved through symbolic links. Both the canonical
-root and selected target must exist, and the selected target must remain at or
-below the canonical root.
+A local source `root` must be a host filesystem path rather than an HTTP, Git,
+OCI, or other URI-like reference. A relative root will be resolved from the
+directory containing `sbxflow.yaml`; an absolute root remains absolute. The root
+must exist and resolve to a directory. Each selected `kit` must likewise be a
+relative filesystem path rather than a URI. It is joined to the root, cleaned,
+and resolved through symbolic links. The selected target must exist and remain
+at or below the canonical root.
 
 Each accepted local target will be passed as an absolute path to
-`sbx kit validate`. The subprocess will be invoked without a shell, with a
-bounded timeout and captured stdout and stderr. A failure will be attributed to
-the source and kit selection and will retain Docker's useful diagnostic text.
-If `sbx` is unavailable, local-kit validation fails clearly; configurations with
-no selected local kits do not look up or invoke `sbx`.
+`sbx kit validate`. Docker, rather than sbxflow, will determine whether that
+filesystem artifact is a valid kit directory or ZIP. The subprocess will be
+invoked without a shell, with a bounded timeout and captured stdout and stderr.
+A failure will be attributed to the source and kit selection and will retain
+Docker's useful diagnostic text. If `sbx` is unavailable, local-kit validation
+fails clearly; configurations with no kits selected from local sources do not
+look up or invoke `sbx`.
+
+"Local" describes how sbxflow addresses the artifact, not the underlying
+storage technology. A network-mounted volume that presents a normal host path is
+therefore treated as local; reliably distinguishing its physical storage from a
+local disk is neither portable nor relevant to Docker's local-kit trust setting.
 
 Lexical path cleaning alone was considered but would permit a symlink beneath a
-source root to escape it. Reimplementing Docker's kit format was rejected
-because the experimental format can evolve within sbxflow's supported Docker
-Sandbox version range.
+source root to escape it. Inferring locality from a `.zip` extension was rejected
+because file format says nothing about provenance. Reimplementing Docker's kit
+format was rejected because the experimental format can evolve within sbxflow's
+supported Docker Sandbox version range.
 
 ### Treat remote normalization as planning, not materialization
 

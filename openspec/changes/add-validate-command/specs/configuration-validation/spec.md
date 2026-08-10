@@ -117,12 +117,42 @@ existence, or testing registry credentials.
   artifact is not present in the registry
 - **THEN** artifact availability does not affect validation
 
-### Requirement: Selected local kits are validated by Docker Sandboxes
+### Requirement: Kits selected from local sources are validated by Docker Sandboxes
 
-For each selection referencing a local source, the `validate` command SHALL
-resolve the selected path relative to the declaration, require the result to
-remain beneath the source root, and invoke `sbx kit validate` with that local
-directory or ZIP file. Local selections SHALL be validated in declaration order.
+For each selection referencing a source declared as local, the `validate`
+command SHALL require the source root to be a host filesystem path and the
+selected kit to be a relative filesystem path rather than a URI-like reference.
+It SHALL resolve the selected path relative to the declaration, require the
+result to remain beneath the source root, and invoke `sbx kit validate` with the
+resulting absolute host path. These selections SHALL be validated in declaration
+order. Docker SHALL determine whether each filesystem artifact is a valid kit
+directory or ZIP; its packaging SHALL NOT determine whether sbxflow considers it
+local.
+
+#### Scenario: Local source root is not a filesystem reference
+
+- **WHEN** a source declared as local uses an HTTP, Git, OCI, or other URI-like
+  value as its root
+- **THEN** the command reports that the local source requires a host filesystem
+  path
+- **AND** does not invoke Docker's kit validator for that source
+- **AND** exits with a non-zero status
+
+#### Scenario: Local source root is unavailable
+
+- **WHEN** a local source root does not exist or does not resolve to a directory
+- **THEN** the command reports that the local source root is unavailable
+- **AND** does not invoke Docker's kit validator for that source
+- **AND** exits with a non-zero status
+
+#### Scenario: Local kit is not a relative filesystem reference
+
+- **WHEN** a selection from a local source uses an absolute path or an HTTP, Git,
+  OCI, or other URI-like value for `kit`
+- **THEN** the command reports that the selection requires a relative host
+  filesystem path
+- **AND** does not invoke Docker's kit validator for that selection
+- **AND** exits with a non-zero status
 
 #### Scenario: Selected local directory is valid
 
@@ -130,11 +160,18 @@ directory or ZIP file. Local selections SHALL be validated in declaration order.
   Sandboxes accepts the directory as a valid kit
 - **THEN** the command reports that local selection as valid
 
-#### Scenario: Selected local ZIP is valid
+#### Scenario: Kit selected from a local source is a valid ZIP
 
 - **WHEN** a local selection resolves beneath its source root and Docker
   Sandboxes accepts the ZIP file as a valid kit
 - **THEN** the command reports that local selection as valid
+
+#### Scenario: Remote selection may use ZIP packaging
+
+- **WHEN** a Git or OCI selection refers to an artifact that may be packaged as
+  a ZIP file
+- **THEN** the packaging does not cause sbxflow to treat the selection as local
+- **AND** the command does not invoke Docker's local kit validator for it
 
 #### Scenario: Local selection escapes its source root
 
@@ -159,7 +196,7 @@ directory or ZIP file. Local selections SHALL be validated in declaration order.
 - **THEN** the command reports that local kit validation could not be completed
 - **AND** exits with a non-zero status
 
-#### Scenario: Declaration has no selected local kits
+#### Scenario: Declaration has no kits selected from local sources
 
 - **WHEN** all selections reference Git or OCI sources
 - **THEN** the command does not require or invoke `sbx kit validate`

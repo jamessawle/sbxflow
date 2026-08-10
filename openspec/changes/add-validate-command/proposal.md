@@ -13,8 +13,12 @@ least-privilege kit-source settings that future lifecycle execution will use.
   strict source-specific shapes and rejection of unknown fields.
 - Add semantic validation for named source references and selection rules that
   depend on the referenced source type.
-- Resolve selected local kit paths relative to the declaration and validate each
-  selected directory or ZIP through `sbx kit validate`.
+- Require every source declared as local to use a host filesystem root and every
+  selection from it to use a relative filesystem path, rejecting URI-like local
+  references before resolving them.
+- Resolve kits selected from local sources relative to the declaration, enforce
+  source-root containment, and validate each resulting filesystem artifact
+  through `sbx kit validate`, whether Docker interprets it as a directory or ZIP.
 - Derive and report the effective remote-source allowlist and local-kit setting
   required by the ordered selections without modifying Docker's global settings.
 - Keep Git and OCI validation offline: validate their declared reference shapes
@@ -38,7 +42,8 @@ least-privilege kit-source settings that future lifecycle execution will use.
 - Adds configuration, schema, semantic-validation, kit-selection, and
   trust-derivation code used by `validate` and future lifecycle commands.
 - Adds a YAML parser and JSON Schema validator to the Go module.
-- Invokes the supported `sbx kit validate` interface for selected local kits but
-  performs no remote resolution or state mutation.
+- Invokes the supported `sbx kit validate` interface only for kits selected from
+  local sources; directory or ZIP packaging does not itself determine locality,
+  and validation performs no remote resolution or state mutation.
 - Extends CLI and process-level tests, examples, README documentation, and the
   aggregate repository validation suite.
