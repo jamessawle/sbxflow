@@ -24,31 +24,9 @@ var (
 // Load parses exactly one YAML document, validates it against the published
 // schema, and returns its typed representation.
 func Load(data []byte) (Configuration, error) {
-	var raw any
-	decoder := yaml.NewDecoder(bytes.NewReader(data))
-	if err := decoder.Decode(&raw); err != nil {
-		if errors.Is(err, io.EOF) {
-			return Configuration{}, errors.New("configuration is empty")
-		}
-		return Configuration{}, fmt.Errorf("parse YAML: %w", err)
-	}
-
-	var extra any
-	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
-		if err != nil {
-			return Configuration{}, fmt.Errorf("parse YAML: %w", err)
-		}
-		return Configuration{}, errors.New("configuration must contain exactly one YAML document")
-	}
-
-	jsonData, err := json.Marshal(raw)
+	document, jsonData, err := decodeDocument(data)
 	if err != nil {
-		return Configuration{}, fmt.Errorf("convert YAML to JSON: %w", err)
-	}
-
-	var document any
-	if err := json.Unmarshal(jsonData, &document); err != nil {
-		return Configuration{}, fmt.Errorf("convert YAML to JSON: %w", err)
+		return Configuration{}, err
 	}
 
 	schema, err := configurationSchema()
@@ -64,6 +42,82 @@ func Load(data []byte) (Configuration, error) {
 		return Configuration{}, fmt.Errorf("decode validated configuration: %w", err)
 	}
 	return configuration, nil
+}
+
+// LoadLifecycleTarget parses only the supported declaration version and
+// sandbox name needed by teardown lifecycle operations.
+func LoadLifecycleTarget(data []byte) (LifecycleTarget, error) {
+	document, _, err := decodeDocument(data)
+	if err != nil {
+		return LifecycleTarget{}, err
+	}
+
+	root, ok := document.(map[string]any)
+	if !ok {
+		return LifecycleTarget{}, errors.New("configuration identity must be an object")
+	}
+	version, ok := root["version"]
+	if !ok {
+		return LifecycleTarget{}, errors.New("configuration identity is missing version")
+	}
+	versionNumber, ok := version.(float64)
+	if !ok {
+		return LifecycleTarget{}, errors.New("configuration identity version must be an integer")
+	}
+	if versionNumber != 1 {
+		return LifecycleTarget{}, fmt.Errorf("unsupported configuration version %v", version)
+	}
+
+	sandbox, ok := root["sandbox"]
+	if !ok {
+		return LifecycleTarget{}, errors.New("configuration identity is missing sandbox")
+	}
+	sandboxObject, ok := sandbox.(map[string]any)
+	if !ok {
+		return LifecycleTarget{}, errors.New("configuration identity sandbox must be an object")
+	}
+	name, ok := sandboxObject["name"]
+	if !ok {
+		return LifecycleTarget{}, errors.New("configuration identity is missing sandbox.name")
+	}
+	nameString, ok := name.(string)
+	if !ok {
+		return LifecycleTarget{}, errors.New("configuration identity sandbox.name must be a string")
+	}
+	if nameString == "" {
+		return LifecycleTarget{}, errors.New("configuration identity sandbox.name must not be empty")
+	}
+	return LifecycleTarget{Name: nameString}, nil
+}
+
+func decodeDocument(data []byte) (any, []byte, error) {
+	var raw any
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	if err := decoder.Decode(&raw); err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil, nil, errors.New("configuration is empty")
+		}
+		return nil, nil, fmt.Errorf("parse YAML: %w", err)
+	}
+
+	var extra any
+	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
+		if err != nil {
+			return nil, nil, fmt.Errorf("parse YAML: %w", err)
+		}
+		return nil, nil, errors.New("configuration must contain exactly one YAML document")
+	}
+
+	jsonData, err := json.Marshal(raw)
+	if err != nil {
+		return nil, nil, fmt.Errorf("convert YAML to JSON: %w", err)
+	}
+
+	var document any
+	if err := json.Unmarshal(jsonData, &document); err != nil {
+		return nil, nil, fmt.Errorf("convert YAML to JSON: %w", err)
+	}
+	return document, jsonData, nil
 }
 
 func configurationSchema() (*jsonschema.Schema, error) {

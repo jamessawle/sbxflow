@@ -105,6 +105,7 @@ func executeWithValidate(args []string, runner ValidateRunner) (string, string, 
 		fakeDoctorRunner{},
 		runner,
 		&fakeUpRunner{},
+		&fakeDownRunner{},
 	)
 	root.Version = formatVersion(buildinfo.Info{Version: "development"})
 	root.SetArgs(args)

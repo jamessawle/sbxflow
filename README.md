@@ -11,8 +11,8 @@ interactively entering an existing one.
 > [!NOTE]
 > sbxflow is in early development. Its foundational CLI and configuration
 > validation and the interactive `up` lifecycle command are available. Existing
-> sandboxes are not yet reconciled with declaration changes, and `down` and
-> `destroy` are not implemented.
+> sandboxes are not yet reconciled with declaration changes, and `destroy` is
+> not implemented. The state-preserving `down` command is available.
 
 ## Configuration
 
@@ -75,8 +75,8 @@ builds report an explicit development version. A `version` subcommand is not
 available.
 
 Completion and man-page commands are intentionally absent from the foundational
-executable. The repository-aware `validate` and `up` commands are available;
-`down` and `destroy` remain planned.
+executable. The repository-aware `validate`, `up`, and `down` commands are
+available; `destroy` remains planned.
 
 ### `sbxflow doctor`
 
@@ -111,8 +111,8 @@ Docker health check exits non-zero.
 
 ### `sbxflow validate`
 
-Validate the nearest repository declaration before lifecycle commands rely on
-it:
+Validate the nearest repository declaration before sandbox creation or entry
+relies on it:
 
 ```text
 sbxflow validate
@@ -197,17 +197,38 @@ returns the Docker process result.
 
 `up` accepts no positional arguments or command-specific flags.
 
-## Planned lifecycle commands
+### `sbxflow down`
 
 ```text
 sbxflow down
-sbxflow destroy
 ```
 
-### `sbxflow down` (planned)
+Stop the sandbox declared by the nearest repository configuration without
+removing it. `down` resolves only the supported configuration version and exact
+non-empty `sandbox.name`; it does not require the agent, kits, local paths,
+linked references, or derived trust to pass complete validation. The identity
+document must still be safe and unambiguous: malformed or multi-document YAML,
+duplicate keys, unsupported or missing versions, and invalid sandbox names are
+rejected before Docker is invoked.
 
-Stop the sandbox while preserving its installed tools, Docker images, agent
-history, and other sandbox state.
+After resolving the target, `down` uses Docker Sandboxes' quiet name listing and
+matches the declared name exactly. If the sandbox exists, sbxflow runs
+`sbx stop <declared-name>`. If it is absent, `down` succeeds without invoking
+`sbx stop`; similarly named sandboxes are never selected. Docker handles an
+already stopped sandbox idempotently.
+
+Stopping preserves the sandbox's installed tools, Docker images, agent history,
+configuration changes, and other persisted state. A later `up` restarts and
+enters that existing sandbox. Docker's stop output and diagnostics remain
+attached to the terminal, and its exit status is preserved.
+
+`down` accepts no positional arguments or command-specific flags.
+
+## Planned lifecycle commands
+
+```text
+sbxflow destroy
+```
 
 ### `sbxflow destroy` (planned)
 

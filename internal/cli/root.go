@@ -23,7 +23,7 @@ type Streams struct {
 }
 
 // NewRootCommand returns a fresh sbxflow root command.
-func NewRootCommand(streams Streams, doctorRunner DoctorRunner, validateRunner ValidateRunner, upRunner UpRunner) *cobra.Command {
+func NewRootCommand(streams Streams, doctorRunner DoctorRunner, validateRunner ValidateRunner, upRunner UpRunner, downRunner DownRunner) *cobra.Command {
 	root := &cobra.Command{
 		Use:   "sbxflow",
 		Short: "Apply a repository's Docker Sandbox configuration and lifecycle",
@@ -61,14 +61,20 @@ func NewRootCommand(streams Streams, doctorRunner DoctorRunner, validateRunner V
 		return target.Help()
 	}
 	root.SetHelpCommand(help)
-	root.AddCommand(help, newDoctorCommand(doctorRunner), newUpCommand(upRunner), newValidateCommand(validateRunner))
+	root.AddCommand(help, newDoctorCommand(doctorRunner), newDownCommand(downRunner), newUpCommand(upRunner), newValidateCommand(validateRunner))
 
 	return root
 }
 
 // Execute runs a fresh root command.
 func Execute(ctx context.Context, args []string, streams Streams, info buildinfo.Info) error {
-	root := NewRootCommand(streams, doctor.NewDefaultRunner(), validation.NewDefaultRunner(), lifecycle.NewDefaultRunner())
+	root := NewRootCommand(
+		streams,
+		doctor.NewDefaultRunner(),
+		validation.NewDefaultRunner(),
+		lifecycle.NewDefaultRunner(),
+		lifecycle.NewDefaultDownRunner(),
+	)
 	root.Version = formatVersion(info)
 	root.SetArgs(args)
 
