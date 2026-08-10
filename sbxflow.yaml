@@ -1,0 +1,24 @@
+version: 1
+
+sandbox:
+  name: sbxflow
+  agent: codex
+
+  kits:
+    sources:
+      community:
+        type: git
+        repo: https://github.com/docker/sbx-kits-contrib.git
+        ref: v0.14.0
+
+      personal:
+        type: git
+        repo: https://github.com/jamessawle/sbx-kits.git
+        ref: v2026.08.02
+
+    use:
+      - source: community
+        kit: mise
+
+      - source: personal
+        kit: kits/mise/network-go

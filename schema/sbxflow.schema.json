@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jamessawle/sbxflow/blob/main/schema/sbxflow.schema.json",
+  "title": "sbxflow configuration",
+  "description": "A version 1 Docker Sandbox declaration.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "sandbox"],
+  "properties": {
+    "version": {
+      "const": 1,
+      "description": "The sbxflow configuration format version."
+    },
+    "sandbox": { "$ref": "#/$defs/sandbox" }
+  },
+  "$defs": {
+    "sandbox": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "agent", "kits"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "agent": {
+          "type": "string",
+          "enum": [
+            "claude",
+            "codex",
+            "copilot",
+            "cursor",
+            "docker-agent",
+            "droid",
+            "gemini",
+            "kiro",
+            "opencode",
+            "shell"
+          ]
+        },
+        "kits": { "$ref": "#/$defs/kits" }
+      }
+    },
+    "kits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sources", "use"],
+      "properties": {
+        "sources": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "minLength": 1 },
+          "additionalProperties": { "$ref": "#/$defs/source" }
+        },
+        "use": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/selection" }
+        }
+      }
+    },
+    "source": {
+      "oneOf": [
+        { "$ref": "#/$defs/gitSource" },
+        { "$ref": "#/$defs/ociSource" },
+        { "$ref": "#/$defs/localSource" }
+      ]
+    },
+    "gitSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "repo", "ref"],
+      "properties": {
+        "type": { "const": "git" },
+        "repo": { "type": "string", "minLength": 1 },
+        "ref": { "type": "string", "minLength": 1 }
+      }
+    },
+    "ociSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "base"],
+      "properties": {
+        "type": { "const": "oci" },
+        "base": { "type": "string", "minLength": 1 }
+      }
+    },
+    "localSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "root"],
+      "properties": {
+        "type": { "const": "local" },
+        "root": { "type": "string", "minLength": 1 }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "kit"],
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "kit": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

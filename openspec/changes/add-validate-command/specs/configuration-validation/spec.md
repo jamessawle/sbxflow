@@ -33,8 +33,9 @@ for the nearest file named `sbxflow.yaml` and SHALL validate that declaration.
 
 The `validate` command SHALL parse exactly one YAML document and validate it
 against the published schema for configuration version 1. The schema SHALL
-enforce required fields, field types, source-specific shapes, exact duplicate
-selection rejection, and rejection of unknown fields.
+enforce required fields, field types, supported Docker Sandbox agent names,
+source-specific shapes, exact duplicate selection rejection, and rejection of
+unknown fields.
 
 #### Scenario: Structurally valid declaration
 
@@ -52,6 +53,18 @@ selection rejection, and rejection of unknown fields.
 
 - **WHEN** a declaration specifies a version other than 1
 - **THEN** the command reports the unsupported version
+- **AND** exits with a non-zero status
+
+#### Scenario: Agent is supported
+
+- **WHEN** a declaration selects one of the Docker Sandbox agents supported by
+  sbxflow's compatible `sbx` range
+- **THEN** structural validation accepts the agent
+
+#### Scenario: Agent is unsupported
+
+- **WHEN** a declaration selects an agent name outside the supported set
+- **THEN** the command reports the invalid `sandbox.agent` value
 - **AND** exits with a non-zero status
 
 #### Scenario: Source shape is invalid

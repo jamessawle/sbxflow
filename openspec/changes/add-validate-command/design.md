@@ -22,6 +22,8 @@ an arbitrary reference.
 
 - Make the published version 1 schema the structural contract used by the CLI
   and available to editor and CI tooling.
+- Reject agent names that are not supported by sbxflow's bounded Docker
+  Sandboxes compatibility range.
 - Produce a typed, linked configuration that later lifecycle commands can reuse.
 - Keep the custom semantic layer limited to relationships JSON Schema cannot
   express portably.
@@ -33,7 +35,7 @@ an arbitrary reference.
 **Non-Goals:**
 
 - Fetch, inspect, or authenticate to Git or OCI sources.
-- Confirm that an agent name is supported by the installed `sbx` version.
+- Dynamically inspect the installed `sbx` executable to discover agent names.
 - Create an execution fingerprint or reconcile sandbox state.
 - Add configuration migration, automatic correction, JSON output, or a custom
   declaration path flag.
@@ -102,6 +104,30 @@ schema behavior and would not provide an artifact editors can consume. Generatin
 the schema from Go types was considered, but source-type unions and strict
 conditional fields are clearer and more stable when the public schema is the
 source of truth.
+
+### Pin the supported agent set in the versioned schema
+
+The schema will enumerate the agent identifiers supported across sbxflow's
+verified Docker Sandboxes version range: `claude`, `codex`, `copilot`, `cursor`,
+`docker-agent`, `droid`, `gemini`, `kiro`, `opencode`, and `shell`. Validation
+will remain offline and deterministic rather than invoking `sbx` to discover
+commands dynamically. `shell` remains the escape hatch for manual or custom
+agent installation.
+
+Accepting arbitrary strings was considered, but it defers simple declaration
+typos until a mutating lifecycle command. Discovering agents from the installed
+binary was rejected because validation must work without `sbx` when no local kit
+is selected and because a local binary may not be in sbxflow's supported range.
+When Docker adds or removes an agent, sbxflow will update the enum as part of
+verifying a new compatibility range.
+
+### Keep a self-validating project declaration
+
+The repository root will contain `sbxflow.yaml` selecting `codex`, the community
+`mise` kit, and `kits/mise/network-go` from the pinned personal sbx-kits source.
+Both selections are remote, so validating sbxflow itself exercises discovery,
+schema validation, linking, and trust derivation without requiring `sbx` or
+network materialization.
 
 ### Keep cross-reference validation as a small semantic linking pass
 
@@ -190,6 +216,9 @@ unproven output schema now.
 - **The public schema and typed Go model can drift** -> Tests will load every
   repository example through the embedded schema and assert representative
   invalid documents at both schema and decode boundaries.
+- **Docker's agent set can change** -> Treat the enum as part of the versioned
+  configuration contract and update it when verifying a new supported `sbx`
+  range.
 - **Docker's experimental kit validator can change** -> Keep the integration to
   the documented `sbx kit validate <local-reference>` command, inject the
   runner, and cover output and exit handling without parsing unstable prose.

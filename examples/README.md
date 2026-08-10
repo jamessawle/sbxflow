@@ -3,11 +3,16 @@
 These examples show how repositories can declare Docker Sandbox kit sources and
 their ordered use.
 
+Every declaration is checked against sbxflow's published
+[Draft 2020-12 JSON Schema](../schema/sbxflow.schema.json). From an example
+directory, run `sbxflow validate` to discover and validate its declaration.
+
 - [`personal-site/sbxflow.yaml`](personal-site/sbxflow.yaml) translates the
   existing `personal-site/.docker-sbx/sandbox.sh` configuration.
 - [`source-types/sbxflow.yaml`](source-types/sbxflow.yaml) demonstrates Git,
   OCI, and local sources. A local source can select either a directory or a ZIP
-  kit.
+  kit. Its local paths are illustrative; provide matching artifacts before
+  running local Docker kit validation.
 
 Each configuration separates two concerns:
 
@@ -15,4 +20,12 @@ Each configuration separates two concerns:
 - `use` selects kit artifacts in the order passed to Docker Sandboxes.
 
 Kit-source trust is derived from the selected sources and is not declared in the
-configuration.
+configuration. Remote Git and OCI selections are normalized without network
+access. Only selections whose declared source is `local` invoke
+`sbx kit validate`; file packaging such as ZIP does not determine provenance.
+
+Validation reports the effective `kit.allowedSources` list in first-selection
+order, beginning with `docker.io/`, and reports `kit.allowLocalKits: true` only
+when a local source is selected. These values describe the settings sbxflow
+will apply to its own future lifecycle subprocesses; validation does not modify
+Docker's global settings or sandbox state.

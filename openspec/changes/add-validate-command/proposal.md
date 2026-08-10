@@ -10,7 +10,8 @@ least-privilege kit-source settings that future lifecycle execution will use.
 - Add a repository-aware `sbxflow validate` command that discovers and validates
   `sbxflow.yaml` without changing sandbox state.
 - Publish and apply a JSON Schema for the version 1 document structure, including
-  strict source-specific shapes and rejection of unknown fields.
+  strict source-specific shapes, the supported Docker Sandbox agent names, and
+  rejection of unknown fields.
 - Add semantic validation for named source references and selection rules that
   depend on the referenced source type.
 - Require every source declared as local to use a host filesystem root and every
@@ -23,6 +24,9 @@ least-privilege kit-source settings that future lifecycle execution will use.
   required by the ordered selections without modifying Docker's global settings.
 - Keep Git and OCI validation offline: validate their declared reference shapes
   without fetching repositories, pulling artifacts, or testing credentials.
+- Add this repository's own declaration using the community Mise kit and the
+  sbx-kits Go networking companion so the project continuously exercises the
+  configuration contract it publishes.
 
 ## Capabilities
 
@@ -47,3 +51,5 @@ least-privilege kit-source settings that future lifecycle execution will use.
   and validation performs no remote resolution or state mutation.
 - Extends CLI and process-level tests, examples, README documentation, and the
   aggregate repository validation suite.
+- Adds a root `sbxflow.yaml` that is both a usable project sandbox declaration
+  and a schema-validation fixture.
