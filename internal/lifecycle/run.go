@@ -62,6 +62,9 @@ func (r Runner) Run(ctx context.Context, start string, streams Streams) (validat
 	if !report.Valid() {
 		return report, ErrValidationFailed
 	}
+	if streams.Err != nil {
+		fmt.Fprintf(streams.Err, "Configuration valid: %s\n", report.Declaration)
+	}
 
 	plan, err := NewPlan(report)
 	if err != nil {

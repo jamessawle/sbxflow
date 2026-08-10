@@ -48,14 +48,42 @@ func TestSandboxExistsReportsDockerDiagnostics(t *testing.T) {
 
 func TestRunnerValidationGatesLifecycleLookup(t *testing.T) {
 	commands := &fakeCommandRunner{}
+	var stderr bytes.Buffer
 	runner := Runner{
 		Validation:  fakeValidator{report: validation.Report{Errors: []error{errors.New("invalid")}}},
 		Commands:    commands,
 		Interactive: &fakeInteractiveRunner{},
 	}
-	_, err := runner.Run(context.Background(), "/repo", Streams{})
+	_, err := runner.Run(context.Background(), "/repo", Streams{Err: &stderr})
 	if !errors.Is(err, ErrValidationFailed) || commands.lookups != 0 || commands.runs != 0 {
 		t.Fatalf("Run() error = %v, lookups = %d, runs = %d", err, commands.lookups, commands.runs)
+	}
+	if stderr.String() != "" {
+		t.Fatalf("stderr = %q, want no validation success status", stderr.String())
+	}
+}
+
+func TestRunnerReportsValidationSuccessBeforeLifecycleLookup(t *testing.T) {
+	var stderr bytes.Buffer
+	commands := &fakeCommandRunner{
+		path: "/bin/sbx",
+		onLookup: func() {
+			if got, want := stderr.String(), "Configuration valid: /repo/sbxflow.yaml\n"; got != want {
+				t.Fatalf("stderr before lookup = %q, want %q", got, want)
+			}
+		},
+	}
+	runner := Runner{
+		Validation:  fakeValidator{report: validReport()},
+		Commands:    commands,
+		Interactive: &fakeInteractiveRunner{},
+	}
+	_, err := runner.Run(context.Background(), "/repo", Streams{Err: &stderr})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if got, want := stderr.String(), "Configuration valid: /repo/sbxflow.yaml\n"; got != want {
+		t.Fatalf("stderr = %q, want %q", got, want)
 	}
 }
 
@@ -143,16 +171,20 @@ type fakeValidator struct{ report validation.Report }
 func (v fakeValidator) Run(context.Context, string) validation.Report { return v.report }
 
 type fakeCommandRunner struct {
-	path    string
-	pathErr error
-	output  command.Output
-	args    []string
-	lookups int
-	runs    int
+	path     string
+	pathErr  error
+	output   command.Output
+	args     []string
+	onLookup func()
+	lookups  int
+	runs     int
 }
 
 func (r *fakeCommandRunner) LookPath(string) (string, error) {
 	r.lookups++
+	if r.onLookup != nil {
+		r.onLookup()
+	}
 	return r.path, r.pathErr
 }
 

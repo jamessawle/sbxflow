@@ -251,7 +251,8 @@ sandbox:
       - source: local
         kit: tooling
 `
-		if err := os.WriteFile(filepath.Join(repository, "sbxflow.yaml"), []byte(configuration), 0o600); err != nil {
+		declaration := filepath.Join(repository, "sbxflow.yaml")
+		if err := os.WriteFile(declaration, []byte(configuration), 0o600); err != nil {
 			t.Fatalf("write declaration: %v", err)
 		}
 		nested := filepath.Join(repository, "nested", "work")
@@ -296,6 +297,7 @@ esac
 		if err != nil {
 			t.Fatalf("canonicalize repository: %v", err)
 		}
+		validationStatus := "Configuration valid: " + filepath.Join(canonicalRepository, "sbxflow.yaml") + "\n"
 
 		t.Run("missing sandbox", func(t *testing.T) {
 			logPath := filepath.Join(fakeDirectory, "missing-calls.log")
@@ -308,7 +310,7 @@ esac
 				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath},
 				"hello creation\n",
 			)
-			if exitCode != 0 || !strings.Contains(stdout, "agent received: hello creation") || stderr != "docker run diagnostic\n" {
+			if exitCode != 0 || !strings.Contains(stdout, "agent received: hello creation") || stderr != validationStatus+"docker run diagnostic\n" {
 				t.Fatalf("up exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
 			}
 			calls, err := os.ReadFile(logPath)
@@ -351,8 +353,8 @@ esac
 			if exitCode != 7 || !strings.Contains(stdout, "agent received: hello existing") {
 				t.Fatalf("up exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
 			}
-			if stderr != "docker run diagnostic\n" {
-				t.Fatalf("stderr = %q, want only Docker diagnostic", stderr)
+			if stderr != validationStatus+"docker run diagnostic\n" {
+				t.Fatalf("stderr = %q, want validation status followed by Docker diagnostic", stderr)
 			}
 			calls, err := os.ReadFile(logPath)
 			if err != nil {

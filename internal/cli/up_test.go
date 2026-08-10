@@ -47,9 +47,9 @@ func TestUpRejectsArgumentsAndFlagsWithoutInvokingRunner(t *testing.T) {
 }
 
 func TestUpInjectsWorkingDirectoryAndStreams(t *testing.T) {
-	runner := &fakeUpRunner{}
+	runner := &fakeUpRunner{stdout: "agent output\n", stderr: "Configuration valid: /repo/sbxflow.yaml\n"}
 	stdout, stderr, err := executeWithUp([]string{"up"}, runner)
-	if err != nil || stdout != "" || stderr != "" || runner.calls != 1 || runner.start == "" {
+	if err != nil || stdout != "agent output\n" || stderr != "Configuration valid: /repo/sbxflow.yaml\n" || runner.calls != 1 || runner.start == "" {
 		t.Fatalf("up error = %v, stdout = %q, stderr = %q, runner = %#v", err, stdout, stderr, runner)
 	}
 	if runner.streams.In == nil || runner.streams.Out == nil || runner.streams.Err == nil {
@@ -95,6 +95,8 @@ func executeWithUp(args []string, runner UpRunner) (string, string, error) {
 type fakeUpRunner struct {
 	report  validation.Report
 	err     error
+	stdout  string
+	stderr  string
 	calls   int
 	start   string
 	streams lifecycle.Streams
@@ -104,5 +106,7 @@ func (r *fakeUpRunner) Run(_ context.Context, start string, streams lifecycle.St
 	r.calls++
 	r.start = start
 	r.streams = streams
+	_, _ = streams.Out.Write([]byte(r.stdout))
+	_, _ = streams.Err.Write([]byte(r.stderr))
 	return r.report, r.err
 }

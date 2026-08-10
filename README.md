@@ -173,7 +173,9 @@ sbxflow up
 
 `up` searches the current directory and its ancestors for `sbxflow.yaml`, using
 the declaration directory as the repository workspace. Complete validation
-runs before Docker inspects or changes sandbox state.
+runs before Docker inspects or changes sandbox state. On success, `up` writes
+`Configuration valid: <declaration path>` to standard error before continuing
+with Docker Sandbox inspection and lifecycle execution.
 
 When the declared name does not exist, `up` creates it with the declared agent,
 workspace, and every selected kit in declaration order. Git and OCI selections
