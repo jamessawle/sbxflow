@@ -1,0 +1,41 @@
+internal/lifecycle/run_test.go
+  s_b12e37e1947003::t_fd60afaffbacbc 51,57,61-87,174-180,185-187
+openspec/changes/archive/2026-08-10-report-up-validation-success/.openspec.yaml
+  s_b12e37e1947003::t_99be55da8ec83e 1-2
+README.md
+  s_b12e37e1947003::t_43bda4276860a4 176-178
+cmd/sbxflow/main_test.go
+  s_b12e37e1947003::t_26fbf4ecf26573 254-255,300,313,356-357
+internal/cli/up_test.go
+  s_b12e37e1947003::t_4682a4fd868a5d 50,52,98-99,109-110
+internal/lifecycle/run.go
+  s_b12e37e1947003::t_b1dfbd35860c56 65-67
+openspec/changes/archive/2026-08-10-report-up-validation-success/design.md
+  s_b12e37e1947003::t_562da745bcce4a 1-55
+openspec/changes/archive/2026-08-10-report-up-validation-success/proposal.md
+  s_b12e37e1947003::t_931c747853ff87 1-32
+openspec/changes/archive/2026-08-10-report-up-validation-success/specs/cli-interface/spec.md
+  s_b12e37e1947003::t_9b8b82c33ec087 1-24
+openspec/changes/archive/2026-08-10-report-up-validation-success/tasks.md
+  s_b12e37e1947003::t_b76635957ff8e0 1-17
+openspec/specs/cli-interface/spec.md
+  s_b12e37e1947003::t_84cc4e7fe6cf47 127-183
+openspec/specs/sandbox-lifecycle/spec.md
+  s_b12e37e1947003::t_4fd75742682f4f 1-180
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "996123f0d2d18273e200ab70755efa55fbe54be7",
+  "prompts": {},
+  "sessions": {
+    "s_b12e37e1947003": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019febe4-f38a-7061-88ea-cb4350368746",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
