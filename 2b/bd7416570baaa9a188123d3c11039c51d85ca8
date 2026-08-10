@@ -1,0 +1,51 @@
+internal/config/load_test.go
+  s_a672e7d30699f7::t_3085cfc9b7492e 141-208
+README.md
+  s_a672e7d30699f7::t_1cce1ce6dc38d4 14-15,78-79,114-115,200,206-225,227-231
+cmd/sbxflow/main_test.go
+  s_a672e7d30699f7::t_be02db80ec2f8b 371-440
+internal/cli/down.go
+  s_a672e7d30699f7::t_27bea2fc55c773 1-41
+internal/cli/down_test.go
+  s_a672e7d30699f7::t_7113ab15805063 1-108
+internal/cli/root.go
+  s_a672e7d30699f7::t_56f1899ffecb19 26,64,71-77
+internal/cli/root_test.go
+  s_a672e7d30699f7::t_29a50fa0c342ed 37,51,95,126
+internal/cli/up_test.go
+  s_a672e7d30699f7::t_2d7280dbff7f25 89
+internal/cli/validate_test.go
+  s_a672e7d30699f7::t_5bce9424fb4e91 108
+internal/config/load.go
+  s_a672e7d30699f7::t_4c0857c4efec4a 27-93,98,100,106,108,113,118,120
+internal/config/model.go
+  s_a672e7d30699f7::t_9f0a21426f4c2b 19-23
+internal/lifecycle/down.go
+  s_a672e7d30699f7::t_db7967f9570ba1 1-54
+internal/lifecycle/down_test.go
+  s_a672e7d30699f7::t_23a298d031c67f 1-134
+internal/lifecycle/run_test.go
+  s_a672e7d30699f7::t_02fc996f3e9d14 199,204,206
+internal/lifecycle/target.go
+  s_a672e7d30699f7::t_dc1fcae6d75ca0 1-53
+internal/lifecycle/target_test.go
+  s_a672e7d30699f7::t_7606929d2a9956 1-71
+openspec/changes/add-down-command/tasks.md
+  s_a672e7d30699f7::t_c556432c4a7ca3 3,6,9,15,17,23,26,29,34,37,43-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "2bbd7416570baaa9a188123d3c11039c51d85ca8",
+  "prompts": {},
+  "sessions": {
+    "s_a672e7d30699f7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fec10-c6a6-77b0-bcf9-52c5bca92de0",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
