@@ -1,0 +1,41 @@
+README.md
+  s_89d2ab625779c3::t_da53cfa1b07bb2 14-15,78-79,227,231,234-257
+cmd/sbxflow/main_test.go
+  s_89d2ab625779c3::t_0b87b2b016e8f7 441-571
+internal/cli/destroy.go
+  s_89d2ab625779c3::t_919f1bab0a14a5 1-45
+internal/cli/destroy_test.go
+  s_89d2ab625779c3::t_03e0c9db908d13 1-125
+internal/cli/down_test.go
+  s_89d2ab625779c3::t_c7c1420a62f43b 86
+internal/cli/root.go
+  s_89d2ab625779c3::t_28b096e4f19a2b 26,64,77
+internal/cli/root_test.go
+  s_89d2ab625779c3::t_575b3f0a90b57b 37,52,96,128
+internal/cli/up_test.go
+  s_89d2ab625779c3::t_a70a2e7a7064d1 90
+internal/cli/validate_test.go
+  s_89d2ab625779c3::t_5c97cd89d163ec 109
+internal/lifecycle/destroy.go
+  s_89d2ab625779c3::t_e3214f8b764dcd 1-59
+internal/lifecycle/destroy_test.go
+  s_89d2ab625779c3::t_0c4b7c9f6e8965 1-127
+openspec/changes/add-destroy-command/tasks.md
+  s_89d2ab625779c3::t_de8f3614fd6b87 3,6,13,16,20,26,32,34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "d9e4dd8a172a560dfa4d029b434fa0a142c2532d",
+  "prompts": {},
+  "sessions": {
+    "s_89d2ab625779c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fec39-0d89-7041-bc7d-b8720b8a9a3c",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
