@@ -1,0 +1,29 @@
+openspec/changes/add-up-recreate-flag/.openspec.yaml
+  s_2fbcc33c7ed133::t_010dfc03809491 1-2
+openspec/changes/add-up-recreate-flag/design.md
+  s_2fbcc33c7ed133::t_8398580fe654a9 1-125
+openspec/changes/add-up-recreate-flag/tasks.md
+  s_2fbcc33c7ed133::t_4d4593057682fb 1-39
+openspec/changes/add-up-recreate-flag/proposal.md
+  s_2fbcc33c7ed133::t_b63ddd4fda0965 1-41
+openspec/changes/add-up-recreate-flag/specs/cli-interface/spec.md
+  s_2fbcc33c7ed133::t_3bf4e8fe6ba520 1-49
+openspec/changes/add-up-recreate-flag/specs/sandbox-lifecycle/spec.md
+  s_2fbcc33c7ed133::t_1666c56eb16f5e 1-106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "90229afbdcd88b80278c8699751418eef8defa11",
+  "prompts": {},
+  "sessions": {
+    "s_2fbcc33c7ed133": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fed6e-164f-78b1-9aa8-5946ef481d22",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
