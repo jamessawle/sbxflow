@@ -1,0 +1,113 @@
+internal/application/lifecycle/destroy.go
+  s_c1fa799bc706e8::t_fe44c2d1ccf3bc 6,11-12,18-19,29,37-42
+internal/application/lifecycle/destroy_test.go
+  s_c1fa799bc706e8::t_20c012410d66d5 11,17-18,29-30,40,43-44,65,70-71,77,98-103,114-115
+internal/application/lifecycle/down.go
+  s_c1fa799bc706e8::t_f9c607e67f2af4 6,11-12,18-19,29,37
+internal/application/lifecycle/down_test.go
+  s_c1fa799bc706e8::t_be53705f82d98a 12,18-19,30-31,41,44-45,57,61-62,68,85-86,97-102,113-114
+internal/application/lifecycle/plan.go
+  s_c1fa799bc706e8::t_49129b6700b44f 9-10,15-19,39,58
+internal/application/lifecycle/plan_test.go
+  s_c1fa799bc706e8::t_789e30772b47ad 7-8,14-19,21,26-27,47-48,55-57
+internal/application/lifecycle/target.go
+  s_c1fa799bc706e8::t_a3ae535151a7b5 7,33,48
+internal/application/lifecycle/target_test.go
+  s_c1fa799bc706e8::t_9e231f83b8ba1d 10,27,68
+internal/application/lifecycle/up_test.go
+  s_c1fa799bc706e8::t_6f7e3411c5e260 12-14,29-30,42-43,52-54,75-77,90-91,116,120,131,140-142,154-156,158,161,173,188,197,201
+internal/application/validation/validation_test.go
+  s_c1fa799bc706e8::t_f61cd37d4de6e4 12,32,75,79,104,123,133
+internal/cli/destroy.go
+  s_c1fa799bc706e8::t_901835dcfc4753 9
+internal/cli/destroy_test.go
+  s_c1fa799bc706e8::t_54f77874ce5279 11
+internal/cli/doctor_test.go
+  s_c1fa799bc706e8::t_defbe72481f067 9
+internal/cli/down.go
+  s_c1fa799bc706e8::t_f61c4eff84b513 9
+internal/cli/down_test.go
+  s_c1fa799bc706e8::t_ba9184b80c7e72 10
+internal/cli/root.go
+  s_c1fa799bc706e8::t_cdf257b22b9de4 9-11,75
+internal/cli/root_test.go
+  s_c1fa799bc706e8::t_c6806dada263e0 9-10
+internal/cli/up.go
+  s_c1fa799bc706e8::t_3245198f7acc1d 9-10
+internal/cli/up_test.go
+  s_c1fa799bc706e8::t_ebdcbdc2c0dd3a 10-11
+internal/cli/validate_test.go
+  s_c1fa799bc706e8::t_f84c496e55ff9f 10,12,33-35,37,61-62
+internal/configuration/discover.go
+  s_c1fa799bc706e8::t_d0a80fc25ba7e1 1
+internal/configuration/discover_test.go
+  s_c1fa799bc706e8::t_bafc18fe47a4dd 1
+internal/configuration/link.go
+  s_c1fa799bc706e8::t_0ddca33f2ed317 1
+internal/configuration/link_test.go
+  s_c1fa799bc706e8::t_70cf26db610d88 1
+internal/configuration/load.go
+  s_c1fa799bc706e8::t_f9d1da4670381f 1
+internal/configuration/load_test.go
+  s_c1fa799bc706e8::t_ff490688f4671b 1
+internal/sbx/interactive.go
+  s_c1fa799bc706e8::t_abc583f12325c4 1
+internal/sbx/interactive_test.go
+  s_c1fa799bc706e8::t_36ec987bd650ce 1
+internal/sbx/process_test.go
+  s_c1fa799bc706e8::t_23a866b4c8085a 1
+AGENTS.md
+  s_c1fa799bc706e8::t_1d1b67b9984aa7 8-9,11
+CONTRIBUTING.md
+  s_c1fa799bc706e8::t_aef0effcfb5095 4-6
+docs/structure.md
+  s_c1fa799bc706e8::t_fe76adb09953a0 1-107
+internal/application/doctor/checks.go
+  s_c1fa799bc706e8::t_ec6ef02a819733 11-12,28,30,44,53,102,176,250
+internal/application/doctor/checks_test.go
+  s_c1fa799bc706e8::t_24bf3aa2056837 33,195-208,222,224
+internal/application/doctor/command.go
+  s_c1fa799bc706e8::t_6bc841da1a02a9 3-4,6-19
+internal/application/doctor/doctor.go
+  s_c1fa799bc706e8::t_823f7fdd5847f2 49-50,78-79,83-84,105
+internal/application/lifecycle/up.go
+  s_c1fa799bc706e8::t_4d4bfe549a0390 10-11,32-35,38-42,57,70,74-83
+internal/application/validation/local.go
+  s_c1fa799bc706e8::t_832a31062ac8a8 1-59
+internal/application/validation/local_test.go
+  s_c1fa799bc706e8::t_199d59b8eecdef 1,6-7,10-12,14-20,22-24,26-28,30-32,36-39,43-47,49-51
+internal/application/validation/validation.go
+  s_c1fa799bc706e8::t_3878718c13feee 11-12,20-21,30,35,42,54,59,66,71
+internal/cli/doctor.go
+  s_c1fa799bc706e8::t_996d57f4c01250 9
+internal/cli/validate.go
+  s_c1fa799bc706e8::t_e9993f426c40bd 11
+internal/configuration/local.go
+  s_c1fa799bc706e8::t_6b7317161a6e6d 1,11-12,19-21,24,27,34,57,63
+internal/configuration/local_test.go
+  s_c1fa799bc706e8::t_2d653e78db66f7 1,23,25,52,69,71,77,79-80,83,85
+internal/configuration/model.go
+  s_c1fa799bc706e8::t_2a8a8e944565a2 1-3
+internal/sbx/client.go
+  s_c1fa799bc706e8::t_a5965820febb08 1-174
+internal/sbx/inspection.go
+  s_c1fa799bc706e8::t_b6982e370dd85a 1-28
+internal/sbx/process.go
+  s_c1fa799bc706e8::t_44e47ad0a6d70c 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "1078984ae3002f30f57c873d636c94955da35809",
+  "prompts": {},
+  "sessions": {
+    "s_c1fa799bc706e8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fec52-67f0-7612-9171-66b33b2547f6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
