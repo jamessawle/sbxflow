@@ -30,7 +30,7 @@ sandbox:
       community:
         type: git
         repo: https://github.com/docker/sbx-kits-contrib.git
-        ref: v0.14.0
+        ref: v0.16.0
 
     use:
       - source: community
