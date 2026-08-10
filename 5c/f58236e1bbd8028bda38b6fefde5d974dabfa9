@@ -1,0 +1,19 @@
+openspec/changes/enforce-package-boundaries/.openspec.yaml
+  s_975d15ab0c8b86::t_720ead7a941703 1-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "5cf58236e1bbd8028bda38b6fefde5d974dabfa9",
+  "prompts": {},
+  "sessions": {
+    "s_975d15ab0c8b86": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fec68-cdf4-7dc0-98c4-b95e14b0120a",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
