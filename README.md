@@ -192,11 +192,20 @@ or reconciled: changing their declaration does not update, recreate, or grade
 the existing sandbox.
 
 Use `up --recreate` to replace an existing exact-name sandbox from the current
-declaration. After complete validation and exact-name lookup succeed, sbxflow
-runs `sbx rm --force <declared-name>` without confirmation, then creates and
-enters the replacement with the declared workspace, agent, kits, and derived
-trust. There is no `-r` shorthand. If the declared sandbox is absent, the flag
-follows the ordinary create-and-enter path without attempting removal.
+declaration. After complete validation, sbxflow inspects that sandbox's state.
+A stopped sandbox is force-removed without an additional prompt. A running
+sandbox produces a warning on standard error and must be explicitly confirmed
+through standard input because removal can terminate sessions attached from
+other terminals. Empty, negative, malformed, unavailable, and non-interactive
+responses cancel with a non-zero status before removal. If the sandbox is
+absent, the flag follows the ordinary create-and-enter path without attempting
+removal. There is no `-r` shorthand.
+
+After any required approval, sbxflow runs
+`sbx rm --force <declared-name>`, then creates and enters the replacement with
+the declared workspace, agent, kits, and derived trust. State can change between
+inspection and removal; sbxflow does not re-inspect or retry, and preserves
+Docker's removal result.
 
 Recreation permanently removes the sandbox's installed tools, Docker images,
 agent history, configuration changes, and other persisted state, including for

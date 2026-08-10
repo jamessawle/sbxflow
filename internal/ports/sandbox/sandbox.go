@@ -39,6 +39,15 @@ type RemoveRequest struct {
 	Streams Streams
 }
 
+// State is the normalized lifecycle state of an exact sandbox name.
+type State string
+
+const (
+	StateAbsent  State = "absent"
+	StateStopped State = "stopped"
+	StateRunning State = "running"
+)
+
 // KitValidator validates canonical local-kit paths.
 type KitValidator interface {
 	ValidateKits(ctx context.Context, paths []string) ([]Output, error)
@@ -56,6 +65,11 @@ type Inspector interface {
 // Lookup checks whether an exact sandbox exists.
 type Lookup interface {
 	SandboxExists(ctx context.Context, name string) (bool, error)
+}
+
+// StateLookup inspects the lifecycle state of an exact sandbox name.
+type StateLookup interface {
+	InspectSandbox(ctx context.Context, name string) (State, error)
 }
 
 // Runner creates or enters a sandbox.

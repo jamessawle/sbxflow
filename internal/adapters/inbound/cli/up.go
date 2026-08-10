@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"strings"
 
 	"github.com/jamessawle/sbxflow/internal/application/lifecycle"
 	"github.com/spf13/cobra"
@@ -22,18 +24,20 @@ func newUpCommand(runner UpRunner) *cobra.Command {
 		Short: "Create or enter the repository's Docker Sandbox",
 		Long: "Discover and validate the nearest sbxflow.yaml, then interactively create or enter its declared Docker Sandbox.\n" +
 			"An existing named sandbox is entered without reconciling its workspace or kits with the current declaration.\n" +
-			"With --recreate, an existing sandbox and its persisted state are force-removed before its replacement is created and entered.",
+			"With --recreate, an existing sandbox and its persisted state are force-removed before its replacement is created and entered.\n" +
+			"Recreating a running sandbox requires confirmation because it can terminate other attached terminal sessions.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			workingDirectory, err := os.Getwd()
 			if err != nil {
 				return fmt.Errorf("determine working directory: %w", err)
 			}
-			report, err := runner.Run(cmd.Context(), workingDirectory, lifecycle.UpOptions{Recreate: recreate}, lifecycle.Streams{
+			streams := lifecycle.Streams{
 				In:  cmd.InOrStdin(),
 				Out: cmd.OutOrStdout(),
 				Err: cmd.ErrOrStderr(),
-			})
+			}
+			report, err := runner.Run(cmd.Context(), workingDirectory, lifecycle.UpOptions{Recreate: recreate, Confirmer: recreationConfirmer{}}, streams)
 			if errors.Is(err, lifecycle.ErrValidationFailed) {
 				renderValidationReport(cmd, report)
 				cmd.Root().SilenceErrors = true
@@ -46,6 +50,45 @@ func newUpCommand(runner UpRunner) *cobra.Command {
 			return err
 		},
 	}
-	command.Flags().BoolVar(&recreate, "recreate", false, "Force-remove an existing sandbox and its persisted state before replacement")
+	command.Flags().BoolVar(&recreate, "recreate", false, "Force-recreate the sandbox, confirming first if it is running")
 	return command
+}
+
+type recreationConfirmer struct{}
+
+func (recreationConfirmer) ConfirmRunningSandboxRecreation(name string, streams lifecycle.Streams) (bool, error) {
+	if streams.In == nil || streams.Err == nil {
+		return false, errors.New("confirmation input or error stream is unavailable")
+	}
+	_, _ = fmt.Fprintf(streams.Err, "Warning: recreating running sandbox %q permanently removes its persisted state and can terminate other attached terminal sessions.\nContinue? [y/N] ", name)
+	response, err := readConfirmationLine(streams.In)
+	if err != nil {
+		return false, fmt.Errorf("read confirmation response: %w", err)
+	}
+	switch strings.ToLower(strings.TrimSpace(response)) {
+	case "y", "yes":
+		return true, nil
+	default:
+		return false, nil
+	}
+}
+
+func readConfirmationLine(input io.Reader) (string, error) {
+	var response strings.Builder
+	var buffer [1]byte
+	for {
+		count, err := input.Read(buffer[:])
+		if count == 1 {
+			if buffer[0] == '\n' {
+				return response.String(), nil
+			}
+			response.WriteByte(buffer[0])
+		}
+		if err != nil {
+			return "", err
+		}
+		if count == 0 {
+			return "", io.ErrNoProgress
+		}
+	}
 }

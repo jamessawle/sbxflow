@@ -14,6 +14,10 @@ import (
 // validation.
 var ErrValidationFailed = errors.New("configuration validation failed")
 
+// ErrRecreationCancelled identifies a running-sandbox recreation that was not
+// explicitly approved.
+var ErrRecreationCancelled = errors.New("running sandbox recreation cancelled")
+
 // ValidationReport is the validated domain state returned by up.
 type ValidationReport = configuration.Validation
 
@@ -31,14 +35,21 @@ type Streams struct {
 
 // UpOptions selects optional behavior for the up lifecycle.
 type UpOptions struct {
-	Recreate bool
+	Recreate  bool
+	Confirmer RecreationConfirmer
+}
+
+// RecreationConfirmer obtains explicit approval before a running sandbox is
+// permanently replaced.
+type RecreationConfirmer interface {
+	ConfirmRunningSandboxRecreation(name string, streams Streams) (bool, error)
 }
 
 // UpRunner validates, inspects, and enters the declared sandbox.
 type UpRunner struct {
 	Validation Validator
 	Sandboxes  interface {
-		sandboxport.Lookup
+		sandboxport.StateLookup
 		sandboxport.Remover
 		sandboxport.Runner
 	}
@@ -68,9 +79,22 @@ func (r UpRunner) Run(ctx context.Context, start string, options UpOptions, stre
 	if err != nil {
 		return report, err
 	}
-	exists, err := r.Sandboxes.SandboxExists(ctx, plan.Name)
+	state, err := r.Sandboxes.InspectSandbox(ctx, plan.Name)
 	if err != nil {
 		return report, err
+	}
+	exists := state != sandboxport.StateAbsent
+	if state == sandboxport.StateRunning && options.Recreate {
+		if options.Confirmer == nil {
+			return report, fmt.Errorf("confirm recreation of running sandbox %q: confirmation is unavailable", plan.Name)
+		}
+		approved, confirmErr := options.Confirmer.ConfirmRunningSandboxRecreation(plan.Name, streams)
+		if confirmErr != nil {
+			return report, fmt.Errorf("confirm recreation of running sandbox %q: %w", plan.Name, confirmErr)
+		}
+		if !approved {
+			return report, fmt.Errorf("%w: sandbox %q was not removed", ErrRecreationCancelled, plan.Name)
+		}
 	}
 	if exists && options.Recreate {
 		err = r.Sandboxes.RemoveSandbox(ctx, sandboxport.RemoveRequest{

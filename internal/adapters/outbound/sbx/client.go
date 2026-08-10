@@ -4,6 +4,7 @@ package sbx
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -30,6 +31,7 @@ var (
 	_ sandboxport.KitValidator = Client{}
 	_ sandboxport.Inspector    = Client{}
 	_ sandboxport.Lookup       = Client{}
+	_ sandboxport.StateLookup  = Client{}
 	_ sandboxport.Runner       = Client{}
 	_ sandboxport.Stopper      = Client{}
 	_ sandboxport.Remover      = Client{}
@@ -83,6 +85,55 @@ func (c Client) SandboxExists(ctx context.Context, name string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+// InspectSandbox reports the normalized lifecycle state of an exact sandbox
+// name from Docker's machine-readable listing.
+func (c Client) InspectSandbox(ctx context.Context, name string) (sandboxport.State, error) {
+	executable, err := c.Commands.LookPath("sbx")
+	if err != nil {
+		return "", fmt.Errorf("locate sbx for sandbox state inspection: %w", err)
+	}
+	output := c.Commands.Run(ctx, executable, "ls", "--json")
+	if output.Err != nil {
+		diagnostics := strings.TrimSpace(strings.Join(nonempty(string(output.Stderr), string(output.Stdout)), ": "))
+		if diagnostics != "" {
+			return "", fmt.Errorf("inspect Docker Sandboxes with `sbx ls --json`: %s: %w", diagnostics, output.Err)
+		}
+		return "", fmt.Errorf("inspect Docker Sandboxes with `sbx ls --json`: %w", output.Err)
+	}
+	var listing struct {
+		Sandboxes *[]struct {
+			Name   string `json:"name"`
+			Status string `json:"status"`
+		} `json:"sandboxes"`
+	}
+	if err := json.Unmarshal(output.Stdout, &listing); err != nil {
+		return "", fmt.Errorf("decode Docker Sandbox state from `sbx ls --json`: %w", err)
+	}
+	if listing.Sandboxes == nil {
+		return "", errors.New("decode Docker Sandbox state from `sbx ls --json`: missing sandboxes collection")
+	}
+	state := sandboxport.StateAbsent
+	matches := 0
+	for _, candidate := range *listing.Sandboxes {
+		if candidate.Name != name {
+			continue
+		}
+		matches++
+		switch strings.ToLower(candidate.Status) {
+		case string(sandboxport.StateRunning):
+			state = sandboxport.StateRunning
+		case string(sandboxport.StateStopped):
+			state = sandboxport.StateStopped
+		default:
+			return "", fmt.Errorf("inspect Docker Sandbox %q: unrecognized lifecycle state %q", name, candidate.Status)
+		}
+	}
+	if matches > 1 {
+		return "", fmt.Errorf("inspect Docker Sandbox %q: machine-readable listing contained %d exact-name matches", name, matches)
+	}
+	return state, nil
 }
 
 // RunSandbox creates or enters a sandbox and remains attached until sbx exits.

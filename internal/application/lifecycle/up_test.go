@@ -14,34 +14,52 @@ import (
 	sandboxport "github.com/jamessawle/sbxflow/internal/ports/sandbox"
 )
 
-func TestSandboxExistsUsesExactNonemptyLines(t *testing.T) {
+func TestInspectSandboxUsesExactMachineReadableState(t *testing.T) {
 	for _, test := range []struct {
 		name   string
 		output string
-		want   bool
+		want   sandboxport.State
 	}{
-		{name: "exact", output: "other\nproject\n", want: true},
-		{name: "prefix", output: "project-extra\n", want: false},
-		{name: "surrounding whitespace", output: " project \n", want: false},
-		{name: "empty", output: "\n\n", want: false},
+		{name: "running", output: `{"sandboxes":[{"name":"other","status":"stopped"},{"name":"project","status":"running"}]}`, want: sandboxport.StateRunning},
+		{name: "stopped", output: `{"sandboxes":[{"name":"project","status":"stopped"}]}`, want: sandboxport.StateStopped},
+		{name: "exact name", output: `{"sandboxes":[{"name":"project-extra","status":"running"}]}`, want: sandboxport.StateAbsent},
+		{name: "absent", output: `{"sandboxes":[]}`, want: sandboxport.StateAbsent},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			commands := &fakeCommandRunner{output: sbx.Output{Stdout: []byte(test.output)}}
-			got, err := (sbx.Client{Commands: commands}).SandboxExists(context.Background(), "project")
+			got, err := (sbx.Client{Commands: commands}).InspectSandbox(context.Background(), "project")
 			if err != nil || got != test.want {
 				t.Fatalf("sandboxExists() = %v, %v, want %v, nil", got, err, test.want)
 			}
-			if !reflect.DeepEqual(commands.args, []string{"ls", "--quiet"}) {
+			if !reflect.DeepEqual(commands.args, []string{"ls", "--json"}) {
 				t.Fatalf("args = %#v", commands.args)
 			}
 		})
 	}
 }
 
-func TestSandboxExistsReportsDockerDiagnostics(t *testing.T) {
+func TestInspectSandboxRejectsInvalidResults(t *testing.T) {
+	for _, test := range []struct {
+		name, output, want string
+	}{
+		{name: "malformed", output: `{`, want: "decode"},
+		{name: "missing collection", output: `{}`, want: "missing sandboxes collection"},
+		{name: "duplicate", output: `{"sandboxes":[{"name":"project","status":"running"},{"name":"project","status":"running"}]}`, want: "2 exact-name matches"},
+		{name: "unknown", output: `{"sandboxes":[{"name":"project","status":"starting"}]}`, want: "unrecognized lifecycle state"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := (sbx.Client{Commands: &fakeCommandRunner{output: sbx.Output{Stdout: []byte(test.output)}}}).InspectSandbox(context.Background(), "project")
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("InspectSandbox() error = %v, want %q", err, test.want)
+			}
+		})
+	}
+}
+
+func TestInspectSandboxReportsDockerDiagnostics(t *testing.T) {
 	commands := &fakeCommandRunner{output: sbx.Output{Stderr: []byte("daemon unavailable\n"), ExitCode: 7, Err: errors.New("exit 7")}}
-	_, err := (sbx.Client{Commands: commands}).SandboxExists(context.Background(), "project")
-	if err == nil || !strings.Contains(err.Error(), "sbx ls --quiet") || !strings.Contains(err.Error(), "daemon unavailable") {
+	_, err := (sbx.Client{Commands: commands}).InspectSandbox(context.Background(), "project")
+	if err == nil || !strings.Contains(err.Error(), "sbx ls --json") || !strings.Contains(err.Error(), "daemon unavailable") {
 		t.Fatalf("sandboxExists() error = %v", err)
 	}
 }
@@ -65,7 +83,8 @@ func TestRunnerValidationGatesLifecycleLookup(t *testing.T) {
 func TestRunnerReportsValidationSuccessBeforeLifecycleLookup(t *testing.T) {
 	var stderr bytes.Buffer
 	commands := &fakeCommandRunner{
-		path: "/bin/sbx",
+		path:   "/bin/sbx",
+		output: sbx.Output{Stdout: []byte(`{"sandboxes":[]}`)},
 		onLookup: func() {
 			if got, want := stderr.String(), "Configuration valid: /repo/sbxflow.yaml\n"; got != want {
 				t.Fatalf("stderr before lookup = %q, want %q", got, want)
@@ -103,12 +122,12 @@ func TestRunnerSelectsExactMissingAndExistingArguments(t *testing.T) {
 	}{
 		{
 			name:       "missing",
-			listOutput: "other\n",
+			listOutput: `{"sandboxes":[{"name":"other","status":"running"}]}`,
 			wantArgs:   []string{"run", "--name", "project", "--kit", "git+https://github.com/example/kits.git#ref=v1&dir=tooling", "codex", "/repo"},
 		},
 		{
 			name:       "existing",
-			listOutput: "project\n",
+			listOutput: `{"sandboxes":[{"name":"project","status":"running"}]}`,
 			wantArgs:   []string{"run", "codex", "--name", "project"},
 		},
 	} {
@@ -151,7 +170,7 @@ func TestRunnerRecreateLeavesAbsentSandboxOnCreatePath(t *testing.T) {
 }
 
 func TestRunnerRecreatesExactExistingSandboxBeforeCreatingFromPlan(t *testing.T) {
-	sandboxes := &fakeUpSandboxes{exists: true}
+	sandboxes := &fakeUpSandboxes{state: sandboxport.StateStopped}
 	var stdout, stderr bytes.Buffer
 	stdin := strings.NewReader("input")
 	streams := Streams{In: stdin, Out: &stdout, Err: &stderr}
@@ -190,6 +209,37 @@ func TestRunnerRecreatesExactExistingSandboxBeforeCreatingFromPlan(t *testing.T)
 	}
 }
 
+func TestRunnerConfirmsOnlyRunningRecreation(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		state      sandboxport.State
+		recreate   bool
+		approved   bool
+		confirmErr error
+		wantCalls  []string
+		wantErr    error
+	}{
+		{name: "running approved", state: sandboxport.StateRunning, recreate: true, approved: true, wantCalls: []string{"lookup project", "confirm project", "remove project", "run project"}},
+		{name: "running declined", state: sandboxport.StateRunning, recreate: true, wantCalls: []string{"lookup project", "confirm project"}, wantErr: ErrRecreationCancelled},
+		{name: "running input failure", state: sandboxport.StateRunning, recreate: true, confirmErr: io.ErrUnexpectedEOF, wantCalls: []string{"lookup project", "confirm project"}, wantErr: io.ErrUnexpectedEOF},
+		{name: "stopped", state: sandboxport.StateStopped, recreate: true, wantCalls: []string{"lookup project", "remove project", "run project"}},
+		{name: "running ordinary up", state: sandboxport.StateRunning, wantCalls: []string{"lookup project", "run project"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			sandboxes := &fakeUpSandboxes{state: test.state}
+			confirmer := &fakeConfirmer{approved: test.approved, err: test.confirmErr, calls: &sandboxes.calls}
+			runner := UpRunner{Validation: fakeValidator{report: validReport()}, Sandboxes: sandboxes}
+			_, err := runner.Run(context.Background(), "/repo", UpOptions{Recreate: test.recreate, Confirmer: confirmer}, Streams{})
+			if test.wantErr == nil && err != nil || test.wantErr != nil && !errors.Is(err, test.wantErr) {
+				t.Fatalf("Run() error = %v, want %v", err, test.wantErr)
+			}
+			if !reflect.DeepEqual(sandboxes.calls, test.wantCalls) {
+				t.Fatalf("calls = %#v, want %#v", sandboxes.calls, test.wantCalls)
+			}
+		})
+	}
+}
+
 func TestRunnerRecreateStopsAtOperationFailures(t *testing.T) {
 	lookupFailure := errors.New("lookup failed")
 	removalFailure := errors.New("removal failed")
@@ -209,14 +259,14 @@ func TestRunnerRecreateStopsAtOperationFailures(t *testing.T) {
 		},
 		{
 			name:         "removal",
-			sandboxes:    &fakeUpSandboxes{exists: true, removeErr: removalFailure},
+			sandboxes:    &fakeUpSandboxes{state: sandboxport.StateStopped, removeErr: removalFailure},
 			wantCalls:    []string{"lookup project", "remove project"},
 			wantErr:      removalFailure,
 			wantAttached: true,
 		},
 		{
 			name:         "replacement execution",
-			sandboxes:    &fakeUpSandboxes{exists: true, runErr: runFailure},
+			sandboxes:    &fakeUpSandboxes{state: sandboxport.StateStopped, runErr: runFailure},
 			wantCalls:    []string{"lookup project", "remove project", "run project"},
 			wantErr:      runFailure,
 			wantAttached: true,
@@ -243,7 +293,7 @@ func TestRunnerMarksAttachedProcessFailureAsRendered(t *testing.T) {
 	interactive := &fakeInteractiveRunner{err: errors.New("exit 9")}
 	runner := UpRunner{
 		Validation: fakeValidator{report: validReport()},
-		Sandboxes:  sbx.Client{Commands: &fakeCommandRunner{path: "/bin/sbx", output: sbx.Output{}}, Interactive: interactive},
+		Sandboxes:  sbx.Client{Commands: &fakeCommandRunner{path: "/bin/sbx", output: sbx.Output{Stdout: []byte(`{"sandboxes":[]}`)}}, Interactive: interactive},
 	}
 	_, err := runner.Run(context.Background(), "/repo", UpOptions{}, Streams{Err: io.Discard})
 	var attached AttachedProcessError
@@ -270,6 +320,17 @@ func validReport() configuration.Validation {
 type fakeValidator struct{ report configuration.Validation }
 
 func (v fakeValidator) Run(context.Context, string) configuration.Validation { return v.report }
+
+type fakeConfirmer struct {
+	approved bool
+	err      error
+	calls    *[]string
+}
+
+func (c *fakeConfirmer) ConfirmRunningSandboxRecreation(name string, _ Streams) (bool, error) {
+	*c.calls = append(*c.calls, "confirm "+name)
+	return c.approved, c.err
+}
 
 type fakeCommandRunner struct {
 	path     string
@@ -310,7 +371,7 @@ func (r *fakeInteractiveRunner) Run(ctx context.Context, invocation sbx.Interact
 }
 
 type fakeUpSandboxes struct {
-	exists        bool
+	state         sandboxport.State
 	lookupErr     error
 	removeErr     error
 	runErr        error
@@ -320,9 +381,12 @@ type fakeUpSandboxes struct {
 	runStreams    sandboxport.Streams
 }
 
-func (s *fakeUpSandboxes) SandboxExists(_ context.Context, name string) (bool, error) {
+func (s *fakeUpSandboxes) InspectSandbox(_ context.Context, name string) (sandboxport.State, error) {
 	s.calls = append(s.calls, "lookup "+name)
-	return s.exists, s.lookupErr
+	if s.state == "" {
+		s.state = sandboxport.StateAbsent
+	}
+	return s.state, s.lookupErr
 }
 
 func (s *fakeUpSandboxes) RemoveSandbox(_ context.Context, request sandboxport.RemoveRequest) error {

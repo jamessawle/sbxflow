@@ -34,7 +34,7 @@ func main() {
 	var doctorInspector sandboxport.Inspector = doctorSandboxes
 	var localKitValidator sandboxport.KitValidator = lifecycleSandboxes
 	var upSandboxes interface {
-		sandboxport.Lookup
+		sandboxport.StateLookup
 		sandboxport.Remover
 		sandboxport.Runner
 	} = lifecycleSandboxes
