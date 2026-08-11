@@ -56,9 +56,11 @@ jobs:
     needs: validate
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    # GoReleaser needs this write only to create the release and upload assets.
+    # Writes are limited to release publication and short-lived provenance.
     permissions:
+      attestations: write
       contents: write
+      id-token: write
 
     steps:
       - name: Check out repository
@@ -82,3 +84,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+      - name: Attest release artifacts
+        id: attest
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/checksums.txt
+
+      - name: Attach provenance to release
+        env:
+          ATTESTATION_BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp "${ATTESTATION_BUNDLE}" dist/sbxflow-provenance.intoto.jsonl
+          gh release upload "${GITHUB_REF_NAME}" dist/sbxflow-provenance.intoto.jsonl

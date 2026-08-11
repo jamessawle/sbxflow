@@ -80,11 +80,20 @@ archive="sbxflow_${version}_linux_amd64.tar.gz"
 base_url="https://github.com/jamessawle/sbxflow/releases/download/v${version}"
 curl -LO "${base_url}/${archive}"
 curl -LO "${base_url}/checksums.txt"
+gh attestation verify "${archive}" --repo jamessawle/sbxflow
+gh attestation verify checksums.txt --repo jamessawle/sbxflow
 grep " ${archive}$" checksums.txt | sha256sum --check
 tar -xzf "${archive}"
 sudo install -m 0755 sbxflow /usr/local/bin/sbxflow
 sbxflow --version
 ```
+
+Attestation verification requires network access and a current GitHub CLI. It
+authenticates the repository and workflow that produced each downloaded file;
+the checksum check independently confirms that the archive matches the
+published manifest. Each release also includes
+`sbxflow-provenance.intoto.jsonl` so automated supply-chain checks can discover
+the provenance directly from its assets.
 
 On macOS, select `darwin_arm64` for Apple silicon or `darwin_amd64` for an
 Intel Mac and replace the checksum command with:

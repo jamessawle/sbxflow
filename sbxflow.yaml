@@ -28,3 +28,6 @@ sandbox:
 
       - source: sbx-kits
         kit: kits/mise/network-node
+
+      - source: sbx-kits
+        kit: kits/mise/network-zig
