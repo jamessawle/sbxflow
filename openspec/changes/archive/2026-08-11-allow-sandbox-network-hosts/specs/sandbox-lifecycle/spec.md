@@ -145,6 +145,50 @@ host paths.
 - **AND** `up` does not attach to a sandbox
 - **AND** exits with a non-zero status
 
+### Requirement: Destroy idempotently removes the exact declared sandbox
+
+After resolving the lifecycle target, `destroy` SHALL determine whether a
+sandbox whose name exactly equals the declared `sandbox.name` exists. When it
+exists, `destroy` SHALL ask Docker Sandboxes to remove that exact sandbox and
+all associated sandbox resources through the shared removal operation, which
+then cleans up the sandbox's declared network resources. Success SHALL require
+both phases. When it does not exist, `destroy` SHALL succeed without creating,
+starting, stopping, or removing a sandbox.
+
+#### Scenario: Declared sandbox exists
+
+- **WHEN** Docker Sandboxes reports the exact declared name as an existing
+  sandbox
+- **THEN** `destroy` invokes `sbx rm` with that name
+- **AND** cleans up its declared network resources once the removal completes
+- **AND** exits successfully when both the removal and that cleanup complete
+
+#### Scenario: Declared sandbox is absent
+
+- **WHEN** Docker Sandboxes reports no sandbox whose name exactly equals the
+  declared name
+- **THEN** `destroy` exits successfully without invoking `sbx rm`
+
+#### Scenario: Only a similar sandbox name exists
+
+- **WHEN** Docker Sandboxes reports a name that only prefixes, suffixes, or
+  otherwise resembles the declared name
+- **THEN** `destroy` treats the declared sandbox as absent
+- **AND** does not remove the similarly named sandbox
+
+#### Scenario: Sandbox names cannot be listed
+
+- **WHEN** Docker Sandboxes cannot report existing sandbox names
+- **THEN** `destroy` reports the Docker failure
+- **AND** does not attempt to remove a sandbox
+- **AND** exits with a non-zero status
+
+#### Scenario: Docker cannot remove the sandbox
+
+- **WHEN** Docker Sandboxes rejects or cannot complete the removal request
+- **THEN** its diagnostic output remains visible to the user
+- **AND** `destroy` exits with a non-zero status
+
 ### Requirement: Existing sandbox is entered without reconciliation
 
 When the declared sandbox name already exists, `up` SHALL ask Docker Sandboxes

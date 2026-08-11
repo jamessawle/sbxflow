@@ -456,15 +456,18 @@ validation pipeline.
 After resolving the lifecycle target, `destroy` SHALL determine whether a
 sandbox whose name exactly equals the declared `sandbox.name` exists. When it
 exists, `destroy` SHALL ask Docker Sandboxes to remove that exact sandbox and
-all associated sandbox resources. When it does not exist, `destroy` SHALL
-succeed without creating, starting, stopping, or removing a sandbox.
+all associated sandbox resources through the shared removal operation, which
+then cleans up the sandbox's declared network resources. Success SHALL require
+both phases. When it does not exist, `destroy` SHALL succeed without creating,
+starting, stopping, or removing a sandbox.
 
 #### Scenario: Declared sandbox exists
 
 - **WHEN** Docker Sandboxes reports the exact declared name as an existing
   sandbox
 - **THEN** `destroy` invokes `sbx rm` with that name
-- **AND** exits successfully when Docker completes the removal
+- **AND** cleans up its declared network resources once the removal completes
+- **AND** exits successfully when both the removal and that cleanup complete
 
 #### Scenario: Declared sandbox is absent
 
