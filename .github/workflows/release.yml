@@ -79,7 +79,14 @@ jobs:
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           distribution: goreleaser
-          version: 2.17.1
+          # Casks generated before goreleaser/goreleaser#6752 emit `on_intel`
+          # before `on_arm` and a blank line before the closing `end`, which the
+          # tap's `brew style` job rejects. That fix is merged but unreleased,
+          # so this tracks the nightly until 2.18.0 ships. The action resolves
+          # this to the latest immutable vX.Y.Z-<sha>-nightly release and
+          # verifies its checksums. Pin it back to a release version when 2.18.0
+          # is out; see issue #63.
+          version: nightly
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ github.token }}

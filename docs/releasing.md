@@ -30,21 +30,13 @@ GitHub release, executable archive, checksum manifest, or Homebrew update.
    mise run validate
    ```
 
-   This includes `mise run test:release`, which builds a GoReleaser snapshot,
-   confirms the public archive set, and checks the structure of the Homebrew
-   formula GoReleaser generates before any tag is pushed.
-
-   Then check that formula against Homebrew itself:
-
-   ```text
-   mise run test:release:tap
-   ```
-
-   This runs the same `brew style`, `brew readall`, and `brew audit` checks as
-   the tap's own test-bot job, on a current Homebrew in a throwaway container.
-   It requires Docker and network access and takes a few minutes, which is why
-   it is separate from `mise run validate`. The tap publishes what GoReleaser
-   generates with no later correction, so a failure here is a release blocker.
+   There is deliberately no local packaging check. The release workflow tracks
+   the GoReleaser nightly, because the fix that makes generated casks pass
+   `brew style` is merged upstream but unreleased, and Mise cannot install that
+   build. A locally pinned GoReleaser would generate a different cask from the
+   one the workflow publishes, so the tap's own test-bot job is the only
+   trustworthy gate. Restore a local check when GoReleaser 2.18.0 ships and the
+   workflow can pin a release version again; see issue #63.
 
 4. Build and smoke-test the release commit on a supported host with an `sbx`
    version inside the range documented in `README.md`:
@@ -78,7 +70,7 @@ git push origin "${version}"
 Pushing the tag starts `.github/workflows/release.yml`. The workflow validates
 the tag and repository, then GoReleaser builds the supported archives, generates
 `checksums.txt`, creates the GitHub release, and opens a pull request updating
-the Homebrew formula. GoReleaser is the only writer of that pull request: the
+the Homebrew cask. GoReleaser is the only writer of that pull request: the
 branch it pushes is published as-is, so its first commit must already pass the
 tap's checks.
 
@@ -145,11 +137,11 @@ the release provenance.
 After merging the tap update, test a clean Homebrew installation:
 
 ```sh
-brew uninstall sbxflow 2>/dev/null || true
-brew install jamessawle/tap/sbxflow
+brew uninstall --cask sbxflow 2>/dev/null || true
+brew install --cask jamessawle/tap/sbxflow
 sbxflow --version
 sbxflow --help
-brew info sbxflow
+brew info --cask sbxflow
 ```
 
 Confirm that the installed version is the release just published. Record the

@@ -43,12 +43,7 @@ checksum:
   name_template: checksums.txt
   algorithm: sha256
 
-# Published as a formula rather than a cask: GoReleaser's generated cask trips
-# Cask/StanzaOrder and cannot declare `depends_on macos:`, so every release
-# needed a corrective commit in the tap. The formula publisher is deprecated
-# upstream; see the publish-homebrew-formula design note for the trade-off and
-# the conditions under which a cask becomes viable again.
-brews:
+homebrew_casks:
   - name: sbxflow
     repository:
       owner: jamessawle
@@ -59,16 +54,26 @@ brews:
         enabled: true
         base:
           branch: main
-    directory: Formula
+    directory: Casks
     homepage: https://github.com/jamessawle/sbxflow
     description: Apply a repository's Docker Sandbox configuration and lifecycle
     license: MIT
-    commit_author:
-      name: goreleaserbot
-      email: bot@goreleaser.com
-    commit_msg_template: "chore(brew): sbxflow {{ .Tag }}"
-    test: |
-      system bin/"sbxflow", "--version"
+    binaries:
+      - sbxflow
+    # The Linux archives are deliberately included. Homebrew cannot install a
+    # cask on Linux, but `brew readall --os=all --arch=all` rejects a cask that
+    # resolves no checksum on a platform it evaluates, and GoReleaser has no
+    # `depends_on macos:` support to declare the cask macOS-only instead.
+    #
+    # The postflight hook is GoReleaser's documented remedy for binaries that
+    # are neither signed nor notarized. Without it macOS refuses to run the
+    # installed executable.
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/sbxflow"]
+          end
 
 changelog:
   use: github-native
