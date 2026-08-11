@@ -1,8 +1,7 @@
 # Publication readiness
 
-This checklist records the evidence and owner actions required before changing
-`jamessawle/sbxflow` from private to public. Completing repository preparation
-does not authorize or perform the visibility change.
+This checklist records the evidence and owner actions used to change
+`jamessawle/sbxflow` from private to public on 2026-08-11.
 
 ## Content and history audit
 
@@ -42,7 +41,7 @@ before changing visibility.
 
 Verified through the GitHub API on 2026-08-11:
 
-- [x] Visibility remains private.
+- [x] Visibility is public following the owner-authorized transition.
 - [x] Description accurately summarizes the repository; no homepage is set.
 - [x] Issues are enabled, the wiki is disabled, and the MIT license is detected.
 - [x] Squash merging is the only merge strategy and merged branches are deleted.
@@ -56,9 +55,9 @@ Verified through the GitHub API on 2026-08-11:
 
 GitHub accepted and returned the topics, vulnerability-alert endpoint returned
 `204 No Content`, and the automated-security-fixes endpoint returned `200 OK`.
-The private repository currently returns `403` for CodeQL default setup, `422`
-for secret scanning, and `404` for private vulnerability reporting. Those
-features therefore remain mandatory visibility-transition gates below.
+While private, the repository returned `403` for CodeQL default setup, `422`
+for secret scanning, and `404` for private vulnerability reporting. All became
+available and were enabled during the public transition.
 
 The repository-owned community files and issue forms use GitHub's standard
 discovery paths, their Markdown and YAML parse successfully during formatting,
@@ -74,33 +73,33 @@ Completed on 2026-08-11:
 - [x] `mise run fmt`
 - [x] `git diff --check`
 - [x] `mise run validate`
-- [x] Final GitHub API review confirmed visibility remains private, topics and
-      dependency security settings remain enabled, and the documented repository
-      and branch settings are unchanged.
+- [x] Final GitHub API review confirmed public visibility, topics and dependency
+      security settings remain enabled, and the documented repository and branch
+      settings are unchanged.
 
 ## Visibility-transition gates
 
 The owner must complete and verify these steps immediately before or after
 making the repository public, according to GitHub feature availability:
 
-- [ ] Re-run current-tree and reachable-history scans and manually review the
+- [x] Re-run current-tree and reachable-history scans and manually review the
       final diff, filenames, links, fixtures, and commit attribution.
-- [ ] Confirm repository metadata, topics, branch protection, merge settings,
+- [x] Confirm repository metadata, topics, branch protection, merge settings,
       and dependency security settings still match this document.
-- [ ] Enable GitHub CodeQL default setup for Go and verify its first analysis.
-- [ ] Enable secret scanning and push protection and verify both report enabled.
-- [ ] Enable private vulnerability reporting and verify that the link in
+- [x] Enable GitHub CodeQL default setup for Go and verify its first analysis.
+- [x] Enable secret scanning and push protection and verify both report enabled.
+- [x] Enable private vulnerability reporting and verify that the link in
       `SECURITY.md` and the issue-template contact link open a private report.
-- [ ] Verify GitHub's community profile discovers the README, contribution
+- [x] Verify GitHub's community profile discovers the README, contribution
       guide, code of conduct, security policy, license, issue forms, and pull
       request template.
-- [ ] Make the separate owner-approved visibility change; this document and its
-      implementation do not grant that approval.
-- [ ] After the visibility change, inspect the public repository while signed
+- [x] Make the separate owner-approved visibility change.
+- [x] After the visibility change, inspect the public repository while signed
       out and confirm releases, source archives, actions, issues, security links,
       and community files expose only intended content.
 
-CodeQL, secret scanning with push protection, and private vulnerability
-reporting are mandatory publication gates. If GitHub does not permit a feature
-while the repository is private, leave visibility private, retain the unchecked
-gate, and enable it as part of the coordinated transition.
+CodeQL default setup completed its first Go and GitHub Actions analysis
+successfully. GitHub reports secret scanning, push protection, Dependabot
+security updates, and private vulnerability reporting enabled. The live
+community profile reports 100% health, and public and security-reporting links
+return successful responses.
