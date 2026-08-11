@@ -39,11 +39,62 @@ Use `sbxflow -v` or `sbxflow --version` to display the build identity. Root and 
 
 ## Installation
 
-Install a published release with Homebrew:
+### Homebrew
+
+Install the latest published release on macOS with Homebrew:
 
 ```text
 brew install --cask jamessawle/tap/sbxflow
 ```
+
+Verify the installation:
+
+```text
+sbxflow --version
+sbxflow doctor
+```
+
+Upgrade or uninstall it with Homebrew:
+
+```text
+brew upgrade --cask sbxflow
+brew uninstall --cask sbxflow
+```
+
+### Direct download
+
+Release archives for macOS, Linux, and Windows are available from the
+[GitHub releases page](https://github.com/jamessawle/sbxflow/releases). Download
+the archive for your operating system and architecture together with
+`checksums.txt`. For example, on Linux amd64:
+
+```sh
+version=0.1.0
+archive="sbxflow_${version}_linux_amd64.tar.gz"
+base_url="https://github.com/jamessawle/sbxflow/releases/download/v${version}"
+curl -LO "${base_url}/${archive}"
+curl -LO "${base_url}/checksums.txt"
+grep " ${archive}$" checksums.txt | sha256sum --check
+tar -xzf "${archive}"
+sudo install -m 0755 sbxflow /usr/local/bin/sbxflow
+sbxflow --version
+```
+
+On macOS, select `darwin_arm64` for Apple silicon or `darwin_amd64` for an
+Intel Mac and replace the checksum command with:
+
+```sh
+grep " ${archive}$" checksums.txt | shasum -a 256 --check
+```
+
+Windows amd64 releases use a `.zip` archive. Compare the SHA-256 value reported
+by `Get-FileHash <archive> -Algorithm SHA256` with the corresponding line in
+`checksums.txt`, extract `sbxflow.exe`, and place it in a directory on `PATH`.
+
+To upgrade a direct installation, verify and install the newer release over the
+existing executable. To uninstall it, remove the installed `sbxflow` executable.
+These operations do not remove Docker sandboxes; use `sbxflow destroy` first if
+you also intend to remove a repository's declared sandbox and persisted state.
 
 ### `sbxflow doctor`
 
