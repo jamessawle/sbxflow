@@ -74,6 +74,10 @@ homebrew_casks:
           if OS.mac?
             system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/sbxflow"]
           end
+    caveats: |
+      sbxflow is not signed or notarized with an Apple Developer certificate.
+      Installing it removes the macOS quarantine attribute from the executable
+      so that Gatekeeper does not refuse to run it.
 
 changelog:
   use: github-native
