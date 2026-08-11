@@ -36,7 +36,9 @@ mise run fmt        Format Markdown and Go files
 mise run test:architecture
                     Check production package dependency boundaries
 mise run test:release
-                    Build a release snapshot and validate its archives and cask
+                    Build a release snapshot and validate its archives and formula
+mise run test:release:tap
+                    Also check the generated formula with Homebrew's own tap checks
 mise run validate   Check Markdown, workflows, specs, Go formatting, vet, tests, and builds
 ```
 
@@ -163,8 +165,8 @@ verification, and failure recovery. Before creating the tag:
 
 Pushing the tag runs the release workflow. It validates the tag and repository,
 then uses the pinned GoReleaser version to build the supported executables,
-generate checksums, publish the GitHub release, and open a Homebrew cask update
-in `jamessawle/homebrew-tap`. The repository must provide a
+generate checksums, publish the GitHub release, and open a Homebrew formula
+update in `jamessawle/homebrew-tap`. The repository must provide a
 `HOMEBREW_TAP_GITHUB_TOKEN` Actions secret whose token can write contents to the
 tap repository and create the update pull request. Do not move a published
 release tag; follow the runbook's partial-failure guidance and issue a new

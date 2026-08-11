@@ -36,16 +36,19 @@ description = "Check production package dependency boundaries"
 run = "go-arch-lint check"
 
 [tasks."test:release"]
-description = "Validate release archives and generated Homebrew cask"
+description = "Validate release archives and the generated Homebrew formula"
 run = '''
 goreleaser release --snapshot --clean
 
-version="$(jq -r .version dist/metadata.json)"
-./scripts/render-homebrew-cask.sh "$version" dist/checksums.txt dist/homebrew/Casks/sbxflow.rb
+# Inspect what GoReleaser writes. Never overwrite it: an earlier version of this
+# task rendered its own cask over this path and then asserted properties that
+# renderer hardcoded, so it could not fail.
+formula=dist/homebrew/Formula/sbxflow.rb
 
 expected="darwin_amd64.tar.gz
 darwin_arm64.tar.gz
 linux_amd64.tar.gz
+linux_arm64.tar.gz
 windows_amd64.zip"
 actual="$(find dist -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' \) -print |
   sed -E 's#^.*/sbxflow_[^_]+_##' | sort)"
@@ -56,22 +59,36 @@ if [ "$actual" != "$expected" ]; then
   exit 1
 fi
 
-if grep -q 'on_linux' dist/homebrew/Casks/sbxflow.rb; then
-  echo "Generated Homebrew cask must not contain Linux stanzas."
+if [ ! -f "$formula" ]; then
+  echo "GoReleaser did not generate $formula."
   exit 1
 fi
 
-arm_line="$(grep -n 'on_arm do' dist/homebrew/Casks/sbxflow.rb | cut -d: -f1)"
-intel_line="$(grep -n 'on_intel do' dist/homebrew/Casks/sbxflow.rb | cut -d: -f1)"
-if [ -z "$arm_line" ] || [ -z "$intel_line" ] || [ "$arm_line" -ge "$intel_line" ]; then
-  echo "Generated Homebrew cask must place on_arm before on_intel."
+# brew readall --os=all --arch=all evaluates the formula on each of these, and
+# rejects any that resolves no archive.
+for platform in "on_macos" "on_linux"; do
+  if ! grep -q "  $platform do" "$formula"; then
+    echo "Generated Homebrew formula must contain a $platform block."
+    exit 1
+  fi
+done
+
+if [ "$(grep -c '^      url "https://' "$formula")" -ne 4 ]; then
+  echo "Generated Homebrew formula must cover macOS and Linux on both architectures."
   exit 1
 fi
 
-if [ "$(tail -n 1 dist/homebrew/Casks/sbxflow.rb)" != "end" ]; then
-  echo "Generated Homebrew cask must end directly after its closing block."
+if grep -q 'windows' "$formula"; then
+  echo "Generated Homebrew formula must not reference Windows archives."
   exit 1
 fi
+'''
+
+[tasks."test:release:tap"]
+description = "Check the generated Homebrew formula against the tap's own syntax checks"
+run = '''
+mise run test:release
+./scripts/check-tap-syntax.sh
 '''
 
 [tasks.validate]
