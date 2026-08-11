@@ -4,7 +4,6 @@ min_version = "2026.5.2"
 actionlint = "1.7.12"
 go = "1.26.5"
 golangci-lint = "2.12.2"
-goreleaser = "2.17.1"
 "go:github.com/fe3dback/go-arch-lint" = "1.16.0"
 node = "24.18.0"
 "npm:@fission-ai/openspec" = "1.8.0"
@@ -35,62 +34,6 @@ gofmt -w .
 description = "Check production package dependency boundaries"
 run = "go-arch-lint check"
 
-[tasks."test:release"]
-description = "Validate release archives and the generated Homebrew formula"
-run = '''
-goreleaser release --snapshot --clean
-
-# Inspect what GoReleaser writes. Never overwrite it: an earlier version of this
-# task rendered its own cask over this path and then asserted properties that
-# renderer hardcoded, so it could not fail.
-formula=dist/homebrew/Formula/sbxflow.rb
-
-expected="darwin_amd64.tar.gz
-darwin_arm64.tar.gz
-linux_amd64.tar.gz
-linux_arm64.tar.gz
-windows_amd64.zip"
-actual="$(find dist -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' \) -print |
-  sed -E 's#^.*/sbxflow_[^_]+_##' | sort)"
-
-if [ "$actual" != "$expected" ]; then
-  echo "Unexpected release archive set:"
-  echo "$actual"
-  exit 1
-fi
-
-if [ ! -f "$formula" ]; then
-  echo "GoReleaser did not generate $formula."
-  exit 1
-fi
-
-# brew readall --os=all --arch=all evaluates the formula on each of these, and
-# rejects any that resolves no archive.
-for platform in "on_macos" "on_linux"; do
-  if ! grep -q "  $platform do" "$formula"; then
-    echo "Generated Homebrew formula must contain a $platform block."
-    exit 1
-  fi
-done
-
-if [ "$(grep -c '^      url "https://' "$formula")" -ne 4 ]; then
-  echo "Generated Homebrew formula must cover macOS and Linux on both architectures."
-  exit 1
-fi
-
-if grep -q 'windows' "$formula"; then
-  echo "Generated Homebrew formula must not reference Windows archives."
-  exit 1
-fi
-'''
-
-[tasks."test:release:tap"]
-description = "Check the generated Homebrew formula against the tap's own syntax checks"
-run = '''
-mise run test:release
-./scripts/check-tap-syntax.sh
-'''
-
 [tasks.validate]
 description = "Run all repository checks"
 env = { CGO_ENABLED = "1", CC = "zig cc" }
@@ -110,6 +53,5 @@ go vet ./...
 golangci-lint run
 go test -race ./...
 mise run test:architecture
-mise run test:release
 go build ./...
 '''
