@@ -1,0 +1,33 @@
+.github/workflows/release.yml
+  s_1b7f4d04f41f7a::t_9d13c3fd918167 82-89
+.goreleaser.yaml
+  s_1b7f4d04f41f7a::t_16e43e7ce68a42 46,57,61-76
+README.md
+  s_1b7f4d04f41f7a::t_14c99e07a55237 53,56,69-70,73-74
+docs/releasing.md
+  s_1b7f4d04f41f7a::t_9b9ba978dc111b 33-39,73,140-141,144
+openspec/changes/publish-homebrew-cask/design.md
+  s_1b7f4d04f41f7a::t_0a68549f00e902 5-7,15,17,19-25,27-28,30,32-36,38-40,42,44,46-51,53-59,61-62
+openspec/changes/publish-homebrew-cask/proposal.md
+  s_1b7f4d04f41f7a::t_be640b64ce16cf 3-25,29-38,48-51,55-58,60-61
+openspec/changes/publish-homebrew-cask/specs/release-distribution/spec.md
+  s_1b7f4d04f41f7a::t_ab0fbdcfc6a760 5,7-8,19-20,22,24-26,31,33-34,36,38-41
+openspec/changes/publish-homebrew-cask/tasks.md
+  s_1b7f4d04f41f7a::t_2dd75099e34051 1,3-8,10,12-15,17,19-23,25,27-30,32,34-36,38,40-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "9fe4149362588467a6903551a223cfe6669c0886",
+  "prompts": {},
+  "sessions": {
+    "s_1b7f4d04f41f7a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa9b609c-eb23-4e02-ba39-465ed0931e39",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
