@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"regexp"
+	"strings"
 	"sync"
 
 	"github.com/goccy/go-yaml"
@@ -20,8 +22,10 @@ const schemaURL = "https://github.com/jamessawle/sbxflow/blob/main/schema/sbxflo
 // allowedHostPattern mirrors the published schema's allowedHosts pattern for the
 // minimal lifecycle-target parse, which does not compile the whole schema.
 // Docker Sandboxes matches network requests by host and port, so a resource
-// carrying a scheme or path is accepted by its CLI but never matches.
-var allowedHostPattern = regexp.MustCompile(`^(\*\*|(\*\.)?([A-Za-z0-9_-]+\.)*[A-Za-z0-9_-]+|\[[0-9A-Fa-f:.]+\])(:[0-9]{1,5})?$`)
+// carrying a scheme or path is accepted by its CLI but never matches. The port
+// alternation is the 1-65535 range Docker can match; a bare [0-9]{1,5} would
+// admit :0 and :65536.
+var allowedHostPattern = regexp.MustCompile(`^(\*\*|(\*\.)?([A-Za-z0-9_-]+\.)*[A-Za-z0-9_-]+|\[[0-9A-Fa-f:.]+\])(:([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))?$`)
 
 var (
 	compiledSchema     *jsonschema.Schema
@@ -118,7 +122,7 @@ func LoadLifecycleTarget(data []byte) (declarationport.LifecycleTarget, error) {
 				if !ok || value == "" {
 					return declarationport.LifecycleTarget{}, fmt.Errorf("configuration identity sandbox.network.allowedHosts[%d] must be a non-empty string", index)
 				}
-				if !allowedHostPattern.MatchString(value) {
+				if !allowedHost(value) {
 					return declarationport.LifecycleTarget{}, fmt.Errorf("configuration identity %w", allowedHostsError(index, value))
 				}
 				if _, duplicate := seen[value]; duplicate {
@@ -135,7 +139,25 @@ func LoadLifecycleTarget(data []byte) (declarationport.LifecycleTarget, error) {
 // allowedHostsError names the forms Docker Sandboxes can actually match, for the
 // one rule whose schema message would otherwise be a bare pattern.
 func allowedHostsError(index int, value string) error {
-	return fmt.Errorf("sandbox.network.allowedHosts[%d] %q must be a host, domain, wildcard subdomain, IP literal, or \"**\", each with an optional :port suffix", index, value)
+	return fmt.Errorf("sandbox.network.allowedHosts[%d] %q must be a host, domain, wildcard subdomain, bracketed IPv6 literal, or \"**\", each with an optional :port suffix from 1 to 65535", index, value)
+}
+
+// allowedHost reports whether a resource is one Docker Sandboxes could match. A
+// JSON Schema pattern cannot express IPv6 semantics, so the bracketed form is
+// shape-matched by allowedHostPattern and parsed here: without this, "[::::]"
+// satisfies the pattern and becomes a rule that never matches a request. A
+// bracketed IPv4 address is not a host form Docker accepts, so the literal must
+// contain a colon.
+func allowedHost(value string) bool {
+	if !allowedHostPattern.MatchString(value) {
+		return false
+	}
+	bracketed, _, found := strings.Cut(value, "]")
+	if !found {
+		return true
+	}
+	literal := strings.TrimPrefix(bracketed, "[")
+	return strings.Contains(literal, ":") && net.ParseIP(literal) != nil
 }
 
 // validateAllowedHosts reports declared hosts that Docker Sandboxes would accept
@@ -163,7 +185,7 @@ func validateAllowedHosts(document any) error {
 		if !ok || value == "" {
 			continue
 		}
-		if !allowedHostPattern.MatchString(value) {
+		if !allowedHost(value) {
 			return allowedHostsError(index, value)
 		}
 	}

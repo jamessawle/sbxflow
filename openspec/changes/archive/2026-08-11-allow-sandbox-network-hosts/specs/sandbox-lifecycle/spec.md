@@ -95,6 +95,56 @@ sbxflow's ownership guarantees.
 
 ## MODIFIED Requirements
 
+### Requirement: Missing sandbox is created and entered from the declaration
+
+When the declared sandbox name is absent, `up` SHALL provision a sandbox under
+that name with the repository workspace and every selected kit in declaration
+order, and SHALL then attach to that named sandbox so its agent session is
+entered interactively. Provisioning and attachment SHALL be separate requests so
+that a declared network rule can be applied between them: the provisioning
+request SHALL carry the creation inputs, and the attachment request SHALL name
+only the sandbox and its declared agent. Remote kits SHALL use their linked
+execution references, and local kits SHALL use their safely resolved absolute
+host paths.
+
+#### Scenario: Missing sandbox uses a Git kit
+
+- **WHEN** the declared sandbox is absent and selects a Git kit
+- **THEN** the provisioning request includes the linked Git execution
+  reference
+- **AND** includes the declared name, agent, and repository workspace
+
+#### Scenario: Missing sandbox uses an OCI kit
+
+- **WHEN** the declared sandbox is absent and selects an OCI kit
+- **THEN** the provisioning request includes the linked OCI execution
+  reference with its declared version
+
+#### Scenario: Missing sandbox uses a local kit
+
+- **WHEN** the declared sandbox is absent and selects a valid local kit
+- **THEN** the provisioning request includes the canonical absolute path
+  produced by local-kit resolution
+
+#### Scenario: Multiple kits are selected
+
+- **WHEN** a missing sandbox declares multiple valid kit selections
+- **THEN** every kit is passed to Docker Sandboxes in declaration order
+
+#### Scenario: Provisioned sandbox is entered
+
+- **WHEN** provisioning succeeds and any declared network rule has been applied
+- **THEN** `up` attaches to that sandbox by name
+- **AND** the agent session is entered interactively
+
+#### Scenario: Docker cannot provision the sandbox
+
+- **WHEN** Docker Sandboxes rejects or cannot complete the provisioning
+  request
+- **THEN** its diagnostic output remains visible to the user
+- **AND** `up` does not attach to a sandbox
+- **AND** exits with a non-zero status
+
 ### Requirement: Existing sandbox is entered without reconciliation
 
 When the declared sandbox name already exists, `up` SHALL ask Docker Sandboxes

@@ -170,19 +170,23 @@ The derived settings apply only to Docker Sandbox processes started by sbxflow. 
 
 Use the optional `sandbox.network.allowedHosts` list to declare additional
 network resources needed by the sandbox. Entries are unique and remain in
-declaration order. Each entry is a host, domain, wildcard subdomain, IP literal,
-or `**` for all hosts, with an optional `:port` suffix:
+declaration order. Each entry is a host, domain, wildcard subdomain, bracketed
+IPv6 literal, or `**` for all hosts, with an optional `:port` suffix from 1 to
+65535:
 
 | Entry                     | Matches                       |
 | ------------------------- | ----------------------------- |
 | `api.github.com`          | that host on port 443         |
 | `registry.npmjs.org:443`  | that host on an explicit port |
 | `*.githubusercontent.com` | any subdomain                 |
+| `[fd00::1]:8443`          | an IPv6 literal on a port     |
 | `**`                      | all outbound hosts            |
 
 Docker Sandboxes matches network requests by host and port, so a URL is not a
 usable resource. `https://api.github.com` is accepted by `sbx policy allow` but
-never matches any request, so sbxflow rejects it during validation instead.
+never matches any request, so sbxflow rejects it during validation instead. For
+the same reason it rejects a port outside 1 to 65535 and a bracketed literal
+that is not a well-formed IPv6 address.
 
 Docker Sandboxes only accepts a sandbox-scoped rule for a sandbox that already
 exists. When `up` creates a missing sandbox it therefore provisions the sandbox,

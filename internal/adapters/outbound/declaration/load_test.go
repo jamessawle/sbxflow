@@ -105,6 +105,8 @@ sandbox:
       - "*.cdn.example.com"
       - 10.0.0.1
       - "[fd00::1]:8443"
+      - "edge.example.com:1"
+      - "origin.example.com:65535"
       - "**"
   kits:
     sources:
@@ -120,7 +122,7 @@ sandbox:
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	want := []string{"api.example.com", "packages.example.com:443", "*.cdn.example.com", "10.0.0.1", "[fd00::1]:8443", "**"}
+	want := []string{"api.example.com", "packages.example.com:443", "*.cdn.example.com", "10.0.0.1", "[fd00::1]:8443", "edge.example.com:1", "origin.example.com:65535", "**"}
 	if !reflect.DeepEqual(configuration.Sandbox.Network.AllowedHosts, want) {
 		t.Fatalf("allowed hosts = %#v, want %#v", configuration.Sandbox.Network.AllowedHosts, want)
 	}
@@ -165,6 +167,13 @@ sandbox:
 		// port, so such a rule would never take effect.
 		"network host URL":  {document: strings.Replace(valid, "  kits:", "  network:\n    allowedHosts: ['https://example.com']\n  kits:", 1), want: "optional :port suffix"},
 		"network host path": {document: strings.Replace(valid, "  kits:", "  network:\n    allowedHosts: ['example.com/v1']\n  kits:", 1), want: "optional :port suffix"},
+		// Docker Sandboxes matches by host and port, so a port outside 1-65535 or
+		// a malformed literal is a rule that could never match a request.
+		"network port zero":         {document: strings.Replace(valid, "  kits:", "  network:\n    allowedHosts: ['example.com:0']\n  kits:", 1), want: "optional :port suffix"},
+		"network port above range":  {document: strings.Replace(valid, "  kits:", "  network:\n    allowedHosts: ['example.com:65536']\n  kits:", 1), want: "optional :port suffix"},
+		"network port five nines":   {document: strings.Replace(valid, "  kits:", "  network:\n    allowedHosts: ['example.com:99999']\n  kits:", 1), want: "optional :port suffix"},
+		"network malformed literal": {document: strings.Replace(valid, "  kits:", "  network:\n    allowedHosts: ['[::::]']\n  kits:", 1), want: "optional :port suffix"},
+		"network bracketed IPv4":    {document: strings.Replace(valid, "  kits:", "  network:\n    allowedHosts: ['[192.168.1.1]']\n  kits:", 1), want: "optional :port suffix"},
 	}
 
 	for name, test := range tests {
@@ -219,6 +228,10 @@ sandbox:
 		"empty host":            {document: valid + "  network:\n    allowedHosts: ['']\n", want: "must be a non-empty string"},
 		"host is not string":    {document: valid + "  network:\n    allowedHosts: [7]\n", want: "must be a non-empty string"},
 		"host URL":              {document: valid + "  network:\n    allowedHosts: ['https://first.example']\n", want: "optional :port suffix"},
+		"port zero":             {document: valid + "  network:\n    allowedHosts: ['first.example:0']\n", want: "optional :port suffix"},
+		"port above range":      {document: valid + "  network:\n    allowedHosts: ['first.example:65536']\n", want: "optional :port suffix"},
+		"malformed literal":     {document: valid + "  network:\n    allowedHosts: ['[::::]']\n", want: "optional :port suffix"},
+		"bracketed IPv4":        {document: valid + "  network:\n    allowedHosts: ['[192.168.1.1]']\n", want: "optional :port suffix"},
 		"duplicate host":        {document: valid + "  network:\n    allowedHosts: [first.example, first.example]\n", want: "duplicates"},
 	}
 
