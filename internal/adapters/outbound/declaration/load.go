@@ -192,6 +192,8 @@ func validateAllowedHosts(document any) error {
 	return nil
 }
 
+// decodeDocument parses exactly one YAML document and returns its JSON-compatible
+// representation together with the serialized JSON data.
 func decodeDocument(data []byte) (any, []byte, error) {
 	var raw any
 	decoder := yaml.NewDecoder(bytes.NewReader(data))

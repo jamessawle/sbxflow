@@ -24,6 +24,9 @@ const (
 	sandboxCommandTimeout = 30 * time.Second
 )
 
+// main initializes the command-line application and executes it with configured
+// declaration, validation, diagnostic, and sandbox lifecycle runners. It preserves
+// subprocess exit codes and uses status 1 for other execution failures.
 func main() {
 	declarations := declaration.NewRepository()
 	doctorSandboxes := sbx.NewClient(doctorCommandTimeout)

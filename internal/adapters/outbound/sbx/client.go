@@ -90,6 +90,7 @@ func (c Client) RemoveNetworkResource(ctx context.Context, request NetworkRemove
 	return capturedError(output, "remove network resource %q for Docker Sandbox %q", request.Resource, request.Name)
 }
 
+// reportsAbsentPolicy reports whether command output indicates that the network policy or resource is absent.
 func reportsAbsentPolicy(output sandboxport.Output) bool {
 	diagnostics := strings.ToLower(string(output.Stderr) + string(output.Stdout))
 	for _, absent := range absentPolicyDiagnostics {
@@ -100,6 +101,7 @@ func reportsAbsentPolicy(output sandboxport.Output) bool {
 	return false
 }
 
+// capturedError formats a command error with the operation context and available diagnostics.
 func capturedError(output sandboxport.Output, operation string, values ...any) error {
 	if output.Err == nil {
 		return nil
@@ -248,6 +250,8 @@ func (c Client) RunSandbox(ctx context.Context, request RunRequest, streams Stre
 	})
 }
 
+// kitTrustEnvironment builds environment variables that configure trusted Docker kit sources and local-kit access.
+// It returns an error if the allowed sources cannot be encoded.
 func kitTrustEnvironment(allowedSources []string, allowLocalKits bool) (map[string]string, error) {
 	encoded, err := json.Marshal(allowedSources)
 	if err != nil {
