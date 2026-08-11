@@ -8,3 +8,6 @@
 
 # Local Mise configuration
 .mise.local.toml
+
+# Generated release artifacts
+dist/

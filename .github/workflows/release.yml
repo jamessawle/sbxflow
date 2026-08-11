@@ -51,43 +51,19 @@ jobs:
       - name: Validate repository
         run: mise run validate
 
-  build:
-    name: Build ${{ matrix.artifact }}
+  release:
+    name: Publish release
     needs: validate
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - artifact: sbxflow-linux-amd64
-            runner: ubuntu-24.04
-            goos: linux
-            goarch: amd64
-            executable: sbxflow
-            archive: tar
-          - artifact: sbxflow-darwin-amd64
-            runner: macos-15-intel
-            goos: darwin
-            goarch: amd64
-            executable: sbxflow
-            archive: tar
-          - artifact: sbxflow-darwin-arm64
-            runner: macos-15
-            goos: darwin
-            goarch: arm64
-            executable: sbxflow
-            archive: tar
-          - artifact: sbxflow-windows-amd64
-            runner: windows-2025
-            goos: windows
-            goarch: amd64
-            executable: sbxflow.exe
-            archive: zip
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
 
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       - name: Install Go
         uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
@@ -95,61 +71,12 @@ jobs:
           version: 2026.8.2 # Keep aligned with mise.toml min_version.
           install_args: go
 
-      - name: Build and exercise executable
-        shell: bash
-        env:
-          ARTIFACT: ${{ matrix.artifact }}
-          ARCHIVE: ${{ matrix.archive }}
-          EXECUTABLE: ${{ matrix.executable }}
-          GOARCH: ${{ matrix.goarch }}
-          GOOS: ${{ matrix.goos }}
-          VERSION: ${{ github.ref_name }}
-        run: |
-          mkdir -p stage dist
-          go build -trimpath \
-            -ldflags "-s -w -X github.com/jamessawle/sbxflow/internal/ports/buildInfo.Version=$VERSION -X github.com/jamessawle/sbxflow/internal/ports/buildInfo.Commit=$GITHUB_SHA" \
-            -o "stage/$EXECUTABLE" ./cmd/sbxflow
-
-          version_output=$("stage/$EXECUTABLE" --version)
-          [[ "$version_output" == *"$VERSION"* ]]
-          [[ "$version_output" == *"${GITHUB_SHA:0:7}"* ]]
-          "stage/$EXECUTABLE" --help >/dev/null
-
-          if [[ "$ARCHIVE" == "zip" ]]; then
-            tar -a -cf "dist/$ARTIFACT.zip" -C stage "$EXECUTABLE"
-          else
-            tar -czf "dist/$ARTIFACT.tar.gz" -C stage "$EXECUTABLE"
-          fi
-
-      - name: Upload release artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - name: Publish GitHub and Homebrew releases
+        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
         with:
-          name: ${{ matrix.artifact }}
-          path: dist/*
-          if-no-files-found: error
-
-  publish:
-    name: Publish release
-    needs: build
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: write
-
-    steps:
-      - name: Download release artifacts
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
-        with:
-          path: dist
-          merge-multiple: true
-
-      - name: Generate checksums
-        run: |
-          cd dist
-          sha256sum sbxflow-* > checksums.txt
-
-      - name: Publish GitHub release
+          distribution: goreleaser
+          version: 2.17.1
+          args: release --clean
         env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ github.ref_name }}
-        run: gh release create "$VERSION" dist/* --generate-notes --verify-tag
+          GITHUB_TOKEN: ${{ github.token }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}

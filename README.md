@@ -37,6 +37,14 @@ mise exec -- go run ./cmd/sbxflow
 
 Use `sbxflow -v` or `sbxflow --version` to display the build identity. Root and command help are available through `--help`.
 
+## Installation
+
+Install a published release with Homebrew:
+
+```text
+brew install --cask jamessawle/tap/sbxflow
+```
+
 ### `sbxflow doctor`
 
 Checks whether Docker Sandboxes is installed at a compatible version, summarizes Docker's diagnostics, and reports global network and kit-source policy posture. It does not read `sbxflow.yaml` or change the host configuration.
