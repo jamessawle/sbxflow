@@ -1,0 +1,23 @@
+cmd/sbxflow/main.go
+  s_b4f9429471fbcc::t_2e1c06a1fe5df6 27-29
+internal/adapters/outbound/declaration/load.go
+  s_b4f9429471fbcc::t_ebcefb27f5fdc1 195-196
+internal/adapters/outbound/sbx/client.go
+  s_b4f9429471fbcc::t_3de587335b2bb8 93,104,253-254
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "ada1317ad0886f16ac740e4d1cf6402f2779615f",
+  "prompts": {},
+  "sessions": {
+    "s_b4f9429471fbcc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "29586e6a-3868-44ab-ade4-d67b5b722b03",
+        "model": "claude-opus-5"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
