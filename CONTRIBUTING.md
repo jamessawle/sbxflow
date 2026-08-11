@@ -44,6 +44,10 @@ Start a change with `$openspec-propose "describe the change"`. The usual flow is
 discussion first. OpenSpec artifacts live in `openspec/` and are checked by
 `mise run validate`.
 
+Pull requests that add major new functionality must include automated tests
+covering it. Pull requests that fix a bug should include a regression test
+where practical. Reviewers may request additional tests before merging.
+
 Create a focused branch from the latest `main`. Before committing, format any
 Markdown changes and run the repository checks:
 
