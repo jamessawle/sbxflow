@@ -112,3 +112,22 @@ need conventional messages because pull requests are squash merged.
 In the pull request body, summarize what changed and list the validation you
 ran. All required checks must pass and conversations must be resolved before a
 pull request can merge.
+
+## Releases
+
+Releases are created from tags named as canonical `v`-prefixed Semantic
+Versions, such as `v0.1.0`. Before creating the tag:
+
+- [ ] Confirm `mise run validate` passes on the release commit.
+- [ ] Review the changes that will form the generated release notes and identify
+      relevant compatibility or breaking changes.
+- [ ] Smoke-test the release commit with an `sbx` version inside the documented
+      supported range.
+- [ ] Confirm the documented `sbx` range agrees with the range enforced by
+      `sbxflow doctor`.
+
+Pushing the tag runs the release workflow. It validates the tag and repository,
+builds and exercises versioned executables, generates checksums, and publishes
+the GitHub release only after every required job succeeds. Do not move a
+published release tag; fix a failed release on a new commit and issue a new
+version instead.
