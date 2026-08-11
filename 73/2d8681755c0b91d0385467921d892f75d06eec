@@ -1,0 +1,19 @@
+README.md
+  s_ec27b7e4f58646::t_69a96ea2de76f8 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "732d8681755c0b91d0385467921d892f75d06eec",
+  "prompts": {},
+  "sessions": {
+    "s_ec27b7e4f58646": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32ff17ef-e837-493e-8b6d-381733c3cf01",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
