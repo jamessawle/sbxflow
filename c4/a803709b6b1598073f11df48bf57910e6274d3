@@ -1,0 +1,19 @@
+openspec/changes/archive/2026-08-11-publish-homebrew-cask/design.md
+  s_1b7f4d04f41f7a::t_b607f6096b592e 15-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "c4a803709b6b1598073f11df48bf57910e6274d3",
+  "prompts": {},
+  "sessions": {
+    "s_1b7f4d04f41f7a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa9b609c-eb23-4e02-ba39-465ed0931e39",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
