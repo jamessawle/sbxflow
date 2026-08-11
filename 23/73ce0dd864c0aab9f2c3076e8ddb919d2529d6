@@ -1,0 +1,21 @@
+openspec/changes/archive/2026-08-11-allow-sandbox-network-hosts/specs/sandbox-lifecycle/spec.md
+  s_6321e1d1d79cc0::t_9b99f9d1408e84 148-191
+openspec/specs/sandbox-lifecycle/spec.md
+  s_6321e1d1d79cc0::t_4ea968fc33a412 459-462,469-470
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "2373ce0dd864c0aab9f2c3076e8ddb919d2529d6",
+  "prompts": {},
+  "sessions": {
+    "s_6321e1d1d79cc0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "36662ed8-a495-460c-a42d-28b5bee38d27",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
