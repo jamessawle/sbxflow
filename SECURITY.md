@@ -14,9 +14,9 @@ This keeps reports and any supporting material private while a fix is assessed.
 
 Do not open a public issue, pull request, or discussion for an undisclosed
 vulnerability. Include the affected version, impact, reproduction steps, and
-any suggested mitigation when possible. The maintainer will acknowledge and
-assess reports as availability permits, but this volunteer-maintained project
-does not promise a fixed response or remediation time.
+any suggested mitigation when possible. The maintainer will acknowledge a
+report within 14 days. This volunteer-maintained project does not promise a
+fixed remediation time beyond that initial acknowledgment.
 
 After a fix is available, the project may publish an advisory and credit the
 reporter unless anonymity is requested.
