@@ -1,0 +1,33 @@
+.golangci.yml
+  s_ec27b7e4f58646::t_baf7adaef778e1 1-11
+CONTRIBUTING.md
+  s_ec27b7e4f58646::t_46e360d9973a5b 47-50
+internal/adapters/inbound/cli/doctor.go
+  s_ec27b7e4f58646::t_17a1b4c73b897a 40,48
+internal/adapters/inbound/cli/validate.go
+  s_ec27b7e4f58646::t_660b0e517a7e05 55,58,60-61,63,65,67,70,77,80,83,86,88
+internal/adapters/outbound/sbx/interactive.go
+  s_ec27b7e4f58646::t_0144f41fb20a6f 34
+internal/adapters/outbound/sbx/process.go
+  s_ec27b7e4f58646::t_63fa6fb357408e 41
+internal/application/lifecycle/up.go
+  s_ec27b7e4f58646::t_02339c5853c6de 75
+mise.toml
+  s_ec27b7e4f58646::t_a5a6436d02b2b0 6,51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "0aef89ff4503e667e2af4142c7e9ebbb0b26bdb1",
+  "prompts": {},
+  "sessions": {
+    "s_ec27b7e4f58646": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32ff17ef-e837-493e-8b6d-381733c3cf01",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
