@@ -123,6 +123,27 @@ In the pull request body, summarize what changed and list the validation you
 ran. All required checks must pass and conversations must be resolved before a
 pull request can merge.
 
+### Review policy
+
+Pull requests require one approval. CodeRabbit provides the routinely
+available automated review for this single-maintainer project: it reviews each
+new head revision, requests changes when it finds issues, and approves the
+revision when its review and pre-merge checks pass. Stale approvals are
+dismissed, and the latest push must be approved by someone other than its
+author. The repository owner remains the code owner; CodeRabbit is a GitHub App
+and is not eligible for CODEOWNERS membership.
+
+Independent human review is encouraged whenever another qualified contributor
+is available. As the maintainer group grows, reassess whether to require human
+approval in addition to CodeRabbit's automated review.
+
+If CodeRabbit is unavailable and delaying urgent security, release-recovery, or
+repository-recovery work, the repository administrator may temporarily set the
+required approval count to zero. Required status checks and all other branch
+protections remain in force. The pull request must record the reason for the
+override, and the administrator must restore the approval requirement
+immediately after the emergency merge.
+
 ## Releases
 
 Releases are created from tags named as canonical `v`-prefixed Semantic
