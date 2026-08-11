@@ -38,10 +38,13 @@ Kit sources can be Git repositories, OCI registries, or local directories. Sourc
 Run the CLI from this repository with Mise:
 
 ```text
-mise exec -- go run ./cmd/sbxflow
+mise exec -- go run ./cmd/sbxflow <command>
 ```
 
-Use `sbxflow -v` or `sbxflow --version` to display the build identity. Root and command help are available through `--help`.
+For example, run `mise exec -- go run ./cmd/sbxflow doctor` to execute the
+environment checks without installing sbxflow first. Use `sbxflow -v` or
+`sbxflow --version` to display the build identity. Root and command help are
+available through `--help`.
 
 ## Installation
 
