@@ -1,15 +1,14 @@
 ## Why
 
-The release workflow currently assembles platform archives independently in GitHub Actions, so maintainers cannot reproduce and inspect the complete release artifact set locally before publishing a version. A pinned GoReleaser snapshot workflow will make artifact identity, naming, contents, and checksums explicit and testable without creating a GitHub release.
+The release workflow manually builds and packages each platform artifact and does not update the project's Homebrew tap. GoReleaser can replace that custom release assembly with a small declarative configuration and publish the corresponding Homebrew cask.
 
 ## What Changes
 
-- Define the supported Linux, macOS, and Windows release matrix in a GoReleaser configuration.
-- Embed snapshot version and source-commit metadata in every executable and exercise each supported artifact's version interface.
-- Produce stable platform archives containing the executable, license, and release metadata, plus a verifiable checksum manifest.
-- Pin GoReleaser through Mise and add a non-publishing snapshot task suitable for local use and CI.
-- Document the artifact names, archive contents, checksum verification, and snapshot workflow.
-- Align release automation with the same GoReleaser configuration so snapshot evidence and published artifacts do not drift.
+- Define the existing Linux, macOS, and Windows release targets in GoReleaser.
+- Preserve version and commit linker metadata, platform archives, and checksums.
+- Replace manual artifact assembly and GitHub release creation with a pinned GoReleaser GitHub Action.
+- Publish the release cask to `jamessawle/homebrew-tap`.
+- Document the Homebrew installation command and release credential requirement.
 
 ## Capabilities
 
@@ -19,8 +18,8 @@ None.
 
 ### Modified Capabilities
 
-- `release-distribution`: Require a reproducible, non-publishing snapshot process that defines and verifies the supported release artifacts before tag-driven publication.
+- `release-distribution`: Publish tagged releases through GoReleaser and update the Homebrew tap after repository validation succeeds.
 
 ## Impact
 
-The change affects the release-distribution contract, Mise tool and task configuration, GoReleaser configuration, release documentation, and GitHub Actions release or validation workflows. It adds GoReleaser as a pinned development and automation tool but does not change the CLI commands, configuration schema, package architecture, or supported runtime behavior. SBOM generation and its additional tooling are deferred until there is a concrete supply-chain requirement.
+The change affects the release-distribution contract, the tag release workflow, contributor release guidance, and a root GoReleaser configuration. GoReleaser is pinned only in GitHub Actions and is not added to Mise or the local contributor workflow.

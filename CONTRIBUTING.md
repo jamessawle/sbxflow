@@ -131,7 +131,9 @@ Versions, such as `v0.1.0`. Before creating the tag:
       `sbxflow doctor`.
 
 Pushing the tag runs the release workflow. It validates the tag and repository,
-builds and exercises versioned executables, generates checksums, and publishes
-the GitHub release only after every required job succeeds. Do not move a
-published release tag; fix a failed release on a new commit and issue a new
-version instead.
+then uses the pinned GoReleaser version to build the supported executables,
+generate checksums, publish the GitHub release, and update the Homebrew cask in
+`jamessawle/homebrew-tap`. The repository must provide a
+`HOMEBREW_TAP_GITHUB_TOKEN` Actions secret whose token can write contents to the
+tap repository. Do not move a published release tag; fix a failed release on a
+new commit and issue a new version instead.
