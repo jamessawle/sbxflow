@@ -8,6 +8,7 @@ golangci-lint = "2.12.2"
 node = "24.18.0"
 "npm:@fission-ai/openspec" = "1.8.0"
 "npm:prettier" = "3.9.6"
+zig = "0.15.2"
 
 [tasks.setup]
 description = "Install development tools and activate Git hooks"
@@ -35,6 +36,7 @@ run = "go-arch-lint check"
 
 [tasks.validate]
 description = "Run all repository checks"
+env = { CGO_ENABLED = "1", CC = "zig cc" }
 run = '''
 prettier --check "**/*.md"
 actionlint

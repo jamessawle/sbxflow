@@ -18,7 +18,7 @@ Development tools and Git hooks are managed with
 mise run setup
 ```
 
-The setup installs the pinned Go toolchain and
+The setup installs the pinned Go toolchain, Zig compiler for CGO race tests, and
 [OpenSpec](https://openspec.dev/) CLI. The repository also includes Codex skills
 for its spec-driven workflow; restart Codex after setup so it discovers them.
 
