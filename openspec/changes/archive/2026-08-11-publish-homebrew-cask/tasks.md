@@ -26,12 +26,12 @@
 
 - [x] 4.1 Confirm the generated cask passes the tap's style, readall, and audit
       checks in the end-state tap, on the Homebrew version the tap's CI uses.
-- [ ] 4.2 Run `mise run fmt`, strict OpenSpec validation, and the full
+- [x] 4.2 Run `mise run fmt`, strict OpenSpec validation, and the full
       repository validation suite.
 
 ## 5. Release
 
-- [ ] 5.1 Close the `v0.1.3` tap pull request unmerged.
+- [x] 5.1 Close the `v0.1.3` tap pull request unmerged.
 - [ ] 5.2 Publish `v0.1.4` and confirm the tap receives one commit and one
       passing test-bot run.
 
