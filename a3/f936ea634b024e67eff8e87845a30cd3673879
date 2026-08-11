@@ -1,0 +1,69 @@
+README.md
+  s_1756d1f279a0e9::t_4585143a946688 22-27,169-207
+sbxflow.yaml
+  s_1756d1f279a0e9::t_aa57f14a89ba90 7-12
+cmd/sbxflow/main.go
+  s_1756d1f279a0e9::t_70bc91a38a459b 38,41,50
+cmd/sbxflow/main_test.go
+  s_1756d1f279a0e9::t_b293a549132ee6 302-319,347,354-355,364-366,421,428,433-434,474,493
+internal/adapters/outbound/declaration/load.go
+  s_1756d1f279a0e9::t_0604c571ed8cd2 9,20-25,44-49,104-170
+internal/adapters/outbound/declaration/load_test.go
+  s_1756d1f279a0e9::t_68990669176836 6,96-128,160-167,187-188,190,217-222
+internal/adapters/outbound/sbx/client.go
+  s_1756d1f279a0e9::t_788d95b5538aaf 31-39,51,54-113,202-204,207,209,211,214-238,242-247,251-261
+internal/adapters/outbound/sbx/network_test.go
+  s_1756d1f279a0e9::t_6191bf2643af68 1-84
+internal/application/lifecycle/network_test.go
+  s_1756d1f279a0e9::t_9eeef748cb5e96 1-112
+internal/application/lifecycle/removal.go
+  s_1756d1f279a0e9::t_2751c652465781 1-34
+internal/application/lifecycle/up.go
+  s_1756d1f279a0e9::t_d9363c20c3138e 53,56,102,104,108-112,126-158
+internal/application/lifecycle/up_test.go
+  s_1756d1f279a0e9::t_35d6ac3d859f74 118,122,127-130,135,148-150,152-153,155-161,174-175,190-191,203,209-216,221-223,239,242,263,285-291,295,385-389,396,401-434
+internal/ports/sandbox/sandbox.go
+  s_1756d1f279a0e9::t_92ee08d095afc3 24-26,33-40,50-61,95-101,115-123
+openspec/changes/allow-sandbox-network-hosts/design.md
+  s_1756d1f279a0e9::t_fbe786577690a3 9-21,49-61,65-70,72-78,84-95,97-100,102-105,126-130,133-136
+openspec/changes/allow-sandbox-network-hosts/proposal.md
+  s_1756d1f279a0e9::t_863cb6427d6944 12-17,42-47
+openspec/changes/allow-sandbox-network-hosts/specs/configuration-validation/spec.md
+  s_1756d1f279a0e9::t_66509ddc05183d 7-12,34-41
+openspec/changes/allow-sandbox-network-hosts/specs/sandbox-lifecycle/spec.md
+  s_1756d1f279a0e9::t_7d16a8ee6802c0 3,5-11,17-20,26,32-40,53-59,68-74,79-80,91
+openspec/changes/allow-sandbox-network-hosts/tasks.md
+  s_1756d1f279a0e9::t_a8fc07b3eef2c0 3,5-7,12-20,24,27,33,36
+schema/sbxflow.schema.json
+  s_1756d1f279a0e9::t_925dc2a187ea40 38-55
+examples/README.md
+  s_1756d1f279a0e9::t_953e7074092004 11-12
+examples/personal-site/sbxflow.yaml
+  s_1756d1f279a0e9::t_e4771e35ddc1c6 7-11
+internal/application/lifecycle/destroy.go
+  s_1756d1f279a0e9::t_2002c1538251eb 14,32
+internal/application/lifecycle/plan.go
+  s_1756d1f279a0e9::t_ec1c851678de69 14-19,54-59
+internal/application/lifecycle/plan_test.go
+  s_1756d1f279a0e9::t_e4c1238fb7538c 14,49-51
+internal/domain/configuration/model.go
+  s_1756d1f279a0e9::t_fb915bfe84a5d0 20
+internal/ports/declaration/model.go
+  s_1756d1f279a0e9::t_aed82cae813faa 22-24,45-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "a3f936ea634b024e67eff8e87845a30cd3673879",
+  "prompts": {},
+  "sessions": {
+    "s_1756d1f279a0e9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76de8b6b-a2c1-4312-9f18-b8be466766b5",
+        "model": "claude-opus-5"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
