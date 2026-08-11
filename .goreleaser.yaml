@@ -3,7 +3,24 @@ version: 2
 project_name: sbxflow
 
 builds:
-  - id: sbxflow
+  - id: sbxflow-darwin
+    main: ./cmd/sbxflow
+    binary: sbxflow
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - >-
+        -s -w
+        -X github.com/jamessawle/sbxflow/internal/ports/buildInfo.Version={{ .Tag }}
+        -X github.com/jamessawle/sbxflow/internal/ports/buildInfo.Commit={{ .FullCommit }}
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+  - id: sbxflow-other
     main: ./cmd/sbxflow
     binary: sbxflow
     env:
@@ -17,20 +34,21 @@ builds:
         -X github.com/jamessawle/sbxflow/internal/ports/buildInfo.Commit={{ .FullCommit }}
     goos:
       - linux
-      - darwin
       - windows
     goarch:
       - amd64
-      - arm64
-    ignore:
-      - goos: linux
-        goarch: arm64
-      - goos: windows
-        goarch: arm64
 archives:
-  - id: sbxflow
+  - id: sbxflow-darwin
     ids:
-      - sbxflow
+      - sbxflow-darwin
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+  - id: sbxflow-other
+    ids:
+      - sbxflow-other
     formats: [tar.gz]
     format_overrides:
       - goos: windows
@@ -45,7 +63,9 @@ checksum:
   algorithm: sha256
 
 homebrew_casks:
-  - repository:
+  - ids:
+      - sbxflow-darwin
+    repository:
       owner: jamessawle
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"

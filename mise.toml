@@ -4,6 +4,7 @@ min_version = "2026.5.2"
 actionlint = "1.7.12"
 go = "1.26.5"
 golangci-lint = "2.12.2"
+goreleaser = "2.17.1"
 "go:github.com/fe3dback/go-arch-lint" = "1.16.0"
 node = "24.18.0"
 "npm:@fission-ai/openspec" = "1.8.0"
@@ -34,6 +35,45 @@ gofmt -w .
 description = "Check production package dependency boundaries"
 run = "go-arch-lint check"
 
+[tasks."test:release"]
+description = "Validate release archives and generated Homebrew cask"
+run = '''
+goreleaser release --snapshot --clean
+
+version="$(jq -r .version dist/metadata.json)"
+./scripts/render-homebrew-cask.sh "$version" dist/checksums.txt dist/homebrew/Casks/sbxflow.rb
+
+expected="darwin_amd64.tar.gz
+darwin_arm64.tar.gz
+linux_amd64.tar.gz
+windows_amd64.zip"
+actual="$(find dist -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' \) -print |
+  sed -E 's#^.*/sbxflow_[^_]+_##' | sort)"
+
+if [ "$actual" != "$expected" ]; then
+  echo "Unexpected release archive set:"
+  echo "$actual"
+  exit 1
+fi
+
+if grep -q 'on_linux' dist/homebrew/Casks/sbxflow.rb; then
+  echo "Generated Homebrew cask must not contain Linux stanzas."
+  exit 1
+fi
+
+arm_line="$(grep -n 'on_arm do' dist/homebrew/Casks/sbxflow.rb | cut -d: -f1)"
+intel_line="$(grep -n 'on_intel do' dist/homebrew/Casks/sbxflow.rb | cut -d: -f1)"
+if [ -z "$arm_line" ] || [ -z "$intel_line" ] || [ "$arm_line" -ge "$intel_line" ]; then
+  echo "Generated Homebrew cask must place on_arm before on_intel."
+  exit 1
+fi
+
+if [ "$(tail -n 1 dist/homebrew/Casks/sbxflow.rb)" != "end" ]; then
+  echo "Generated Homebrew cask must end directly after its closing block."
+  exit 1
+fi
+'''
+
 [tasks.validate]
 description = "Run all repository checks"
 env = { CGO_ENABLED = "1", CC = "zig cc" }
@@ -53,5 +93,6 @@ go vet ./...
 golangci-lint run
 go test -race ./...
 mise run test:architecture
+mise run test:release
 go build ./...
 '''
