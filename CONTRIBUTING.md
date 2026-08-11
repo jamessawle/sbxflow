@@ -120,7 +120,9 @@ pull request can merge.
 ## Releases
 
 Releases are created from tags named as canonical `v`-prefixed Semantic
-Versions, such as `v0.1.0`. Before creating the tag:
+Versions, such as `v0.1.0`. Follow the complete
+[`release runbook`](docs/releasing.md) for preparation, tagging, publication,
+verification, and failure recovery. Before creating the tag:
 
 - [ ] Confirm `mise run validate` passes on the release commit.
 - [ ] Review the changes that will form the generated release notes and identify
@@ -132,8 +134,9 @@ Versions, such as `v0.1.0`. Before creating the tag:
 
 Pushing the tag runs the release workflow. It validates the tag and repository,
 then uses the pinned GoReleaser version to build the supported executables,
-generate checksums, publish the GitHub release, and update the Homebrew cask in
-`jamessawle/homebrew-tap`. The repository must provide a
+generate checksums, publish the GitHub release, and open a Homebrew cask update
+in `jamessawle/homebrew-tap`. The repository must provide a
 `HOMEBREW_TAP_GITHUB_TOKEN` Actions secret whose token can write contents to the
-tap repository. Do not move a published release tag; fix a failed release on a
-new commit and issue a new version instead.
+tap repository and create the update pull request. Do not move a published
+release tag; follow the runbook's partial-failure guidance and issue a new
+version when published artifacts must change.
