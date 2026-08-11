@@ -3,6 +3,7 @@ min_version = "2026.5.2"
 [tools]
 actionlint = "1.7.12"
 go = "1.26.5"
+golangci-lint = "2.12.2"
 "go:github.com/fe3dback/go-arch-lint" = "1.16.0"
 node = "24.18.0"
 "npm:@fission-ai/openspec" = "1.8.0"
@@ -47,6 +48,7 @@ if [ -n "$unformatted" ]; then
 fi
 
 go vet ./...
+golangci-lint run
 go test ./...
 mise run test:architecture
 go build ./...

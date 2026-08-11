@@ -52,40 +52,40 @@ func renderValidationReport(command *cobra.Command, report validation.Report) {
 	if declaration == "" {
 		declaration = "unavailable"
 	}
-	fmt.Fprintf(writer, "Declaration: %s\n\n", declaration)
+	_, _ = fmt.Fprintf(writer, "Declaration: %s\n\n", declaration)
 
 	if report.Linked.Configuration.Version == 0 {
-		fmt.Fprintln(writer, "Derived State: unavailable")
+		_, _ = fmt.Fprintln(writer, "Derived State: unavailable")
 	} else {
-		fmt.Fprintln(writer, "Derived State:")
-		fmt.Fprintln(writer, "  Kit:")
+		_, _ = fmt.Fprintln(writer, "Derived State:")
+		_, _ = fmt.Fprintln(writer, "  Kit:")
 		if len(report.Linked.Trust.AllowedSources) == 0 {
-			fmt.Fprintln(writer, "    Allowed Sources: []")
+			_, _ = fmt.Fprintln(writer, "    Allowed Sources: []")
 		} else {
-			fmt.Fprintln(writer, "    Allowed Sources:")
+			_, _ = fmt.Fprintln(writer, "    Allowed Sources:")
 			for _, source := range report.Linked.Trust.AllowedSources {
-				fmt.Fprintf(writer, "      - %s\n", source)
+				_, _ = fmt.Fprintf(writer, "      - %s\n", source)
 			}
 		}
-		fmt.Fprintf(writer, "    Local Kits Allowed: %t\n", report.Linked.Trust.AllowLocalKits)
+		_, _ = fmt.Fprintf(writer, "    Local Kits Allowed: %t\n", report.Linked.Trust.AllowLocalKits)
 	}
 
 	state := "pass"
 	if !report.Valid() {
 		state = "fail"
 	}
-	fmt.Fprintf(writer, "\nValidation:\n  State: %s\n", state)
+	_, _ = fmt.Fprintf(writer, "\nValidation:\n  State: %s\n", state)
 	findings := validationFindings(report)
 	if len(findings) == 0 {
-		fmt.Fprintln(writer, "  Findings: []")
+		_, _ = fmt.Fprintln(writer, "  Findings: []")
 		return
 	}
-	fmt.Fprintln(writer, "  Findings:")
+	_, _ = fmt.Fprintln(writer, "  Findings:")
 	for _, finding := range findings {
 		lines := strings.Split(finding, "\n")
-		fmt.Fprintf(writer, "    - %s\n", lines[0])
+		_, _ = fmt.Fprintf(writer, "    - %s\n", lines[0])
 		for _, line := range lines[1:] {
-			fmt.Fprintf(writer, "      %s\n", line)
+			_, _ = fmt.Fprintf(writer, "      %s\n", line)
 		}
 	}
 }

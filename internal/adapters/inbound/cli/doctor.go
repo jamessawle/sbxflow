@@ -37,7 +37,7 @@ func newDoctorCommand(runner DoctorRunner) *cobra.Command {
 
 func renderDoctorReport(command *cobra.Command, report doctor.Report) {
 	for _, result := range report.Results {
-		fmt.Fprintf(
+		_, _ = fmt.Fprintf(
 			command.OutOrStdout(),
 			"[%s] %s: %s\n",
 			strings.ToUpper(string(result.Status)),
@@ -45,7 +45,7 @@ func renderDoctorReport(command *cobra.Command, report doctor.Report) {
 			result.Summary,
 		)
 		if result.Guidance != "" {
-			fmt.Fprintf(command.OutOrStdout(), "  %s\n", result.Guidance)
+			_, _ = fmt.Fprintf(command.OutOrStdout(), "  %s\n", result.Guidance)
 		}
 	}
 }

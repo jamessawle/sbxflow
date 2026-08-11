@@ -31,7 +31,7 @@ type InteractiveExecRunner struct{}
 
 // Run starts the invocation with inherited environment and terminal streams.
 func (InteractiveExecRunner) Run(ctx context.Context, invocation InteractiveInvocation) error {
-	process := exec.CommandContext(ctx, invocation.Executable, invocation.Args...)
+	process := exec.CommandContext(ctx, invocation.Executable, invocation.Args...) //nolint:gosec // executable and args come from the validated sandbox declaration; running them is this adapter's purpose.
 	process.Env = mergeEnvironment(os.Environ(), invocation.Environment)
 	process.Stdin = invocation.Stdin
 	process.Stdout = invocation.Stdout

@@ -38,7 +38,7 @@ func (r ExecRunner) Run(ctx context.Context, executable string, args ...string) 
 	}
 
 	var stdout, stderr bytes.Buffer
-	invocation := exec.CommandContext(ctx, executable, args...)
+	invocation := exec.CommandContext(ctx, executable, args...) //nolint:gosec // executable and args come from the validated sandbox declaration; running them is this adapter's purpose.
 	invocation.Stdout = &stdout
 	invocation.Stderr = &stderr
 

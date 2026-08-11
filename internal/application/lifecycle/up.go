@@ -72,7 +72,7 @@ func (r UpRunner) Run(ctx context.Context, start string, options UpOptions, stre
 		return report, ErrValidationFailed
 	}
 	if streams.Err != nil {
-		fmt.Fprintf(streams.Err, "Configuration valid: %s\n", report.Declaration)
+		_, _ = fmt.Fprintf(streams.Err, "Configuration valid: %s\n", report.Declaration)
 	}
 
 	plan, err := NewPlan(report)
