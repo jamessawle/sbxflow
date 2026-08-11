@@ -1,0 +1,33 @@
+README.md
+  s_6321e1d1d79cc0::t_87b3f489c319c4 173-175,182,187-189
+internal/adapters/outbound/declaration/load.go
+  s_6321e1d1d79cc0::t_47761359026eb6 9,11,25-28,125,142-160,188
+internal/adapters/outbound/declaration/load_test.go
+  s_6321e1d1d79cc0::t_386a96ff2bfc92 108-109,125,170-176,231-234
+openspec/changes/archive/2026-08-11-allow-sandbox-network-hosts/specs/configuration-validation/spec.md
+  s_6321e1d1d79cc0::t_c3b3d54522de6b 8-14,44-50
+openspec/changes/archive/2026-08-11-allow-sandbox-network-hosts/specs/sandbox-lifecycle/spec.md
+  s_6321e1d1d79cc0::t_851378603b78b4 98-147
+openspec/specs/configuration-validation/spec.md
+  s_6321e1d1d79cc0::t_58378261018dbf 91-97,127-133
+openspec/specs/sandbox-lifecycle/spec.md
+  s_6321e1d1d79cc0::t_7e654dca9b9dc2 155-163,168,175,181,189,191-197,200-201
+schema/sbxflow.schema.json
+  s_6321e1d1d79cc0::t_ac1f590968cd68 52-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "31d7b445907802b0e0ace1e72d51d873216a68c9",
+  "prompts": {},
+  "sessions": {
+    "s_6321e1d1d79cc0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "36662ed8-a495-460c-a42d-28b5bee38d27",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
