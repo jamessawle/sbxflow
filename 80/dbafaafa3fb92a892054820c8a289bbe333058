@@ -1,0 +1,39 @@
+openspec/changes/publish-homebrew-formula/tasks.md
+  s_1b7f4d04f41f7a::t_e002123814fb99 1-44
+.goreleaser.yaml
+  s_1b7f4d04f41f7a::t_27c2b75f4289fc 6,24-28,30,32,46-52,56,60-62,66-71
+CONTRIBUTING.md
+  s_1b7f4d04f41f7a::t_2702f74ce6f8ca 39-41,168-169
+README.md
+  s_1b7f4d04f41f7a::t_b934444f85b240 53,56,69-70
+docs/releasing.md
+  s_1b7f4d04f41f7a::t_29c51b4bf777c7 34-47,81-83,133,145,148-149,152
+mise.toml
+  s_1b7f4d04f41f7a::t_2d2e97cc0a8f33 39,43-46,51,62-63,67-77,81-82,87-93
+openspec/changes/publish-homebrew-formula/.openspec.yaml
+  s_1b7f4d04f41f7a::t_b12cf58ade0935 1-2
+openspec/changes/publish-homebrew-formula/design.md
+  s_1b7f4d04f41f7a::t_badf1d3de86e6f 1-100
+openspec/changes/publish-homebrew-formula/proposal.md
+  s_1b7f4d04f41f7a::t_609d74e5c14628 1-72
+openspec/changes/publish-homebrew-formula/specs/release-distribution/spec.md
+  s_1b7f4d04f41f7a::t_68a767e19e47fc 1-47
+scripts/check-tap-syntax.sh
+  s_1b7f4d04f41f7a::t_f7b174c40060d0 3-11,14-17,21-22,26-73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "80dbafaafa3fb92a892054820c8a289bbe333058",
+  "prompts": {},
+  "sessions": {
+    "s_1b7f4d04f41f7a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa9b609c-eb23-4e02-ba39-465ed0931e39",
+        "model": "claude-opus-5"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
