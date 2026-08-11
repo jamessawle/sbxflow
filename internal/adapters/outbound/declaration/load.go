@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"regexp"
 	"sync"
 
 	"github.com/goccy/go-yaml"
@@ -15,6 +16,12 @@ import (
 )
 
 const schemaURL = "https://github.com/jamessawle/sbxflow/blob/main/schema/sbxflow.schema.json"
+
+// allowedHostPattern mirrors the published schema's allowedHosts pattern for the
+// minimal lifecycle-target parse, which does not compile the whole schema.
+// Docker Sandboxes matches network requests by host and port, so a resource
+// carrying a scheme or path is accepted by its CLI but never matches.
+var allowedHostPattern = regexp.MustCompile(`^(\*\*|(\*\.)?([A-Za-z0-9_-]+\.)*[A-Za-z0-9_-]+|\[[0-9A-Fa-f:.]+\])(:[0-9]{1,5})?$`)
 
 var (
 	compiledSchema     *jsonschema.Schema
@@ -32,6 +39,12 @@ func Load(data []byte) (declarationport.Configuration, error) {
 
 	schema, err := configurationSchema()
 	if err != nil {
+		return declarationport.Configuration{}, err
+	}
+	// The schema constrains allowed hosts so editors report them, but its
+	// generated message is the bare pattern. Report the accepted forms first and
+	// leave every other structural rule to the schema.
+	if err := validateAllowedHosts(document); err != nil {
 		return declarationport.Configuration{}, err
 	}
 	if err := schema.Validate(document); err != nil {
@@ -88,7 +101,73 @@ func LoadLifecycleTarget(data []byte) (declarationport.LifecycleTarget, error) {
 	if nameString == "" {
 		return declarationport.LifecycleTarget{}, errors.New("configuration identity sandbox.name must not be empty")
 	}
-	return declarationport.LifecycleTarget{Name: nameString}, nil
+	var allowedHosts []string
+	if network, exists := sandboxObject["network"]; exists {
+		networkObject, ok := network.(map[string]any)
+		if !ok {
+			return declarationport.LifecycleTarget{}, errors.New("configuration identity sandbox.network must be an object")
+		}
+		if hosts, exists := networkObject["allowedHosts"]; exists {
+			hostList, ok := hosts.([]any)
+			if !ok {
+				return declarationport.LifecycleTarget{}, errors.New("configuration identity sandbox.network.allowedHosts must be an array")
+			}
+			seen := make(map[string]struct{}, len(hostList))
+			for index, host := range hostList {
+				value, ok := host.(string)
+				if !ok || value == "" {
+					return declarationport.LifecycleTarget{}, fmt.Errorf("configuration identity sandbox.network.allowedHosts[%d] must be a non-empty string", index)
+				}
+				if !allowedHostPattern.MatchString(value) {
+					return declarationport.LifecycleTarget{}, fmt.Errorf("configuration identity %w", allowedHostsError(index, value))
+				}
+				if _, duplicate := seen[value]; duplicate {
+					return declarationport.LifecycleTarget{}, fmt.Errorf("configuration identity sandbox.network.allowedHosts[%d] duplicates %q", index, value)
+				}
+				seen[value] = struct{}{}
+				allowedHosts = append(allowedHosts, value)
+			}
+		}
+	}
+	return declarationport.LifecycleTarget{Name: nameString, AllowedHosts: allowedHosts}, nil
+}
+
+// allowedHostsError names the forms Docker Sandboxes can actually match, for the
+// one rule whose schema message would otherwise be a bare pattern.
+func allowedHostsError(index int, value string) error {
+	return fmt.Errorf("sandbox.network.allowedHosts[%d] %q must be a host, domain, wildcard subdomain, IP literal, or \"**\", each with an optional :port suffix", index, value)
+}
+
+// validateAllowedHosts reports declared hosts that Docker Sandboxes would accept
+// but never match. Anything other than a string entry is left to the schema, so
+// this adds a message without taking over structural validation.
+func validateAllowedHosts(document any) error {
+	root, ok := document.(map[string]any)
+	if !ok {
+		return nil
+	}
+	sandboxObject, ok := root["sandbox"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	networkObject, ok := sandboxObject["network"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	hostList, ok := networkObject["allowedHosts"].([]any)
+	if !ok {
+		return nil
+	}
+	for index, host := range hostList {
+		value, ok := host.(string)
+		if !ok || value == "" {
+			continue
+		}
+		if !allowedHostPattern.MatchString(value) {
+			return allowedHostsError(index, value)
+		}
+	}
+	return nil
 }
 
 func decodeDocument(data []byte) (any, []byte, error) {

@@ -11,11 +11,12 @@ import (
 
 // Plan contains the validated inputs needed to create or enter a sandbox.
 type Plan struct {
-	Name      string
-	Agent     string
-	Workspace string
-	Kits      []string
-	Trust     configuration.Trust
+	Name         string
+	Agent        string
+	Workspace    string
+	Kits         []string
+	Trust        configuration.Trust
+	AllowedHosts []string
 }
 
 // NewPlan converts a successful validation report into ordered Docker
@@ -50,10 +51,11 @@ func NewPlan(report configuration.Validation) (Plan, error) {
 	}
 
 	return Plan{
-		Name:      report.Linked.Configuration.Sandbox.Name,
-		Agent:     report.Linked.Configuration.Sandbox.Agent,
-		Workspace: filepath.Dir(report.Declaration),
-		Kits:      kits,
-		Trust:     report.Linked.Trust,
+		Name:         report.Linked.Configuration.Sandbox.Name,
+		Agent:        report.Linked.Configuration.Sandbox.Agent,
+		Workspace:    filepath.Dir(report.Declaration),
+		Kits:         kits,
+		Trust:        report.Linked.Trust,
+		AllowedHosts: append([]string(nil), report.Linked.Configuration.Sandbox.Network.AllowedHosts...),
 	}, nil
 }

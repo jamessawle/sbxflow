@@ -17,6 +17,7 @@ type LifecycleTarget = declaration.LifecycleTarget
 type LocalKit = declaration.LocalKit
 type LocalKitRequest = declaration.LocalKitRequest
 type Sandbox = declaration.Sandbox
+type Network = declaration.Network
 type Kits = declaration.Kits
 type Source = declaration.Source
 type Selection = declaration.Selection

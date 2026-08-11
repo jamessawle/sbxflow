@@ -115,20 +115,24 @@ func TestRunnerLookupFailureDoesNotRunAgent(t *testing.T) {
 }
 
 func TestRunnerSelectsExactMissingAndExistingArguments(t *testing.T) {
+	attachArgs := []string{"run", "codex", "--name", "project"}
 	for _, test := range []struct {
 		name       string
 		listOutput string
-		wantArgs   []string
+		wantArgs   [][]string
 	}{
 		{
 			name:       "missing",
 			listOutput: `{"sandboxes":[{"name":"other","status":"running"}]}`,
-			wantArgs:   []string{"run", "--name", "project", "--kit", "git+https://github.com/example/kits.git#ref=v1&dir=tooling", "codex", "/repo"},
+			wantArgs: [][]string{
+				{"create", "--name", "project", "--kit", "git+https://github.com/example/kits.git#ref=v1&dir=tooling", "codex", "/repo"},
+				attachArgs,
+			},
 		},
 		{
 			name:       "existing",
 			listOutput: `{"sandboxes":[{"name":"project","status":"running"}]}`,
-			wantArgs:   []string{"run", "codex", "--name", "project"},
+			wantArgs:   [][]string{attachArgs},
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -141,14 +145,20 @@ func TestRunnerSelectsExactMissingAndExistingArguments(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Run() error = %v", err)
 			}
-			if !reflect.DeepEqual(interactive.invocation.Args, test.wantArgs) {
-				t.Fatalf("args = %#v, want %#v", interactive.invocation.Args, test.wantArgs)
+			gotArgs := make([][]string, 0, len(interactive.invocations))
+			for _, invocation := range interactive.invocations {
+				gotArgs = append(gotArgs, invocation.Args)
 			}
-			if interactive.invocation.Executable != "/bin/sbx" || interactive.invocation.Stdin != stdin || interactive.invocation.Stdout != &stdout || interactive.invocation.Stderr != &stderr {
-				t.Fatalf("interactive invocation = %#v", interactive.invocation)
+			if !reflect.DeepEqual(gotArgs, test.wantArgs) {
+				t.Fatalf("args = %#v, want %#v", gotArgs, test.wantArgs)
 			}
-			if got := interactive.invocation.Environment["DOCKER_SANDBOXES_KIT_ALLOWED_SOURCES"]; got != `["docker.io/","github.com/example/kits"]` {
-				t.Fatalf("allowed sources = %q", got)
+			for index, invocation := range interactive.invocations {
+				if invocation.Executable != "/bin/sbx" || invocation.Stdin != stdin || invocation.Stdout != &stdout || invocation.Stderr != &stderr {
+					t.Fatalf("interactive invocation %d = %#v", index, invocation)
+				}
+				if got := invocation.Environment["DOCKER_SANDBOXES_KIT_ALLOWED_SOURCES"]; got != `["docker.io/","github.com/example/kits"]` {
+					t.Fatalf("invocation %d allowed sources = %q", index, got)
+				}
 			}
 		})
 	}
@@ -161,11 +171,8 @@ func TestRunnerRecreateLeavesAbsentSandboxOnCreatePath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	if !reflect.DeepEqual(sandboxes.calls, []string{"lookup project", "run project"}) {
-		t.Fatalf("calls = %#v, want lookup followed by run without removal", sandboxes.calls)
-	}
-	if sandboxes.runRequest.Exists {
-		t.Fatalf("run request = %#v, want creation request", sandboxes.runRequest)
+	if !reflect.DeepEqual(sandboxes.calls, []string{"lookup project", "create project", "run project"}) {
+		t.Fatalf("calls = %#v, want lookup then creation without removal", sandboxes.calls)
 	}
 }
 
@@ -180,8 +187,8 @@ func TestRunnerRecreatesExactExistingSandboxBeforeCreatingFromPlan(t *testing.T)
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	if !reflect.DeepEqual(sandboxes.calls, []string{"lookup project", "remove project", "run project"}) {
-		t.Fatalf("calls = %#v, want lookup, removal, then run", sandboxes.calls)
+	if !reflect.DeepEqual(sandboxes.calls, []string{"lookup project", "remove project", "create project", "run project"}) {
+		t.Fatalf("calls = %#v, want lookup, removal, creation, then attachment", sandboxes.calls)
 	}
 	wantRemove := sandboxport.RemoveRequest{
 		Name:  "project",
@@ -193,16 +200,26 @@ func TestRunnerRecreatesExactExistingSandboxBeforeCreatingFromPlan(t *testing.T)
 	if !reflect.DeepEqual(sandboxes.removeRequest, wantRemove) {
 		t.Fatalf("remove request = %#v, want %#v", sandboxes.removeRequest, wantRemove)
 	}
-	wantRun := sandboxport.RunRequest{
+	wantCreate := sandboxport.CreateRequest{
 		Name:           "project",
 		Agent:          "codex",
 		Workspace:      "/repo",
 		Kits:           []string{"git+https://github.com/example/kits.git#ref=v1&dir=tooling"},
 		AllowedSources: []string{"docker.io/", "github.com/example/kits"},
-		Exists:         false,
+	}
+	if !reflect.DeepEqual(sandboxes.createRequest, wantCreate) {
+		t.Fatalf("create request = %#v, want %#v", sandboxes.createRequest, wantCreate)
+	}
+	wantRun := sandboxport.RunRequest{
+		Name:           "project",
+		Agent:          "codex",
+		AllowedSources: []string{"docker.io/", "github.com/example/kits"},
 	}
 	if !reflect.DeepEqual(sandboxes.runRequest, wantRun) {
 		t.Fatalf("run request = %#v, want %#v", sandboxes.runRequest, wantRun)
+	}
+	if !reflect.DeepEqual(sandboxes.createStreams, wantRemove.Streams) {
+		t.Fatalf("create streams = %#v, want %#v", sandboxes.createStreams, wantRemove.Streams)
 	}
 	if !reflect.DeepEqual(sandboxes.runStreams, wantRemove.Streams) {
 		t.Fatalf("run streams = %#v, want %#v", sandboxes.runStreams, wantRemove.Streams)
@@ -219,10 +236,10 @@ func TestRunnerConfirmsOnlyRunningRecreation(t *testing.T) {
 		wantCalls  []string
 		wantErr    error
 	}{
-		{name: "running approved", state: sandboxport.StateRunning, recreate: true, approved: true, wantCalls: []string{"lookup project", "confirm project", "remove project", "run project"}},
+		{name: "running approved", state: sandboxport.StateRunning, recreate: true, approved: true, wantCalls: []string{"lookup project", "confirm project", "remove project", "create project", "run project"}},
 		{name: "running declined", state: sandboxport.StateRunning, recreate: true, wantCalls: []string{"lookup project", "confirm project"}, wantErr: ErrRecreationCancelled},
 		{name: "running input failure", state: sandboxport.StateRunning, recreate: true, confirmErr: io.ErrUnexpectedEOF, wantCalls: []string{"lookup project", "confirm project"}, wantErr: io.ErrUnexpectedEOF},
-		{name: "stopped", state: sandboxport.StateStopped, recreate: true, wantCalls: []string{"lookup project", "remove project", "run project"}},
+		{name: "stopped", state: sandboxport.StateStopped, recreate: true, wantCalls: []string{"lookup project", "remove project", "create project", "run project"}},
 		{name: "running ordinary up", state: sandboxport.StateRunning, wantCalls: []string{"lookup project", "run project"}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -243,6 +260,7 @@ func TestRunnerConfirmsOnlyRunningRecreation(t *testing.T) {
 func TestRunnerRecreateStopsAtOperationFailures(t *testing.T) {
 	lookupFailure := errors.New("lookup failed")
 	removalFailure := errors.New("removal failed")
+	createFailure := errors.New("creation failed")
 	runFailure := errors.New("replacement failed")
 	for _, test := range []struct {
 		name         string
@@ -265,9 +283,16 @@ func TestRunnerRecreateStopsAtOperationFailures(t *testing.T) {
 			wantAttached: true,
 		},
 		{
+			name:         "replacement creation",
+			sandboxes:    &fakeUpSandboxes{state: sandboxport.StateStopped, createErr: createFailure},
+			wantCalls:    []string{"lookup project", "remove project", "create project"},
+			wantErr:      createFailure,
+			wantAttached: true,
+		},
+		{
 			name:         "replacement execution",
 			sandboxes:    &fakeUpSandboxes{state: sandboxport.StateStopped, runErr: runFailure},
-			wantCalls:    []string{"lookup project", "remove project", "run project"},
+			wantCalls:    []string{"lookup project", "remove project", "create project", "run project"},
 			wantErr:      runFailure,
 			wantAttached: true,
 		},
@@ -357,28 +382,56 @@ func (r *fakeCommandRunner) Run(_ context.Context, _ string, args ...string) sbx
 }
 
 type fakeInteractiveRunner struct {
-	calls      int
-	ctx        context.Context
-	invocation sbx.InteractiveInvocation
-	err        error
+	calls       int
+	ctx         context.Context
+	invocation  sbx.InteractiveInvocation
+	invocations []sbx.InteractiveInvocation
+	err         error
 }
 
 func (r *fakeInteractiveRunner) Run(ctx context.Context, invocation sbx.InteractiveInvocation) error {
 	r.calls++
 	r.ctx = ctx
 	r.invocation = invocation
+	r.invocations = append(r.invocations, invocation)
 	return r.err
 }
 
 type fakeUpSandboxes struct {
-	state         sandboxport.State
-	lookupErr     error
-	removeErr     error
-	runErr        error
-	calls         []string
-	removeRequest sandboxport.RemoveRequest
-	runRequest    sandboxport.RunRequest
-	runStreams    sandboxport.Streams
+	state           sandboxport.State
+	lookupErr       error
+	removeErr       error
+	createErr       error
+	runErr          error
+	calls           []string
+	removeRequest   sandboxport.RemoveRequest
+	createRequest   sandboxport.CreateRequest
+	createStreams   sandboxport.Streams
+	runRequest      sandboxport.RunRequest
+	runStreams      sandboxport.Streams
+	allowErr        error
+	cleanupErr      error
+	allowRequest    sandboxport.NetworkAllowRequest
+	cleanupRequests []sandboxport.NetworkRemoveRequest
+}
+
+func (s *fakeUpSandboxes) CreateSandbox(_ context.Context, request sandboxport.CreateRequest, streams sandboxport.Streams) error {
+	s.calls = append(s.calls, "create "+request.Name)
+	s.createRequest = request
+	s.createStreams = streams
+	return s.createErr
+}
+
+func (s *fakeUpSandboxes) AllowNetwork(_ context.Context, request sandboxport.NetworkAllowRequest) error {
+	s.calls = append(s.calls, "allow "+request.Name)
+	s.allowRequest = request
+	return s.allowErr
+}
+
+func (s *fakeUpSandboxes) RemoveNetworkResource(_ context.Context, request sandboxport.NetworkRemoveRequest) error {
+	s.calls = append(s.calls, "cleanup "+request.Resource)
+	s.cleanupRequests = append(s.cleanupRequests, request)
+	return s.cleanupErr
 }
 
 func (s *fakeUpSandboxes) InspectSandbox(_ context.Context, name string) (sandboxport.State, error) {

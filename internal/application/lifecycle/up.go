@@ -50,8 +50,10 @@ type UpRunner struct {
 	Validation Validator
 	Sandboxes  interface {
 		sandboxport.StateLookup
+		sandboxport.Creator
 		sandboxport.Remover
 		sandboxport.Runner
+		sandboxport.NetworkPolicy
 	}
 }
 
@@ -97,26 +99,22 @@ func (r UpRunner) Run(ctx context.Context, start string, options UpOptions, stre
 		}
 	}
 	if exists && options.Recreate {
-		err = r.Sandboxes.RemoveSandbox(ctx, sandboxport.RemoveRequest{
-			Name:  plan.Name,
-			Force: true,
-			Streams: sandboxport.Streams{
-				In: streams.In, Out: streams.Out, Err: streams.Err,
-			},
-		})
+		err = removeSandbox(ctx, r.Sandboxes, plan.Name, plan.AllowedHosts, true, streams)
 		if err != nil {
-			return report, AttachedProcessError{Err: err}
+			return report, err
 		}
 		exists = false
+	}
+	if !exists {
+		if err = r.create(ctx, plan, streams); err != nil {
+			return report, err
+		}
 	}
 	err = r.Sandboxes.RunSandbox(ctx, sandboxport.RunRequest{
 		Name:           plan.Name,
 		Agent:          plan.Agent,
-		Workspace:      plan.Workspace,
-		Kits:           plan.Kits,
 		AllowedSources: plan.Trust.AllowedSources,
 		AllowLocalKits: plan.Trust.AllowLocalKits,
-		Exists:         exists,
 	}, sandboxport.Streams{
 		In: streams.In, Out: streams.Out, Err: streams.Err,
 	})
@@ -124,4 +122,37 @@ func (r UpRunner) Run(ctx context.Context, start string, options UpOptions, stre
 		return report, AttachedProcessError{Err: err}
 	}
 	return report, nil
+}
+
+// create provisions the missing sandbox and then scopes its declared network
+// resources to it. Docker Sandboxes accepts a sandbox-scoped rule only for a
+// sandbox that already exists, so creation and attachment are separate
+// invocations with the rule applied in between, before the agent starts. A rule
+// that cannot be applied removes the new sandbox again so that up neither
+// creates nor enters a sandbox without its declared network access.
+func (r UpRunner) create(ctx context.Context, plan Plan, streams Streams) error {
+	err := r.Sandboxes.CreateSandbox(ctx, sandboxport.CreateRequest{
+		Name:           plan.Name,
+		Agent:          plan.Agent,
+		Workspace:      plan.Workspace,
+		Kits:           plan.Kits,
+		AllowedSources: plan.Trust.AllowedSources,
+		AllowLocalKits: plan.Trust.AllowLocalKits,
+	}, sandboxport.Streams{
+		In: streams.In, Out: streams.Out, Err: streams.Err,
+	})
+	if err != nil {
+		return AttachedProcessError{Err: err}
+	}
+	if len(plan.AllowedHosts) == 0 {
+		return nil
+	}
+	err = r.Sandboxes.AllowNetwork(ctx, sandboxport.NetworkAllowRequest{Name: plan.Name, Resources: plan.AllowedHosts})
+	if err == nil {
+		return nil
+	}
+	if rollback := removeSandbox(ctx, r.Sandboxes, plan.Name, plan.AllowedHosts, true, streams); rollback != nil {
+		return fmt.Errorf("%w; the created sandbox %q could not be removed again: %v", err, plan.Name, rollback)
+	}
+	return err
 }

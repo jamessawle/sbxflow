@@ -9,10 +9,12 @@ organisation policy.
 ## What Changes
 
 - Add an optional `sandbox.network.allowedHosts` list to version 1 declarations.
-- Strictly validate the list as non-empty, unique Docker Sandbox network
-  resources.
-- Apply declared hosts as a sandbox-scoped local allow rule before creating and
-  entering a missing sandbox.
+- Strictly validate the list as unique hosts, domains, wildcard subdomains, IP
+  literals, or `**`, each with an optional port, rejecting URL forms that Docker
+  accepts but can never match.
+- Split creating a missing sandbox from entering it, and apply declared hosts as a
+  sandbox-scoped local allow rule in between, because Docker scopes a rule only to
+  a sandbox that already exists.
 - Share removal logic between destroy and recreation so both clean up the
   currently declared sandbox-scoped resources after removal.
 - Preserve the existing no-reconciliation behavior for an already-created
@@ -37,6 +39,9 @@ None.
 ## Impact
 
 The public YAML schema, declaration port model, lifecycle plan and sandbox port,
-Docker Sandbox outbound adapter, README, and examples change. The implementation
-uses the existing supported `sbx policy allow network --sandbox` CLI and adds no
-dependency or architecture relationship.
+Docker Sandbox outbound adapter, README, and examples change. The sandbox port
+gains a `Creator` capability and `Runner` becomes attachment-only, so `up` now
+invokes `sbx create` and `sbx run --name` in place of a single `sbx run`. The
+implementation uses the existing supported `sbx create`, `sbx run`, and
+`sbx policy allow network --sandbox` CLI and adds no dependency or architecture
+relationship.

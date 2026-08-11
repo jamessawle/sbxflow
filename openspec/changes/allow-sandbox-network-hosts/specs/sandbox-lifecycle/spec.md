@@ -1,32 +1,43 @@
 ## ADDED Requirements
 
-### Requirement: Declared network access is applied to a missing sandbox
+### Requirement: Declared network access is applied to a newly created sandbox
 
-Before creating a missing sandbox, `up` SHALL ask Docker Sandboxes to add the
-declared network resources as a local allow rule scoped to the exact declared
-sandbox name. Docker Sandboxes SHALL remain authoritative for resource syntax
-and for the effect of stricter organisation-managed policy.
+Docker Sandboxes accepts a sandbox-scoped local rule only for a sandbox that
+already exists. When creating a missing sandbox, `up` SHALL therefore provision
+the sandbox without attaching to its agent, add the declared network resources as
+a local allow rule scoped to the exact declared sandbox name, and only then enter
+the sandbox, so the rule is in force before any agent traffic. Docker Sandboxes
+SHALL remain authoritative for the effect of stricter organisation-managed
+policy.
 
 #### Scenario: Missing sandbox declares allowed hosts
 
 - **WHEN** the declared sandbox is absent and `allowedHosts` contains one or
   more resources
-- **THEN** `up` asks Docker Sandboxes to allow those resources only for the
-  declared sandbox
-- **AND** applies the rule before starting creation so kit and agent traffic can
-  use it
+- **THEN** `up` provisions the sandbox without attaching to its agent
+- **AND** asks Docker Sandboxes to allow those resources only for the declared
+  sandbox
+- **AND** enters the sandbox afterwards so agent traffic can use the rule
 
 #### Scenario: Missing sandbox has no declared allowed hosts
 
 - **WHEN** the declared sandbox is absent and `allowedHosts` is absent or empty
 - **THEN** `up` does not ask Docker Sandboxes to add a network rule
-- **AND** continues creating the sandbox normally
+- **AND** provisions and enters the sandbox normally
 
 #### Scenario: Docker rejects a declared network resource
 
 - **WHEN** Docker Sandboxes rejects the sandbox-scoped allow request
 - **THEN** its diagnostic output remains visible to the user
-- **AND** `up` does not create or enter the sandbox
+- **AND** `up` removes the sandbox it just created rather than entering it
+  without the declared network access
+- **AND** exits with a non-zero status
+
+#### Scenario: The rejected sandbox cannot be removed again
+
+- **WHEN** the sandbox-scoped allow request is rejected and the just-created
+  sandbox cannot be removed
+- **THEN** `up` reports both the rejected resource and the failed removal
 - **AND** exits with a non-zero status
 
 #### Scenario: Organisation governance is stricter
@@ -39,10 +50,13 @@ and for the effect of stricter organisation-managed policy.
 ### Requirement: Sandbox removal cleans up declared network access
 
 The shared lifecycle removal operation used by `destroy` and `up --recreate`
-SHALL remove the exact sandbox and SHALL remove every network resource currently
-declared for that sandbox by sandbox name and resource. Declared resources are
-owned by sbxflow; manually modifying an overlapping sandbox-scoped resource is
-outside sbxflow's ownership guarantees.
+SHALL remove the exact sandbox and SHALL then remove every network resource
+currently declared for that sandbox, each by sandbox name and resource. Removing
+a resource that is already absent SHALL succeed, because Docker Sandboxes
+ordinarily discards a sandbox-scoped policy along with its sandbox and rejects a
+removal request naming any resource it cannot find. Declared resources are owned
+by sbxflow; manually modifying an overlapping sandbox-scoped resource is outside
+sbxflow's ownership guarantees.
 
 #### Scenario: Destroy removes a sandbox with declared network access
 
@@ -51,12 +65,19 @@ outside sbxflow's ownership guarantees.
 - **THEN** it removes each declared resource from the local rule scoped to that
   sandbox
 
+#### Scenario: Declared network access is already absent
+
+- **WHEN** removal reaches a declared resource that Docker Sandboxes no longer
+  holds, or a sandbox that has no scoped policy at all
+- **THEN** cleanup treats that resource as already removed
+- **AND** the lifecycle operation succeeds
+
 #### Scenario: Recreation replaces declared network access
 
 - **WHEN** `up --recreate` removes an existing sandbox
 - **THEN** it uses the same removal and network-cleanup behavior as `destroy`
-- **AND** applies the current declaration's allowed hosts before creating the
-  replacement
+- **AND** applies the current declaration's allowed hosts to the replacement
+  between provisioning it and entering it
 
 #### Scenario: Sandbox removal fails
 
@@ -67,7 +88,7 @@ outside sbxflow's ownership guarantees.
 #### Scenario: Network cleanup fails after removal
 
 - **WHEN** the sandbox was removed but Docker Sandboxes cannot remove a declared
-  network resource
+  network resource for a reason other than its absence
 - **THEN** the lifecycle operation reports that the sandbox was removed but
   network cleanup was incomplete
 - **AND** exits with a non-zero status

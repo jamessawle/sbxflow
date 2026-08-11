@@ -11,7 +11,7 @@ func TestNewPlanPreservesKitOrderAndTrust(t *testing.T) {
 	report := configuration.Validation{
 		Declaration: "/repo/sbxflow.yaml",
 		Linked: configuration.LinkedConfiguration{
-			Configuration: configuration.Configuration{Sandbox: configuration.Sandbox{Name: "project", Agent: "codex"}},
+			Configuration: configuration.Configuration{Sandbox: configuration.Sandbox{Name: "project", Agent: "codex", Network: configuration.Network{AllowedHosts: []string{"first.example", "second.example"}}}},
 			Selections: []configuration.LinkedSelection{
 				{Index: 0, Source: configuration.Source{Type: configuration.SourceGit}, RemoteReference: "git+https://github.com/example/kits.git#ref=v1&dir=git-kit"},
 				{Index: 1, Source: configuration.Source{Type: configuration.SourceLocal}},
@@ -45,6 +45,9 @@ func TestNewPlanPreservesKitOrderAndTrust(t *testing.T) {
 	}
 	if !reflect.DeepEqual(plan.Trust, report.Linked.Trust) {
 		t.Fatalf("Trust = %#v, want %#v", plan.Trust, report.Linked.Trust)
+	}
+	if !reflect.DeepEqual(plan.AllowedHosts, []string{"first.example", "second.example"}) {
+		t.Fatalf("AllowedHosts = %#v", plan.AllowedHosts)
 	}
 }
 

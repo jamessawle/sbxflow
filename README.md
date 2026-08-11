@@ -19,6 +19,12 @@ sandbox:
   name: my-project
   agent: codex
 
+  network:
+    allowedHosts:
+      - api.github.com
+      - registry.npmjs.org:443
+      - "*.githubusercontent.com"
+
   kits:
     sources:
       community:
@@ -159,6 +165,45 @@ sbxflow derives Docker's kit-source settings from the selected kits:
 - Local kits are enabled only when selected.
 
 The derived settings apply only to Docker Sandbox processes started by sbxflow. Host and organisation policy can impose stricter controls.
+
+## Sandbox network access
+
+Use the optional `sandbox.network.allowedHosts` list to declare additional
+network resources needed by the sandbox. Entries are unique and remain in
+declaration order. Each entry is a host, domain, wildcard subdomain, IP literal,
+or `**` for all hosts, with an optional `:port` suffix:
+
+| Entry                     | Matches                       |
+| ------------------------- | ----------------------------- |
+| `api.github.com`          | that host on port 443         |
+| `registry.npmjs.org:443`  | that host on an explicit port |
+| `*.githubusercontent.com` | any subdomain                 |
+| `**`                      | all outbound hosts            |
+
+Docker Sandboxes matches network requests by host and port, so a URL is not a
+usable resource. `https://api.github.com` is accepted by `sbx policy allow` but
+never matches any request, so sbxflow rejects it during validation instead.
+
+Docker Sandboxes only accepts a sandbox-scoped rule for a sandbox that already
+exists. When `up` creates a missing sandbox it therefore provisions the sandbox,
+applies the rule, and only then starts the agent, so the rule is in force before
+any agent traffic. If the rule cannot be applied, `up` removes the sandbox it
+just created rather than entering it without the declared access.
+Organisation-managed policy remains authoritative and can prevent a local rule
+from taking effect. An ordinary `up` never reconciles an existing sandbox when
+this list changes; use `up --recreate` to remove the currently declared resources
+and apply the current declaration to the replacement.
+
+Declared resources are owned by sbxflow. Both `destroy` and recreation remove the
+sandbox first, then remove each currently declared resource. Docker Sandboxes
+ordinarily discards a sandbox-scoped policy along with its sandbox, so this
+cleanup is idempotent and a resource that is already gone is not an error. Avoid
+manually modifying overlapping sandbox-scoped resources. If cleanup does fail
+after the sandbox was removed, retry the resource reported in the error with:
+
+```text
+sbx policy rm network --sandbox <sandbox-name> --resource <resource>
+```
 
 ## Versioning
 

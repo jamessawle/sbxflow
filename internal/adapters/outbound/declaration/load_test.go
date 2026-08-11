@@ -3,6 +3,7 @@ package declaration
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -92,6 +93,39 @@ func TestLoadRepositoryDeclaration(t *testing.T) {
 	}
 }
 
+func TestLoadPreservesOrderedNetworkAllowedHosts(t *testing.T) {
+	document := `version: 1
+sandbox:
+  name: demo
+  agent: codex
+  network:
+    allowedHosts:
+      - api.example.com
+      - packages.example.com:443
+      - "*.cdn.example.com"
+      - 10.0.0.1
+      - "[fd00::1]:8443"
+      - "**"
+  kits:
+    sources:
+      community:
+        type: git
+        repo: https://github.com/example/kits.git
+        ref: v1
+    use:
+      - source: community
+        kit: tooling
+`
+	configuration, err := Load([]byte(document))
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	want := []string{"api.example.com", "packages.example.com:443", "*.cdn.example.com", "10.0.0.1", "[fd00::1]:8443", "**"}
+	if !reflect.DeepEqual(configuration.Sandbox.Network.AllowedHosts, want) {
+		t.Fatalf("allowed hosts = %#v, want %#v", configuration.Sandbox.Network.AllowedHosts, want)
+	}
+}
+
 func TestLoadRejectsInvalidDocuments(t *testing.T) {
 	valid := `version: 1
 sandbox:
@@ -123,7 +157,14 @@ sandbox:
 		"wrong source shape": {document: strings.Replace(valid, "        ref: v1", "        base: ghcr.io/example", 1), want: "sources"},
 		"unknown source field": {document: strings.Replace(valid, "        ref: v1", "        ref: v1\n        mystery: value", 1),
 			want: "mystery"},
-		"duplicate selection": {document: valid + "      - source: community\n        kit: tooling\n", want: "items at 0 and 1 are equal"},
+		"duplicate selection":    {document: valid + "      - source: community\n        kit: tooling\n", want: "items at 0 and 1 are equal"},
+		"empty network host":     {document: strings.Replace(valid, "  kits:", "  network:\n    allowedHosts: ['']\n  kits:", 1), want: "allowedHosts"},
+		"duplicate network host": {document: strings.Replace(valid, "  kits:", "  network:\n    allowedHosts: [example.com, example.com]\n  kits:", 1), want: "items at 0 and 1 are equal"},
+		"unknown network field":  {document: strings.Replace(valid, "  kits:", "  network:\n    unknown: true\n  kits:", 1), want: "unknown"},
+		// Docker Sandboxes accepts a URL resource but matches requests by host and
+		// port, so such a rule would never take effect.
+		"network host URL":  {document: strings.Replace(valid, "  kits:", "  network:\n    allowedHosts: ['https://example.com']\n  kits:", 1), want: "optional :port suffix"},
+		"network host path": {document: strings.Replace(valid, "  kits:", "  network:\n    allowedHosts: ['example.com/v1']\n  kits:", 1), want: "optional :port suffix"},
 	}
 
 	for name, test := range tests {
@@ -143,8 +184,10 @@ func TestLoadLifecycleTarget(t *testing.T) {
 	target, err := LoadLifecycleTarget([]byte(`version: 1
 sandbox:
   name: exact-project
+  network:
+    allowedHosts: [first.example, second.example]
 `))
-	if err != nil || target.Name != "exact-project" {
+	if err != nil || target.Name != "exact-project" || !reflect.DeepEqual(target.AllowedHosts, []string{"first.example", "second.example"}) {
 		t.Fatalf("LoadLifecycleTarget() = %#v, %v", target, err)
 	}
 }
@@ -171,6 +214,12 @@ sandbox:
 		"missing name":          {document: "version: 1\nsandbox: {}\n", want: "missing sandbox.name"},
 		"name is not string":    {document: "version: 1\nsandbox:\n  name: 7\n", want: "must be a string"},
 		"empty name":            {document: "version: 1\nsandbox:\n  name: ''\n", want: "must not be empty"},
+		"network is not object": {document: valid + "  network: hosts\n", want: "sandbox.network must be an object"},
+		"hosts are not array":   {document: valid + "  network:\n    allowedHosts: first.example\n", want: "must be an array"},
+		"empty host":            {document: valid + "  network:\n    allowedHosts: ['']\n", want: "must be a non-empty string"},
+		"host is not string":    {document: valid + "  network:\n    allowedHosts: [7]\n", want: "must be a non-empty string"},
+		"host URL":              {document: valid + "  network:\n    allowedHosts: ['https://first.example']\n", want: "optional :port suffix"},
+		"duplicate host":        {document: valid + "  network:\n    allowedHosts: [first.example, first.example]\n", want: "duplicates"},
 	}
 
 	for name, test := range tests {

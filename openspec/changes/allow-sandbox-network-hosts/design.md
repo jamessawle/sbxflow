@@ -6,6 +6,19 @@ them by sandbox and resource through `sbx policy rm network --sandbox
 --resource`. Organisation-managed allow policy takes precedence over local
 allow rules.
 
+Three properties of that CLI (verified against sbx v0.35.0) constrain the design:
+
+- `sbx policy allow network --sandbox NAME` fails with `sandbox "NAME" not found`
+  unless the sandbox already exists, and neither `sbx run` nor `sbx create`
+  accepts local policy at creation time. A rule therefore cannot precede the
+  sandbox it is scoped to.
+- `RESOURCES` is a single comma-separated positional argument. A second
+  positional is rejected as a mistaken sandbox name.
+- `sbx policy rm network` fails when the sandbox has no scoped policy
+  (`no scoped policy found`) and when any named resource is not in that policy
+  (`remove-resource: rule not found`), rejecting the whole request in the latter
+  case rather than removing the resources it did find.
+
 The lifecycle application package already owns create, recreate, and destroy
 coordination. Its current recreation path calls sandbox removal directly rather
 than reusing the destroy runner, while the declaration adapter's teardown loader
@@ -33,36 +46,63 @@ intentionally resolves only identity.
 ### Model network resources explicitly at the declaration boundary
 
 Add `Network` to the declaration sandbox model with ordered `AllowedHosts`.
-Although Docker accepts resources broader than bare hosts, `allowedHosts`
-matches the public issue language and Docker's user-facing host terminology.
-The schema checks strings for presence and uniqueness; Docker remains the source
-of truth for wildcard, URL, IP, and port syntax.
+`allowedHosts` matches the public issue language and Docker's user-facing host
+terminology. The schema checks presence, uniqueness, and that each entry is a
+host, domain, wildcard subdomain, IP literal, or `**`, each with an optional
+`:port` suffix.
 
-Parsing the syntax in sbxflow was rejected because it would duplicate a
-versioned Docker contract and risk rejecting resources supported by the pinned
-CLI.
+Deferring resource syntax entirely to Docker was rejected. Docker's policy
+authorizer matches requests by host and port, so `sbx policy allow network`
+accepts `https://example.com` and stores it verbatim while it never matches any
+request — an entry that reads as applied and silently is not. Validating the
+accepted forms turns that into a validation error instead. The trade-off is that
+sbxflow now mirrors part of a versioned Docker contract and could reject a form a
+later CLI supports; the pattern is deliberately permissive about label characters
+to limit that exposure.
 
 ### Add narrow network-rule capabilities to the Sandbox port
 
+Keep `NetworkPolicy` a narrow interface in the existing `ports/sandbox` package
+rather than folding its two methods into `Remover` and the create capability.
+`sbx policy` is a distinct command family from `sbx run`, `sbx create`, and
+`sbx rm`, and consumers already compose the interfaces they need, so the cost of
+a separate interface is one embedded line per consumer.
+
 Represent add and remove requests as structured port values containing sandbox
-name and ordered resources. The outbound adapter translates them into one
-`sbx policy allow network --sandbox` invocation and resource-specific
-`sbx policy rm network --sandbox --resource` invocations. Captured execution is
-used because these operations do not require an attached terminal.
+name and resources. The outbound adapter joins allow resources into the single
+comma-separated argument Docker requires, and removes resources one invocation at
+a time so that one already-absent resource cannot block cleanup of the rest.
+Removal is idempotent at the adapter boundary: the adapter owns the CLI contract,
+including its diagnostics, so it recognises both absence diagnostics and reports
+success. Captured execution is used because these operations do not require an
+attached terminal.
 
 Generating a custom kit internally was rejected because it would introduce
 temporary filesystem artifacts and local-kit trust solely to reach a native
 Docker policy interface.
 
-### Apply the rule only while creating or recreating
+### Split creation from attachment so the rule can precede the agent
 
-For a missing sandbox, `up` adds the scoped rule before `sbx run` so selected
-kits and the initial agent session receive access. An existing sandbox remains
-untouched unless `--recreate` is requested, consistent with the established
-no-reconciliation contract.
+Docker will not scope a rule to a sandbox that does not exist yet, so `up` splits
+what was one `sbx run` into `sbx create` followed by `sbx run --name`, and applies
+the rule between them. Add a `Creator` port for the provisioning half; `Runner`
+becomes attachment-only and its request drops the creation inputs and the
+`Exists` discriminator.
 
-Applying on every `up` was rejected because additive policy calls cannot remove
-hosts deleted from the declaration and could accumulate stale rules.
+This gives the rule force before the agent starts, but not before kit
+provisioning, which happens inside `sbx create`. Kits declare their own
+sandbox-scoped policy, which Docker applies as part of creation, so kit
+provisioning does not depend on `allowedHosts`.
+
+Because the sandbox exists by the time a rule can be rejected, compensation is
+inverted relative to a single `sbx run`: a rejected rule removes the sandbox that
+was just created, so `up` neither creates nor enters a sandbox lacking its
+declared access.
+
+An existing sandbox remains untouched unless `--recreate` is requested,
+consistent with the established no-reconciliation contract. Applying on every
+`up` was rejected because additive policy calls cannot remove hosts deleted from
+the declaration and could accumulate stale rules.
 
 ### Share removal orchestration inside the lifecycle package
 
@@ -83,11 +123,17 @@ sandbox removal would unexpectedly revoke access from a surviving sandbox.
 
 ## Risks / Trade-offs
 
-- **[Creation fails after the allow rule is added]** → Attempt compensating
-  removal and report both failures if compensation also fails.
+- **[The allow rule is rejected after the sandbox is created]** → Remove the
+  just-created sandbox and report both failures if that removal also fails.
+- **[Attachment fails after the rule is applied]** → Leave the sandbox and its
+  rule in place; the sandbox now exists, so a later `up` attaches to it without
+  reapplying anything.
 - **[Cleanup fails after permanent sandbox removal]** → Return a precise partial
   completion error containing the sandbox and resource so the user can retry the
-  documented `sbx policy rm` command.
+  documented `sbx policy rm` command. Absence is not such a failure.
+- **[`sbx create` diverges from `sbx run`'s implicit creation]** → Both accept the
+  same `--name`, `--kit`, agent, and workspace inputs, and Docker documents
+  `sbx run --name` as the way to attach after `sbx create`.
 - **[A user manually changes an overlapping resource]** → Document declared
   resources as sbxflow-owned and remove them according to the declaration.
 - **[Organisation governance makes the local rule inactive]** → Do not claim
