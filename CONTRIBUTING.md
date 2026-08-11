@@ -5,6 +5,10 @@ the project's purpose, current interface, and lifecycle scope. See
 [`docs/structure.md`](docs/structure.md) for the internal package boundaries and
 code placement guidance.
 
+Participation is governed by the [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
+Report suspected vulnerabilities privately as described in
+[`SECURITY.md`](SECURITY.md), rather than through a public issue or pull request.
+
 ## Development setup
 
 Development tools and Git hooks are managed with
