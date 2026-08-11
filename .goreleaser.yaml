@@ -49,6 +49,9 @@ homebrew_casks:
       owner: jamessawle
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+      pull_request:
+        enabled: true
+        draft: false
     directory: Casks
     homepage: https://github.com/jamessawle/sbxflow
     description: Apply a repository's Docker Sandbox configuration and lifecycle
@@ -57,4 +60,4 @@ homebrew_casks:
       - sbxflow
 
 changelog:
-  disable: true
+  use: github-native
