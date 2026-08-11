@@ -90,14 +90,22 @@ archive="sbxflow_${version}_linux_amd64.tar.gz"
 base_url="https://github.com/jamessawle/sbxflow/releases/download/${tag}"
 curl -LO "${base_url}/${archive}"
 curl -LO "${base_url}/checksums.txt"
+gh attestation verify "${archive}" --repo jamessawle/sbxflow
+gh attestation verify checksums.txt --repo jamessawle/sbxflow
 grep " ${archive}$" checksums.txt | sha256sum --check
 tar -xzf "${archive}"
 ./sbxflow --version
 ./sbxflow --help
 ```
 
+The two attestation checks require network access and a current GitHub CLI.
+They must identify `jamessawle/sbxflow` and its release workflow as the source
+of both files. Provenance authenticates each file independently; the checksum
+check still confirms that the archive matches the published manifest.
+
 Confirm that `--version` reports the tag and a short form of the tagged commit.
-Also confirm that the GitHub release contains all expected files:
+Also confirm that the GitHub release contains all expected files and that each
+one appears as a subject in the workflow's build-provenance summary:
 
 ```text
 checksums.txt
@@ -106,6 +114,11 @@ sbxflow_<version>_darwin_arm64.tar.gz
 sbxflow_<version>_linux_amd64.tar.gz
 sbxflow_<version>_windows_amd64.zip
 ```
+
+Download and run `gh attestation verify <file> --repo jamessawle/sbxflow` for
+each listed subject, not only the host-native archive used for the smoke test.
+After the next scheduled OpenSSF Scorecard run, confirm that its
+Signed-Releases check recognizes the attestations.
 
 After merging the tap update, test a clean Homebrew installation on macOS:
 
@@ -119,7 +132,9 @@ brew info --cask sbxflow
 
 Confirm that the installed version is the release just published. Record the
 release URL, workflow run, tap pull request, validation result, supported-`sbx`
-smoke-test result, and Homebrew test in the release issue or pull request.
+smoke-test result, attestation results for every subject, subsequent OpenSSF
+Scorecard Signed-Releases result, and Homebrew test in the release issue or
+pull request.
 
 ## Failure recovery
 
@@ -128,19 +143,27 @@ new patch-version tag. Do not force-update the failed tag: a pushed tag may
 already have been fetched or partially processed.
 
 Publication can partially succeed because GitHub assets are created before the
-Homebrew update completes. Inspect the GitHub release, workflow run, and tap
-repository separately:
+provenance step or Homebrew update completes. A missing or unverifiable
+attestation makes the release incomplete even when its asset was uploaded.
+Inspect the GitHub release, workflow run, attestations, and tap repository
+separately:
 
 ```sh
 tag=v0.1.1
 gh release view "${tag}"
 gh run list --workflow release.yml --limit 5
+gh attestation verify checksums.txt --repo jamessawle/sbxflow
 gh pr list --repo jamessawle/homebrew-tap --search sbxflow
 ```
 
+- If provenance generation fails or any expected subject is missing or cannot
+  be verified, do not present the release as complete and do not merge its tap
+  update. Preserve the immutable tag and assets, fix the problem on `main`, and
+  publish a corrected patch release whose complete subject set verifies.
 - If GitHub publication succeeded but the tap pull request failed, preserve the
-  tag and release. Correct the tap update in a pull request using the published
-  artifact URLs and checksums, then perform the Homebrew validation above.
+  tag and release only after every expected attestation verifies. Correct the
+  tap update in a pull request using the published artifact URLs and checksums,
+  then perform the Homebrew validation above.
 - If an incorrect release is already public, leave its tag immutable, mark the
   release as superseded where appropriate, fix the problem on `main`, and
   publish a new patch version.
