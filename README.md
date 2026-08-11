@@ -3,6 +3,7 @@
 [![Latest release](https://img.shields.io/github/v/release/jamessawle/sbxflow)](https://github.com/jamessawle/sbxflow/releases/latest)
 [![License](https://img.shields.io/github/license/jamessawle/sbxflow)](LICENSE)
 [![Build status](https://github.com/jamessawle/sbxflow/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jamessawle/sbxflow/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/jamessawle/sbxflow/badge)](https://scorecard.dev/viewer/?uri=github.com/jamessawle/sbxflow)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14024/badge)](https://www.bestpractices.dev/projects/14024)
 
 `sbxflow` applies a repository's declared [Docker Sandbox](https://docs.docker.com/ai/sandboxes/) configuration and lifecycle. It validates the declared agent and ordered set of kits, then creates, enters, stops, or removes the repository's sandbox.
