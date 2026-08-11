@@ -12,7 +12,10 @@ brew readall --aliases --os=all --arch=all   (clean)
 brew audit --except=installed                (clean)
 ```
 
-No rules were skipped and no generated file was patched.
+These are the tap's own commands, unmodified: `--except=installed` is what its
+test-bot job passes. No further rule was skipped to make the cask pass, and no
+generated file was patched. An earlier attempt to fix this by adding
+`--except=version` was rejected for exactly that reason.
 
 ## Why the cask, having just moved to a formula
 
