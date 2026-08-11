@@ -10,3 +10,5 @@
 
 - [ ] My PR title follows Conventional Commits
 - [ ] `mise run validate`
+- [ ] My contribution follows `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md`
+- [ ] I have not included secrets, private data, or an undisclosed vulnerability
