@@ -35,6 +35,8 @@ The existing project tasks cover the routine workflow:
 mise run fmt        Format Markdown and Go files
 mise run test:architecture
                     Check production package dependency boundaries
+mise run test:release
+                    Build a release snapshot and validate its archives and cask
 mise run validate   Check Markdown, workflows, specs, Go formatting, vet, tests, and builds
 ```
 

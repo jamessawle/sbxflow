@@ -85,6 +85,29 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
 
+      - name: Normalize generated Homebrew cask
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          version=${VERSION#v}
+          branch="sbxflow-${version}"
+          cask_path="Casks/sbxflow.rb"
+
+          ./scripts/render-homebrew-cask.sh "${version}" dist/checksums.txt dist/sbxflow.rb
+
+          cask_sha=$(gh api \
+            "repos/jamessawle/homebrew-tap/contents/${cask_path}?ref=${branch}" \
+            --jq .sha)
+          content=$(base64 -w 0 dist/sbxflow.rb)
+
+          gh api --method PUT \
+            "repos/jamessawle/homebrew-tap/contents/${cask_path}" \
+            -f message="fix: normalize sbxflow ${version} cask" \
+            -f content="${content}" \
+            -f sha="${cask_sha}" \
+            -f branch="${branch}" >/dev/null
+
       - name: Attest release artifacts
         id: attest
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2

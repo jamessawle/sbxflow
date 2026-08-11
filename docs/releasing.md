@@ -30,6 +30,10 @@ GitHub release, executable archive, checksum manifest, or Homebrew update.
    mise run validate
    ```
 
+   This includes `mise run test:release`, which builds a GoReleaser snapshot,
+   confirms the public archive set, and validates the deterministic macOS-only
+   Homebrew cask structure before any tag is pushed.
+
 4. Build and smoke-test the release commit on a supported host with an `sbx`
    version inside the range documented in `README.md`:
 
