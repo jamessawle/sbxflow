@@ -10,6 +10,8 @@ Scorecard Signed-Releases finding tracked by issue #45.
 
 - Generate GitHub artifact attestations for each release archive and the
   checksum manifest after GoReleaser publishes them.
+- Attach the generated in-toto bundle to each GitHub release so provenance is
+  discoverable by the OpenSSF Scorecard Signed-Releases check.
 - Grant the release job only the additional GitHub permissions required to
   issue build provenance.
 - Document how consumers and maintainers verify release artifacts with the
@@ -32,7 +34,7 @@ None.
 ## Impact
 
 The change affects the tag-triggered GitHub Actions release workflow, its
-job-level permissions and pinned actions, the release-distribution contract,
-and consumer and maintainer verification documentation. It does not rewrite
-existing releases or change archive contents, supported platforms, GoReleaser
-packaging, or Homebrew publication.
+release assets, job-level permissions and pinned actions, the
+release-distribution contract, and consumer and maintainer verification
+documentation. It does not rewrite existing releases or change archive
+contents, supported platforms, GoReleaser packaging, or Homebrew publication.

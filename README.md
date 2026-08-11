@@ -91,7 +91,9 @@ sbxflow --version
 Attestation verification requires network access and a current GitHub CLI. It
 authenticates the repository and workflow that produced each downloaded file;
 the checksum check independently confirms that the archive matches the
-published manifest.
+published manifest. Each release also includes
+`sbxflow-provenance.intoto.jsonl` so automated supply-chain checks can discover
+the provenance directly from its assets.
 
 On macOS, select `darwin_arm64` for Apple silicon or `darwin_amd64` for an
 Intel Mac and replace the checksum command with:

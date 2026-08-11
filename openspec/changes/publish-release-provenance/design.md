@@ -18,6 +18,8 @@ releases are immutable and out of scope.
   release workflow, tagged commit, and GitHub Actions identity.
 - Let consumers verify downloaded files with GitHub's supported CLI rather
   than project-specific verification code or long-lived signing keys.
+- Publish the generated in-toto bundle as a release asset that supply-chain
+  scanners can discover without querying GitHub's attestation API.
 - Keep provenance authority confined to the release job.
 
 **Non-Goals:**
@@ -52,9 +54,11 @@ over-broad `dist/**` glob from attesting unpacked binaries, metadata, or other
 GoReleaser intermediates. GitHub records a distinct subject digest for every
 matched file.
 
-The attestations do not need to be uploaded as additional release assets:
-GitHub associates them with the repository and the CLI retrieves them through
-the attestation API and transparency log.
+Give the attestation step an ID, copy its `bundle-path` output to the stable
+`sbxflow-provenance.intoto.jsonl` name, and upload that file to the GitHub
+release. GitHub still associates the attestations with the repository for CLI
+verification; the additional asset lets the OpenSSF Scorecard
+Signed-Releases check discover the provenance by its required filename suffix.
 
 ### Scope provenance permissions to the release job
 
@@ -77,6 +81,8 @@ familiar offline integrity check after download.
   workflow failed, treat the release as incomplete, preserve the immutable tag,
   and publish a corrected patch release rather than presenting unattested
   assets as successful.
+- [The attestation succeeds but its bundle upload fails] → Let the upload step
+  fail the workflow and treat the partially published release as incomplete.
 - [Artifact globs drift from GoReleaser output names] → Use extension-based
   patterns for the supported archive formats and explicitly name the checksum
   manifest; review the resulting subject list during release verification.
@@ -91,7 +97,8 @@ familiar offline integrity check after download.
 ## Migration Plan
 
 1. Add the pinned attestation action and job-scoped permissions after the
-   GoReleaser step.
+   GoReleaser step, then attach its bundle output to the release with an
+   `.intoto.jsonl` filename.
 2. Update consumer and maintainer verification documentation, including
    partial-publication recovery.
 3. Validate workflow syntax, action pinning, OpenSpec artifacts, and repository
@@ -99,5 +106,6 @@ familiar offline integrity check after download.
 4. On the next version tag, verify every expected subject and confirm a later
    OpenSSF Scorecard run recognizes the release provenance.
 
-Rollback removes the attestation step and its two permissions on a new commit;
-already published attestations and release tags remain immutable evidence.
+Rollback removes the attestation and bundle-upload steps and the two provenance
+permissions on a new commit; already published attestations and release tags
+remain immutable evidence.

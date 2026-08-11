@@ -23,3 +23,12 @@
 - [x] 3.3 Review the final permission scope and artifact subject patterns, and
       record next-release checks for attestation verification and the subsequent
       OpenSSF Scorecard result.
+
+## 4. Scorecard compatibility
+
+- [x] 4.1 Amend the proposal, specification, and design to require the generated
+      in-toto bundle as a GitHub release asset.
+- [x] 4.2 Upload the attestation action's bundle output with an `.intoto.jsonl`
+      filename and align release verification documentation.
+- [x] 4.3 Re-run formatting, strict OpenSpec validation, actionlint, and the full
+      repository validation suite.

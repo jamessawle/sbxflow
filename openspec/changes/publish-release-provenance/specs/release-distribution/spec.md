@@ -20,8 +20,15 @@ repository and its trusted release workflow as the source.
 - **THEN** GitHub verifies that the manifest was produced by the sbxflow
   repository's release workflow
 
+#### Scenario: Provenance is discoverable from the release
+
+- **WHEN** a release is published with build provenance
+- **THEN** its GitHub release assets include an in-toto JSONL provenance bundle
+  discoverable by the OpenSSF Scorecard Signed-Releases check
+
 #### Scenario: Provenance publication fails
 
-- **WHEN** any required archive or checksum manifest cannot be attested
+- **WHEN** any required archive or checksum manifest cannot be attested or the
+  generated provenance bundle cannot be attached to the release
 - **THEN** the release workflow fails and does not report the release as
   successfully completed

@@ -113,12 +113,15 @@ sbxflow_<version>_darwin_amd64.tar.gz
 sbxflow_<version>_darwin_arm64.tar.gz
 sbxflow_<version>_linux_amd64.tar.gz
 sbxflow_<version>_windows_amd64.zip
+sbxflow-provenance.intoto.jsonl
 ```
 
 Download and run `gh attestation verify <file> --repo jamessawle/sbxflow` for
-each listed subject, not only the host-native archive used for the smoke test.
-After the next scheduled OpenSSF Scorecard run, confirm that its
-Signed-Releases check recognizes the attestations.
+each archive and checksum subject, not only the host-native archive used for
+the smoke test. Confirm that the provenance bundle is attached to the release
+with the exact `.intoto.jsonl` suffix required by OpenSSF Scorecard. After the
+next scheduled Scorecard run, confirm that its Signed-Releases check recognizes
+the release provenance.
 
 After merging the tap update, test a clean Homebrew installation on macOS:
 
@@ -156,10 +159,11 @@ gh attestation verify checksums.txt --repo jamessawle/sbxflow
 gh pr list --repo jamessawle/homebrew-tap --search sbxflow
 ```
 
-- If provenance generation fails or any expected subject is missing or cannot
-  be verified, do not present the release as complete and do not merge its tap
-  update. Preserve the immutable tag and assets, fix the problem on `main`, and
-  publish a corrected patch release whose complete subject set verifies.
+- If provenance generation or bundle upload fails, or any expected subject is
+  missing or cannot be verified, do not present the release as complete and do
+  not merge its tap update. Preserve the immutable tag and assets, fix the
+  problem on `main`, and publish a corrected patch release whose complete
+  subject set verifies.
 - If GitHub publication succeeded but the tap pull request failed, preserve the
   tag and release only after every expected attestation verifies. Correct the
   tap update in a pull request using the published artifact URLs and checksums,
