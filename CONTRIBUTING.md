@@ -114,8 +114,10 @@ feat(config)!: replace the kits declaration format
 ```
 
 The required `Validate` check enforces this format whenever a pull request is
-opened, updated, reopened, or retitled. Intermediate commits on a branch do not
-need conventional messages because pull requests are squash merged.
+opened, updated, reopened, or retitled. Pull requests must also pass the
+repository's CodeQL checks for Go and GitHub Actions. Intermediate commits on a
+branch do not need conventional messages because pull requests are squash
+merged.
 
 In the pull request body, summarize what changed and list the validation you
 ran. All required checks must pass and conversations must be resolved before a
