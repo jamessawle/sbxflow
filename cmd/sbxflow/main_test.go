@@ -299,15 +299,24 @@ case "$1 $2" in
     fi
     ;;
   *)
-    if [ "$1" != "run" ]; then
-      echo 'unexpected fake sbx invocation' >&2
-      exit 8
-    fi
-    printf 'allowed=%s\nlocal=%s\n' "$DOCKER_SANDBOXES_KIT_ALLOWED_SOURCES" "$DOCKER_SANDBOXES_KIT_ALLOW_LOCAL" >> "$SBX_TEST_ENV_LOG"
-    read input
-    printf 'agent received: %s\n' "$input"
-    echo 'docker run diagnostic' >&2
-    exit "${SBX_TEST_RUN_EXIT:-0}"
+    case "$1" in
+      create)
+        printf 'allowed=%s\nlocal=%s\n' "$DOCKER_SANDBOXES_KIT_ALLOWED_SOURCES" "$DOCKER_SANDBOXES_KIT_ALLOW_LOCAL" >> "$SBX_TEST_ENV_LOG"
+        echo 'docker create diagnostic' >&2
+        exit "${SBX_TEST_CREATE_EXIT:-0}"
+        ;;
+      run)
+        printf 'allowed=%s\nlocal=%s\n' "$DOCKER_SANDBOXES_KIT_ALLOWED_SOURCES" "$DOCKER_SANDBOXES_KIT_ALLOW_LOCAL" >> "$SBX_TEST_ENV_LOG"
+        read input
+        printf 'agent received: %s\n' "$input"
+        echo 'docker run diagnostic' >&2
+        exit "${SBX_TEST_RUN_EXIT:-0}"
+        ;;
+      *)
+        echo 'unexpected fake sbx invocation' >&2
+        exit 8
+        ;;
+    esac
     ;;
 esac
 `
@@ -335,15 +344,15 @@ esac
 				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath},
 				"hello creation\n",
 			)
-			if exitCode != 0 || !strings.Contains(stdout, "agent received: hello creation") || stderr != validationStatus+"docker run diagnostic\n" {
+			if exitCode != 0 || !strings.Contains(stdout, "agent received: hello creation") || stderr != validationStatus+"docker create diagnostic\ndocker run diagnostic\n" {
 				t.Fatalf("up exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
 			}
 			calls, err := os.ReadFile(logPath)
 			if err != nil {
 				t.Fatalf("read calls: %v", err)
 			}
-			wantRun := "run --name executable-up --kit git+https://github.com/example/kits.git#ref=v1&dir=remote-tooling --kit " + canonicalLocalKit + " codex " + canonicalRepository
-			for _, want := range []string{"kit validate " + canonicalLocalKit, "ls --json", wantRun} {
+			wantCreate := "create --name executable-up --kit git+https://github.com/example/kits.git#ref=v1&dir=remote-tooling --kit " + canonicalLocalKit + " codex " + canonicalRepository
+			for _, want := range []string{"kit validate " + canonicalLocalKit, "ls --json", wantCreate, "run codex --name executable-up"} {
 				if !strings.Contains(string(calls), want+"\n") {
 					t.Errorf("calls do not contain %q:\n%s", want, calls)
 				}
@@ -352,9 +361,9 @@ esac
 			if err != nil {
 				t.Fatalf("read environment: %v", err)
 			}
-			wantEnvironment := "allowed=[\"docker.io/\",\"github.com/example/kits\"]\nlocal=true\n"
-			if string(environment) != wantEnvironment {
-				t.Fatalf("environment = %q, want %q", environment, wantEnvironment)
+			trust := "allowed=[\"docker.io/\",\"github.com/example/kits\"]\nlocal=true\n"
+			if string(environment) != trust+trust {
+				t.Fatalf("environment = %q, want scoped trust on both creation and attachment %q", environment, trust+trust)
 			}
 		})
 
@@ -409,19 +418,20 @@ esac
 				},
 				"hello replacement\n",
 			)
-			if exitCode != 0 || !strings.Contains(stdout, "agent received: hello replacement") || stderr != validationStatus+"docker run diagnostic\n" {
+			if exitCode != 0 || !strings.Contains(stdout, "agent received: hello replacement") || stderr != validationStatus+"docker create diagnostic\ndocker run diagnostic\n" {
 				t.Fatalf("up --recreate exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
 			}
 			calls, err := os.ReadFile(logPath)
 			if err != nil {
 				t.Fatalf("read calls: %v", err)
 			}
-			wantRun := "run --name executable-up --kit git+https://github.com/example/kits.git#ref=v1&dir=remote-tooling --kit " + canonicalLocalKit + " codex " + canonicalRepository
+			wantCreate := "create --name executable-up --kit git+https://github.com/example/kits.git#ref=v1&dir=remote-tooling --kit " + canonicalLocalKit + " codex " + canonicalRepository
 			wantCalls := []string{
 				"kit validate " + canonicalLocalKit,
 				"ls --json",
 				"rm --force executable-up",
-				wantRun,
+				wantCreate,
+				"run codex --name executable-up",
 			}
 			if got := strings.Split(strings.TrimSpace(string(calls)), "\n"); !reflect.DeepEqual(got, wantCalls) {
 				t.Fatalf("calls = %#v, want %#v", got, wantCalls)
@@ -461,7 +471,7 @@ esac
 			if err != nil {
 				t.Fatalf("read calls: %v", err)
 			}
-			if strings.Contains(string(calls), "rm ") || strings.Contains(string(calls), "run ") {
+			if strings.Contains(string(calls), "rm ") || strings.Contains(string(calls), "create ") || strings.Contains(string(calls), "run ") {
 				t.Fatalf("declined calls contain mutation: %s", calls)
 			}
 		})
@@ -480,7 +490,7 @@ esac
 			if err != nil {
 				t.Fatalf("read calls: %v", err)
 			}
-			if strings.Contains(string(calls), "rm ") || strings.Contains(string(calls), "run ") {
+			if strings.Contains(string(calls), "rm ") || strings.Contains(string(calls), "create ") || strings.Contains(string(calls), "run ") {
 				t.Fatalf("failed inspection calls contain mutation: %s", calls)
 			}
 		})

@@ -21,15 +21,23 @@ type Streams struct {
 	Err io.Writer
 }
 
-// RunRequest contains the inputs needed to create or enter a sandbox.
-type RunRequest struct {
+// CreateRequest contains the inputs needed to create a sandbox without
+// attaching to its agent session.
+type CreateRequest struct {
 	Name           string
 	Agent          string
 	Workspace      string
 	Kits           []string
 	AllowedSources []string
 	AllowLocalKits bool
-	Exists         bool
+}
+
+// RunRequest contains the inputs needed to enter an existing sandbox.
+type RunRequest struct {
+	Name           string
+	Agent          string
+	AllowedSources []string
+	AllowLocalKits bool
 }
 
 // RemoveRequest contains the safeguards and streams for sandbox removal.
@@ -37,6 +45,18 @@ type RemoveRequest struct {
 	Name    string
 	Force   bool
 	Streams Streams
+}
+
+// NetworkAllowRequest adds ordered resources to one sandbox-scoped local rule.
+type NetworkAllowRequest struct {
+	Name      string
+	Resources []string
+}
+
+// NetworkRemoveRequest removes one resource from a sandbox-scoped local rule.
+type NetworkRemoveRequest struct {
+	Name     string
+	Resource string
 }
 
 // State is the normalized lifecycle state of an exact sandbox name.
@@ -72,7 +92,13 @@ type StateLookup interface {
 	InspectSandbox(ctx context.Context, name string) (State, error)
 }
 
-// Runner creates or enters a sandbox.
+// Creator creates a sandbox without attaching to its agent session, so that
+// sandbox-scoped policy can be applied before the agent starts.
+type Creator interface {
+	CreateSandbox(ctx context.Context, request CreateRequest, streams Streams) error
+}
+
+// Runner enters an existing sandbox.
 type Runner interface {
 	RunSandbox(ctx context.Context, request RunRequest, streams Streams) error
 }
@@ -85,4 +111,13 @@ type Stopper interface {
 // Remover permanently removes a sandbox.
 type Remover interface {
 	RemoveSandbox(ctx context.Context, request RemoveRequest) error
+}
+
+// NetworkPolicy manages sandbox-scoped local network allow resources. The
+// sandbox must already exist before resources can be scoped to it.
+// RemoveNetworkResource is idempotent: a resource that is already absent, or a
+// sandbox that has no scoped policy at all, is not an error.
+type NetworkPolicy interface {
+	AllowNetwork(context.Context, NetworkAllowRequest) error
+	RemoveNetworkResource(context.Context, NetworkRemoveRequest) error
 }

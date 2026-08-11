@@ -8,7 +8,8 @@ Every declaration is checked against sbxflow's published
 directory, run `sbxflow validate` to discover and validate its declaration.
 
 - [`personal-site/sbxflow.yaml`](personal-site/sbxflow.yaml) translates the
-  existing `personal-site/.docker-sbx/sandbox.sh` configuration.
+  existing `personal-site/.docker-sbx/sandbox.sh` configuration and demonstrates
+  sandbox-scoped network resources.
 - [`source-types/sbxflow.yaml`](source-types/sbxflow.yaml) demonstrates Git,
   OCI, and local sources. A local source can select either a directory or a ZIP
   kit. Its local paths are illustrative; provide matching artifacts before

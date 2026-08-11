@@ -4,6 +4,12 @@ sandbox:
   name: sbxflow
   agent: codex
 
+  network:
+    allowedHosts:
+      - www.bestpractices.dev
+      - scorecard.dev
+      - api.scorecard.dev
+
   kits:
     sources:
       community:

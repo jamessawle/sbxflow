@@ -11,7 +11,7 @@ type DestroyRunner struct {
 	Targets   TargetResolver
 	Sandboxes interface {
 		sandboxport.Lookup
-		sandboxport.Remover
+		removalSandbox
 	}
 }
 
@@ -29,15 +29,5 @@ func (r DestroyRunner) Run(ctx context.Context, start string, force bool, stream
 		return nil
 	}
 
-	err = r.Sandboxes.RemoveSandbox(ctx, sandboxport.RemoveRequest{
-		Name:  target.Name,
-		Force: force,
-		Streams: sandboxport.Streams{
-			In: streams.In, Out: streams.Out, Err: streams.Err,
-		},
-	})
-	if err != nil {
-		return AttachedProcessError{Err: err}
-	}
-	return nil
+	return removeSandbox(ctx, r.Sandboxes, target.Name, target.AllowedHosts, force, streams)
 }

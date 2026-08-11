@@ -4,6 +4,11 @@ sandbox:
   name: personal-site
   agent: codex
 
+  network:
+    allowedHosts:
+      - api.github.com
+      - registry.npmjs.org
+
   kits:
     sources:
       docker-contrib:

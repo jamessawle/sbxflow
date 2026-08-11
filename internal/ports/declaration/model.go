@@ -19,8 +19,9 @@ type Configuration struct {
 
 // LifecycleTarget is the declaration identity needed by teardown operations.
 type LifecycleTarget struct {
-	Declaration string
-	Name        string
+	Declaration  string
+	Name         string
+	AllowedHosts []string
 }
 
 // LocalKit identifies one safely resolved local kit selection.
@@ -41,9 +42,15 @@ type LocalKitRequest struct {
 
 // Sandbox declares the sandbox identity and ordered kit configuration.
 type Sandbox struct {
-	Name  string `json:"name" yaml:"name"`
-	Agent string `json:"agent" yaml:"agent"`
-	Kits  Kits   `json:"kits" yaml:"kits"`
+	Name    string  `json:"name" yaml:"name"`
+	Agent   string  `json:"agent" yaml:"agent"`
+	Kits    Kits    `json:"kits" yaml:"kits"`
+	Network Network `json:"network,omitempty" yaml:"network,omitempty"`
+}
+
+// Network contains ordered sandbox-scoped network resources.
+type Network struct {
+	AllowedHosts []string `json:"allowedHosts,omitempty" yaml:"allowedHosts,omitempty"`
 }
 
 // Kits contains reusable named sources and their ordered selections.
