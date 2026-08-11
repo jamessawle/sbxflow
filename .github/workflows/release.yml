@@ -96,8 +96,9 @@ jobs:
 
           ./scripts/render-homebrew-cask.sh "${version}" dist/checksums.txt dist/sbxflow.rb
 
-          cask_sha=$(gh api \
-            "repos/jamessawle/homebrew-tap/contents/${cask_path}?ref=${branch}" \
+          cask_sha=$(gh api --method GET \
+            "repos/jamessawle/homebrew-tap/contents/${cask_path}" \
+            -f ref="${branch}" \
             --jq .sha)
           content=$(base64 -w 0 dist/sbxflow.rb)
 
