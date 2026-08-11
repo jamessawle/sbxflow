@@ -1,0 +1,21 @@
+openspec/specs/configuration-validation/spec.md
+  s_6321e1d1d79cc0::t_9734d530e4d12a 86-130
+openspec/specs/sandbox-lifecycle/spec.md
+  s_6321e1d1d79cc0::t_6b15bf9fe5f777 192-238,242-245,273-279,548-593
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "df5b9acfdac6a69649199b7052200de87788e552",
+  "prompts": {},
+  "sessions": {
+    "s_6321e1d1d79cc0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "36662ed8-a495-460c-a42d-28b5bee38d27",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
