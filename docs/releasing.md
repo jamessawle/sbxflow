@@ -31,8 +31,20 @@ GitHub release, executable archive, checksum manifest, or Homebrew update.
    ```
 
    This includes `mise run test:release`, which builds a GoReleaser snapshot,
-   confirms the public archive set, and validates the deterministic macOS-only
-   Homebrew cask structure before any tag is pushed.
+   confirms the public archive set, and checks the structure of the Homebrew
+   formula GoReleaser generates before any tag is pushed.
+
+   Then check that formula against Homebrew itself:
+
+   ```text
+   mise run test:release:tap
+   ```
+
+   This runs the same `brew style`, `brew readall`, and `brew audit` checks as
+   the tap's own test-bot job, on a current Homebrew in a throwaway container.
+   It requires Docker and network access and takes a few minutes, which is why
+   it is separate from `mise run validate`. The tap publishes what GoReleaser
+   generates with no later correction, so a failure here is a release blocker.
 
 4. Build and smoke-test the release commit on a supported host with an `sbx`
    version inside the range documented in `README.md`:
@@ -66,7 +78,9 @@ git push origin "${version}"
 Pushing the tag starts `.github/workflows/release.yml`. The workflow validates
 the tag and repository, then GoReleaser builds the supported archives, generates
 `checksums.txt`, creates the GitHub release, and opens a pull request updating
-the Homebrew cask.
+the Homebrew formula. GoReleaser is the only writer of that pull request: the
+branch it pushes is published as-is, so its first commit must already pass the
+tap's checks.
 
 Monitor it with:
 
@@ -116,6 +130,7 @@ checksums.txt
 sbxflow_<version>_darwin_amd64.tar.gz
 sbxflow_<version>_darwin_arm64.tar.gz
 sbxflow_<version>_linux_amd64.tar.gz
+sbxflow_<version>_linux_arm64.tar.gz
 sbxflow_<version>_windows_amd64.zip
 sbxflow-provenance.intoto.jsonl
 ```
@@ -127,14 +142,14 @@ with the exact `.intoto.jsonl` suffix required by OpenSSF Scorecard. After the
 next scheduled Scorecard run, confirm that its Signed-Releases check recognizes
 the release provenance.
 
-After merging the tap update, test a clean Homebrew installation on macOS:
+After merging the tap update, test a clean Homebrew installation:
 
 ```sh
-brew uninstall --cask sbxflow 2>/dev/null || true
-brew install --cask jamessawle/tap/sbxflow
+brew uninstall sbxflow 2>/dev/null || true
+brew install jamessawle/tap/sbxflow
 sbxflow --version
 sbxflow --help
-brew info --cask sbxflow
+brew info sbxflow
 ```
 
 Confirm that the installed version is the release just published. Record the

@@ -50,10 +50,10 @@ available through `--help`.
 
 ### Homebrew
 
-Install the latest published release on macOS with Homebrew:
+Install the latest published release on macOS or Linux with Homebrew:
 
 ```text
-brew install --cask jamessawle/tap/sbxflow
+brew install jamessawle/tap/sbxflow
 ```
 
 Verify the installation:
@@ -66,8 +66,8 @@ sbxflow doctor
 Upgrade or uninstall it with Homebrew:
 
 ```text
-brew upgrade --cask sbxflow
-brew uninstall --cask sbxflow
+brew upgrade sbxflow
+brew uninstall sbxflow
 ```
 
 ### Direct download
