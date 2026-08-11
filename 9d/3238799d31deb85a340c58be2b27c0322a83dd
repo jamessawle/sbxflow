@@ -1,0 +1,19 @@
+mise.toml
+  s_ec27b7e4f58646::t_bb8b088529d15d 52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "9d3238799d31deb85a340c58be2b27c0322a83dd",
+  "prompts": {},
+  "sessions": {
+    "s_ec27b7e4f58646": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32ff17ef-e837-493e-8b6d-381733c3cf01",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
