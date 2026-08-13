@@ -42,7 +42,7 @@ func TestExecutableStreamsAndExitStatuses(t *testing.T) {
 		if exitCode != 0 || stderr != "" {
 			t.Fatalf("exit code = %d, stderr = %q", exitCode, stderr)
 		}
-		for _, want := range []string{"--recreate", "force-removed", "persisted state"} {
+		for _, want := range []string{"--recreate", "--force", "bypasses", "permanent state loss", "attached sessions"} {
 			if !strings.Contains(stdout, want) {
 				t.Errorf("stdout does not contain %q:\n%s", want, stdout)
 			}
@@ -249,6 +249,9 @@ echo 'fixture accepted local kit'
 sandbox:
   name: executable-up
   agent: codex
+  network:
+    allowedHosts:
+      - api.example.com
   kits:
     sources:
       remote:
@@ -298,6 +301,12 @@ case "$1 $2" in
       exit 8
     fi
     ;;
+	"policy allow")
+		exit 0
+		;;
+	"policy rm")
+		exit 0
+		;;
   *)
     case "$1" in
       create)
@@ -332,6 +341,21 @@ esac
 			t.Fatalf("canonicalize repository: %v", err)
 		}
 		validationStatus := "Configuration valid: " + filepath.Join(canonicalRepository, "sbxflow.yaml") + "\n"
+
+		t.Run("force without recreate stops before validation and Docker", func(t *testing.T) {
+			missing := t.TempDir()
+			logPath := filepath.Join(fakeDirectory, "invalid-force-calls.log")
+			_, stderr, exitCode := runBinaryInDirectoryWithInput(
+				t, binary, missing, []string{"up", "--force"},
+				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath}, "",
+			)
+			if exitCode == 0 || !strings.Contains(stderr, "--force requires --recreate") {
+				t.Fatalf("up --force exit = %d, stderr = %q", exitCode, stderr)
+			}
+			if _, err := os.Stat(logPath); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("Docker call log exists or stat failed: %v", err)
+			}
+		})
 
 		t.Run("missing sandbox", func(t *testing.T) {
 			logPath := filepath.Join(fakeDirectory, "missing-calls.log")
@@ -430,7 +454,9 @@ esac
 				"kit validate " + canonicalLocalKit,
 				"ls --json",
 				"rm --force executable-up",
+				"policy rm network --sandbox executable-up --resource api.example.com",
 				wantCreate,
+				"policy allow network --sandbox executable-up api.example.com",
 				"run codex --name executable-up",
 			}
 			if got := strings.Split(strings.TrimSpace(string(calls)), "\n"); !reflect.DeepEqual(got, wantCalls) {
@@ -453,6 +479,36 @@ esac
 				if !strings.Contains(stderr, want) {
 					t.Errorf("stderr does not contain %q: %q", want, stderr)
 				}
+			}
+		})
+
+		t.Run("forced running recreation skips confirmation", func(t *testing.T) {
+			logPath := filepath.Join(fakeDirectory, "running-forced-calls.log")
+			environmentPath := filepath.Join(fakeDirectory, "running-forced-env.log")
+			stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
+				t, binary, nested, []string{"up", "--recreate", "--force"},
+				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath, "SBX_TEST_EXISTING=executable-up", "SBX_TEST_STATUS=running"},
+				"hello forced replacement\n",
+			)
+			if exitCode != 0 || !strings.Contains(stdout, "agent received: hello forced replacement") || strings.Contains(stderr, "[y/N]") {
+				t.Fatalf("forced up exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+			}
+			calls, err := os.ReadFile(logPath)
+			if err != nil {
+				t.Fatalf("read calls: %v", err)
+			}
+			wantCreate := "create --name executable-up --kit git+https://github.com/example/kits.git#ref=v1&dir=remote-tooling --kit " + canonicalLocalKit + " codex " + canonicalRepository
+			wantCalls := []string{
+				"kit validate " + canonicalLocalKit,
+				"ls --json",
+				"rm --force executable-up",
+				"policy rm network --sandbox executable-up --resource api.example.com",
+				wantCreate,
+				"policy allow network --sandbox executable-up api.example.com",
+				"run codex --name executable-up",
+			}
+			if got := strings.Split(strings.TrimSpace(string(calls)), "\n"); !reflect.DeepEqual(got, wantCalls) {
+				t.Fatalf("calls = %#v, want %#v", got, wantCalls)
 			}
 		})
 

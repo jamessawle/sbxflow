@@ -23,7 +23,7 @@ func TestUpHelpDoesNotInvokeRunner(t *testing.T) {
 			if err != nil || stderr != "" || runner.calls != 0 {
 				t.Fatalf("up help error = %v, stderr = %q, calls = %d", err, stderr, runner.calls)
 			}
-			for _, want := range []string{"sbxflow up", "interactively create or enter", "without reconciling", "--recreate", "force-removed", "persisted state"} {
+			for _, want := range []string{"sbxflow up", "interactively create or enter", "without reconciling", "--recreate", "--force", "requires confirmation", "bypasses", "permanent state loss", "attached sessions"} {
 				if !strings.Contains(stdout, want) {
 					t.Errorf("stdout does not contain %q:\n%s", want, stdout)
 				}
@@ -36,7 +36,9 @@ func TestUpRejectsArgumentsAndFlagsWithoutInvokingRunner(t *testing.T) {
 	for name, args := range map[string][]string{
 		"argument":            {"up", "extra"},
 		"short recreate flag": {"up", "-r"},
+		"short force flag":    {"up", "-f"},
 		"unrelated flag":      {"up", "--agent", "other"},
+		"force alone":         {"up", "--force"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			runner := &fakeUpRunner{}
@@ -53,9 +55,11 @@ func TestUpInjectsWorkingDirectoryOptionsAndStreams(t *testing.T) {
 		name         string
 		args         []string
 		wantRecreate bool
+		wantForce    bool
 	}{
 		{name: "default", args: []string{"up"}},
 		{name: "recreate", args: []string{"up", "--recreate"}, wantRecreate: true},
+		{name: "forced recreate", args: []string{"up", "--recreate", "--force"}, wantRecreate: true, wantForce: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			runner := &fakeUpRunner{stdout: "agent output\n", stderr: "Configuration valid: /repo/sbxflow.yaml\n"}
@@ -65,6 +69,9 @@ func TestUpInjectsWorkingDirectoryOptionsAndStreams(t *testing.T) {
 			}
 			if runner.options.Recreate != test.wantRecreate {
 				t.Fatalf("options = %#v, want recreate %v", runner.options, test.wantRecreate)
+			}
+			if runner.options.Force != test.wantForce {
+				t.Fatalf("options = %#v, want force %v", runner.options, test.wantForce)
 			}
 			if runner.streams.In == nil || runner.streams.Out == nil || runner.streams.Err == nil {
 				t.Fatalf("streams = %#v", runner.streams)

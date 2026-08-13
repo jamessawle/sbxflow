@@ -137,11 +137,14 @@ Finds the nearest `sbxflow.yaml`, validates its structure and semantics, derives
 ```text
 sbxflow up
 sbxflow up --recreate
+sbxflow up --recreate --force
 ```
 
 Validates the declaration, then creates and enters a missing sandbox or enters an existing one. An existing sandbox's workspace and kits are not inspected or reconciled when the declaration changes.
 
 Use `--recreate` to replace an existing sandbox from the current declaration. Recreation permanently removes the sandbox's installed tools, Docker images, agent history, configuration changes, and other persisted state. A running sandbox requires confirmation; a stopped sandbox does not. The repository's host workspace is not deleted.
+
+Use `--force` with `--recreate` to bypass confirmation for a running sandbox. This still permanently removes its persisted state and can terminate other attached terminal sessions. `--force` is not valid without `--recreate`.
 
 ### `sbxflow down`
 
