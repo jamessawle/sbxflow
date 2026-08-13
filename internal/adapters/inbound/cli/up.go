@@ -79,12 +79,17 @@ func readConfirmationLine(input io.Reader) (string, error) {
 	for {
 		count, err := input.Read(buffer[:])
 		if count == 1 {
-			if buffer[0] == '\n' {
-				return response.String(), nil
+			if buffer[0] != '\n' {
+				response.WriteByte(buffer[0])
 			}
-			response.WriteByte(buffer[0])
+		}
+		if count == 1 && buffer[0] == '\n' && (err == nil || errors.Is(err, io.EOF)) {
+			return response.String(), nil
 		}
 		if err != nil {
+			if errors.Is(err, io.EOF) && response.Len() > 0 {
+				return response.String(), nil
+			}
 			return "", err
 		}
 		if count == 0 {

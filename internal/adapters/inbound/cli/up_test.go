@@ -107,7 +107,10 @@ func TestRunningRecreationConfirmationUsesCommandStreamsAndDefaultsNegative(t *t
 		{name: "negative", input: "no\n"},
 		{name: "empty", input: "\n"},
 		{name: "malformed", input: "approve\n"},
-		{name: "EOF", input: "", wantError: true},
+		{name: "EOF-terminated affirmative", input: "yes", want: true},
+		{name: "EOF-terminated negative", input: "no"},
+		{name: "EOF-terminated malformed", input: "approve"},
+		{name: "immediate EOF", input: "", wantError: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			var stderr bytes.Buffer
@@ -127,11 +130,72 @@ func TestRunningRecreationConfirmationUsesCommandStreamsAndDefaultsNegative(t *t
 	if err == nil || !strings.Contains(err.Error(), "read confirmation") {
 		t.Fatalf("read error = %v", err)
 	}
+	stderr.Reset()
+	_, err = (recreationConfirmer{}).ConfirmRunningSandboxRecreation("project", lifecycle.Streams{In: &bufferedErrorReader{input: "yes"}, Err: &stderr})
+	if err == nil || !strings.Contains(err.Error(), "read confirmation") {
+		t.Fatalf("buffered read error = %v", err)
+	}
+	stderr.Reset()
+	got, err := (recreationConfirmer{}).ConfirmRunningSandboxRecreation("project", lifecycle.Streams{In: newlineEOFReader{}, Err: &stderr})
+	if got || err != nil {
+		t.Fatalf("newline with EOF confirmation = %v, %v", got, err)
+	}
+	for _, test := range []struct {
+		name  string
+		input string
+		want  bool
+	}{
+		{name: "affirmative", input: "yes\n", want: true},
+		{name: "negative", input: "no"},
+	} {
+		t.Run("same-read EOF "+test.name, func(t *testing.T) {
+			var stderr bytes.Buffer
+			got, err := (recreationConfirmer{}).ConfirmRunningSandboxRecreation("project", lifecycle.Streams{In: &eofWithDataReader{input: test.input}, Err: &stderr})
+			if got != test.want || err != nil {
+				t.Fatalf("confirmation = %v, %v", got, err)
+			}
+		})
+	}
 }
 
 type errorReader struct{}
 
 func (errorReader) Read([]byte) (int, error) { return 0, io.ErrUnexpectedEOF }
+
+type newlineEOFReader struct{}
+
+func (newlineEOFReader) Read(buffer []byte) (int, error) {
+	buffer[0] = '\n'
+	return 1, io.EOF
+}
+
+type eofWithDataReader struct {
+	input string
+	index int
+}
+
+func (reader *eofWithDataReader) Read(buffer []byte) (int, error) {
+	buffer[0] = reader.input[reader.index]
+	reader.index++
+	if reader.index == len(reader.input) {
+		return 1, io.EOF
+	}
+	return 1, nil
+}
+
+type bufferedErrorReader struct {
+	input string
+	index int
+}
+
+func (reader *bufferedErrorReader) Read(buffer []byte) (int, error) {
+	if reader.index == len(reader.input) {
+		return 0, io.ErrUnexpectedEOF
+	}
+	buffer[0] = reader.input[reader.index]
+	reader.index++
+	return 1, nil
+}
 
 func executeWithUp(args []string, runner UpRunner) (string, string, error) {
 	var stdout, stderr bytes.Buffer
