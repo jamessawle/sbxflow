@@ -456,6 +456,42 @@ esac
 			}
 		})
 
+		for _, test := range []struct {
+			name       string
+			input      string
+			wantError  string
+			wantMutate bool
+		}{
+			{name: "affirmative", input: "yes", wantMutate: true},
+			{name: "negative", input: "no", wantError: "recreation cancelled"},
+			{name: "malformed", input: "approve", wantError: "recreation cancelled"},
+			{name: "immediate EOF", wantError: "read confirmation response"},
+		} {
+			t.Run("running sandbox with "+test.name+" EOF-terminated confirmation", func(t *testing.T) {
+				logPath := filepath.Join(fakeDirectory, "running-eof-"+test.name+"-calls.log")
+				environmentPath := filepath.Join(fakeDirectory, "running-eof-"+test.name+"-env.log")
+				_, stderr, exitCode := runBinaryInDirectoryWithInput(
+					t, binary, nested, []string{"up", "--recreate"},
+					[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath, "SBX_TEST_EXISTING=executable-up", "SBX_TEST_STATUS=running"},
+					test.input,
+				)
+				if (exitCode != 0) != (test.wantError != "") || !strings.Contains(stderr, test.wantError) {
+					t.Fatalf("up --recreate exit = %d, stderr = %q", exitCode, stderr)
+				}
+				calls, err := os.ReadFile(logPath)
+				if err != nil {
+					t.Fatalf("read calls: %v", err)
+				}
+				callLog := string(calls)
+				mutations := []string{"rm --force executable-up\n", "create --name executable-up ", "run codex --name executable-up\n"}
+				for _, mutation := range mutations {
+					if strings.Contains(callLog, mutation) != test.wantMutate {
+						t.Fatalf("call %q present = %v, want mutation %v; calls:\n%s", mutation, strings.Contains(callLog, mutation), test.wantMutate, calls)
+					}
+				}
+			})
+		}
+
 		t.Run("running sandbox decline stops before mutation", func(t *testing.T) {
 			logPath := filepath.Join(fakeDirectory, "running-declined-calls.log")
 			environmentPath := filepath.Join(fakeDirectory, "running-declined-env.log")
