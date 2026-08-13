@@ -490,8 +490,13 @@ esac
 				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath, "SBX_TEST_EXISTING=executable-up", "SBX_TEST_STATUS=running"},
 				"hello forced replacement\n",
 			)
-			if exitCode != 0 || !strings.Contains(stdout, "agent received: hello forced replacement") || strings.Contains(stderr, "[y/N]") {
+			if exitCode != 0 || !strings.Contains(stdout, "agent received: hello forced replacement") {
 				t.Fatalf("forced up exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+			}
+			for _, unwanted := range []string{"running sandbox", "other attached terminal sessions", "[y/N]"} {
+				if strings.Contains(stderr, unwanted) {
+					t.Errorf("stderr contains confirmation marker %q: %q", unwanted, stderr)
+				}
 			}
 			calls, err := os.ReadFile(logPath)
 			if err != nil {
