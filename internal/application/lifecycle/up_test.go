@@ -176,6 +176,15 @@ func TestRunnerRecreateLeavesAbsentSandboxOnCreatePath(t *testing.T) {
 	}
 }
 
+func TestRunnerRejectsForceWithoutRecreateBeforeValidation(t *testing.T) {
+	validator := &countingValidator{report: validReport()}
+	runner := UpRunner{Validation: validator, Sandboxes: &fakeUpSandboxes{}}
+	_, err := runner.Run(context.Background(), "/repo", UpOptions{Force: true}, Streams{})
+	if !errors.Is(err, ErrForceRequiresRecreate) || validator.calls != 0 {
+		t.Fatalf("Run() error = %v, validation calls = %d", err, validator.calls)
+	}
+}
+
 func TestRunnerRecreatesExactExistingSandboxBeforeCreatingFromPlan(t *testing.T) {
 	sandboxes := &fakeUpSandboxes{state: sandboxport.StateStopped}
 	var stdout, stderr bytes.Buffer
@@ -232,21 +241,25 @@ func TestRunnerConfirmsOnlyRunningRecreation(t *testing.T) {
 		state      sandboxport.State
 		recreate   bool
 		approved   bool
+		force      bool
 		confirmErr error
 		wantCalls  []string
 		wantErr    error
 	}{
 		{name: "running approved", state: sandboxport.StateRunning, recreate: true, approved: true, wantCalls: []string{"lookup project", "confirm project", "remove project", "create project", "run project"}},
+		{name: "running forced", state: sandboxport.StateRunning, recreate: true, force: true, wantCalls: []string{"lookup project", "remove project", "create project", "run project"}},
 		{name: "running declined", state: sandboxport.StateRunning, recreate: true, wantCalls: []string{"lookup project", "confirm project"}, wantErr: ErrRecreationCancelled},
 		{name: "running input failure", state: sandboxport.StateRunning, recreate: true, confirmErr: io.ErrUnexpectedEOF, wantCalls: []string{"lookup project", "confirm project"}, wantErr: io.ErrUnexpectedEOF},
 		{name: "stopped", state: sandboxport.StateStopped, recreate: true, wantCalls: []string{"lookup project", "remove project", "create project", "run project"}},
+		{name: "stopped forced", state: sandboxport.StateStopped, recreate: true, force: true, wantCalls: []string{"lookup project", "remove project", "create project", "run project"}},
+		{name: "absent forced", state: sandboxport.StateAbsent, recreate: true, force: true, wantCalls: []string{"lookup project", "create project", "run project"}},
 		{name: "running ordinary up", state: sandboxport.StateRunning, wantCalls: []string{"lookup project", "run project"}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			sandboxes := &fakeUpSandboxes{state: test.state}
 			confirmer := &fakeConfirmer{approved: test.approved, err: test.confirmErr, calls: &sandboxes.calls}
 			runner := UpRunner{Validation: fakeValidator{report: validReport()}, Sandboxes: sandboxes}
-			_, err := runner.Run(context.Background(), "/repo", UpOptions{Recreate: test.recreate, Confirmer: confirmer}, Streams{})
+			_, err := runner.Run(context.Background(), "/repo", UpOptions{Recreate: test.recreate, Force: test.force, Confirmer: confirmer}, Streams{})
 			if test.wantErr == nil && err != nil || test.wantErr != nil && !errors.Is(err, test.wantErr) {
 				t.Fatalf("Run() error = %v, want %v", err, test.wantErr)
 			}
@@ -345,6 +358,16 @@ func validReport() configuration.Validation {
 type fakeValidator struct{ report configuration.Validation }
 
 func (v fakeValidator) Run(context.Context, string) configuration.Validation { return v.report }
+
+type countingValidator struct {
+	report configuration.Validation
+	calls  int
+}
+
+func (v *countingValidator) Run(context.Context, string) configuration.Validation {
+	v.calls++
+	return v.report
+}
 
 type fakeConfirmer struct {
 	approved bool

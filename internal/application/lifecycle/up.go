@@ -18,6 +18,9 @@ var ErrValidationFailed = errors.New("configuration validation failed")
 // explicitly approved.
 var ErrRecreationCancelled = errors.New("running sandbox recreation cancelled")
 
+// ErrForceRequiresRecreate identifies an invalid forced ordinary-up request.
+var ErrForceRequiresRecreate = errors.New("force requires recreation")
+
 // ValidationReport is the validated domain state returned by up.
 type ValidationReport = configuration.Validation
 
@@ -36,6 +39,7 @@ type Streams struct {
 // UpOptions selects optional behavior for the up lifecycle.
 type UpOptions struct {
 	Recreate  bool
+	Force     bool
 	Confirmer RecreationConfirmer
 }
 
@@ -69,6 +73,9 @@ func (e AttachedProcessError) Unwrap() error { return e.Err }
 // Run validates the repository, chooses the creation or existing-sandbox
 // invocation, and remains attached until Docker exits.
 func (r UpRunner) Run(ctx context.Context, start string, options UpOptions, streams Streams) (ValidationReport, error) {
+	if options.Force && !options.Recreate {
+		return ValidationReport{}, ErrForceRequiresRecreate
+	}
 	report := r.Validation.Run(ctx, start)
 	if !report.Valid() {
 		return report, ErrValidationFailed
@@ -86,7 +93,7 @@ func (r UpRunner) Run(ctx context.Context, start string, options UpOptions, stre
 		return report, err
 	}
 	exists := state != sandboxport.StateAbsent
-	if state == sandboxport.StateRunning && options.Recreate {
+	if state == sandboxport.StateRunning && options.Recreate && !options.Force {
 		if options.Confirmer == nil {
 			return report, fmt.Errorf("confirm recreation of running sandbox %q: confirmation is unavailable", plan.Name)
 		}

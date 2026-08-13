@@ -19,15 +19,20 @@ type UpRunner interface {
 
 func newUpCommand(runner UpRunner) *cobra.Command {
 	var recreate bool
+	var force bool
 	command := &cobra.Command{
 		Use:   "up",
 		Short: "Create or enter the repository's Docker Sandbox",
 		Long: "Discover and validate the nearest sbxflow.yaml, then interactively create or enter its declared Docker Sandbox.\n" +
 			"An existing named sandbox is entered without reconciling its workspace or kits with the current declaration.\n" +
 			"With --recreate, an existing sandbox and its persisted state are force-removed before its replacement is created and entered.\n" +
-			"Recreating a running sandbox requires confirmation because it can terminate other attached terminal sessions.",
+			"Recreating a running sandbox requires confirmation because it can terminate other attached terminal sessions.\n" +
+			"With --recreate, --force bypasses that confirmation despite the permanent state loss and risk to attached sessions.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			if force && !recreate {
+				return fmt.Errorf("--force requires --recreate")
+			}
 			workingDirectory, err := os.Getwd()
 			if err != nil {
 				return fmt.Errorf("determine working directory: %w", err)
@@ -37,7 +42,7 @@ func newUpCommand(runner UpRunner) *cobra.Command {
 				Out: cmd.OutOrStdout(),
 				Err: cmd.ErrOrStderr(),
 			}
-			report, err := runner.Run(cmd.Context(), workingDirectory, lifecycle.UpOptions{Recreate: recreate, Confirmer: recreationConfirmer{}}, streams)
+			report, err := runner.Run(cmd.Context(), workingDirectory, lifecycle.UpOptions{Recreate: recreate, Force: force, Confirmer: recreationConfirmer{}}, streams)
 			if errors.Is(err, lifecycle.ErrValidationFailed) {
 				renderValidationReport(cmd, report)
 				cmd.Root().SilenceErrors = true
@@ -51,6 +56,7 @@ func newUpCommand(runner UpRunner) *cobra.Command {
 		},
 	}
 	command.Flags().BoolVar(&recreate, "recreate", false, "Force-recreate the sandbox, confirming first if it is running")
+	command.Flags().BoolVar(&force, "force", false, "With --recreate, skip running-sandbox confirmation despite permanent state loss and risk to attached sessions")
 	return command
 }
 
