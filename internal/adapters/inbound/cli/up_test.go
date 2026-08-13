@@ -140,6 +140,22 @@ func TestRunningRecreationConfirmationUsesCommandStreamsAndDefaultsNegative(t *t
 	if got || err != nil {
 		t.Fatalf("newline with EOF confirmation = %v, %v", got, err)
 	}
+	for _, test := range []struct {
+		name  string
+		input string
+		want  bool
+	}{
+		{name: "affirmative", input: "yes\n", want: true},
+		{name: "negative", input: "no"},
+	} {
+		t.Run("same-read EOF "+test.name, func(t *testing.T) {
+			var stderr bytes.Buffer
+			got, err := (recreationConfirmer{}).ConfirmRunningSandboxRecreation("project", lifecycle.Streams{In: &eofWithDataReader{input: test.input}, Err: &stderr})
+			if got != test.want || err != nil {
+				t.Fatalf("confirmation = %v, %v", got, err)
+			}
+		})
+	}
 }
 
 type errorReader struct{}
@@ -151,6 +167,20 @@ type newlineEOFReader struct{}
 func (newlineEOFReader) Read(buffer []byte) (int, error) {
 	buffer[0] = '\n'
 	return 1, io.EOF
+}
+
+type eofWithDataReader struct {
+	input string
+	index int
+}
+
+func (reader *eofWithDataReader) Read(buffer []byte) (int, error) {
+	buffer[0] = reader.input[reader.index]
+	reader.index++
+	if reader.index == len(reader.input) {
+		return 1, io.EOF
+	}
+	return 1, nil
 }
 
 type bufferedErrorReader struct {
