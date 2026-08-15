@@ -167,13 +167,8 @@ func (c Client) InspectSandbox(ctx context.Context, name string) (sandboxport.St
 		}
 		return "", fmt.Errorf("inspect Docker Sandboxes with `sbx ls --json`: %w", output.Err)
 	}
-	var listing struct {
-		Sandboxes *[]struct {
-			Name   string `json:"name"`
-			Status string `json:"status"`
-		} `json:"sandboxes"`
-	}
-	if err := json.Unmarshal(output.Stdout, &listing); err != nil {
+	listing, err := decodeSandboxListing(output.Stdout)
+	if err != nil {
 		return "", fmt.Errorf("decode Docker Sandbox state from `sbx ls --json`: %w", err)
 	}
 	if listing.Sandboxes == nil {

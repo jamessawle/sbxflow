@@ -24,6 +24,16 @@ func TestInspectSandboxUsesExactMachineReadableState(t *testing.T) {
 		{name: "stopped", output: `{"sandboxes":[{"name":"project","status":"stopped"}]}`, want: sandboxport.StateStopped},
 		{name: "exact name", output: `{"sandboxes":[{"name":"project-extra","status":"running"}]}`, want: sandboxport.StateAbsent},
 		{name: "absent", output: `{"sandboxes":[]}`, want: sandboxport.StateAbsent},
+		{
+			name:   "running before box-drawn update notice",
+			output: `{"sandboxes":[{"name":"project","status":"running"}]}` + dockerUpdateNotice,
+			want:   sandboxport.StateRunning,
+		},
+		{
+			name:   "stopped before styled update notice",
+			output: `{"sandboxes":[{"name":"project","status":"stopped"}]}` + "\n\n\x1b[1;36mDocker Sandboxes Update Available\x1b[0m\nRun your preferred upgrade command.\n",
+			want:   sandboxport.StateStopped,
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			commands := &fakeCommandRunner{output: sbx.Output{Stdout: []byte(test.output)}}
@@ -40,21 +50,56 @@ func TestInspectSandboxUsesExactMachineReadableState(t *testing.T) {
 
 func TestInspectSandboxRejectsInvalidResults(t *testing.T) {
 	for _, test := range []struct {
-		name, output, want string
+		name   string
+		output []byte
+		want   string
 	}{
-		{name: "malformed", output: `{`, want: "decode"},
-		{name: "missing collection", output: `{}`, want: "missing sandboxes collection"},
-		{name: "duplicate", output: `{"sandboxes":[{"name":"project","status":"running"},{"name":"project","status":"running"}]}`, want: "2 exact-name matches"},
-		{name: "unknown", output: `{"sandboxes":[{"name":"project","status":"starting"}]}`, want: "unrecognized lifecycle state"},
+		{name: "malformed", output: []byte(`{`), want: "decode"},
+		{name: "malformed before notice", output: []byte(`{"sandboxes":[}` + dockerUpdateNotice), want: "decode"},
+		{name: "leading contamination", output: []byte("checking for updates\n" + `{"sandboxes":[]}`), want: "decode"},
+		{name: "multiple documents", output: []byte(`{"sandboxes":[]}` + "\n" + `{"sandboxes":[]}`), want: "multiple JSON documents"},
+		{name: "multiple documents before notice", output: []byte(`{"sandboxes":[]}` + "\n{}" + dockerUpdateNotice), want: "multiple JSON documents"},
+		{name: "invalid UTF-8", output: append([]byte(`{"sandboxes":[]}`), 0xff), want: "unexpected trailing output"},
+		{name: "invalid UTF-8 in name", output: []byte("{\"sandboxes\":[{\"name\":\"proj\xffct\",\"status\":\"running\"}]}"), want: "invalid UTF-8"},
+		{name: "invalid UTF-8 in status", output: []byte("{\"sandboxes\":[{\"name\":\"project\",\"status\":\"run\xffning\"}]}"), want: "invalid UTF-8"},
+		{name: "invalid UTF-8 in name before notice", output: []byte("{\"sandboxes\":[{\"name\":\"proj\xffct\",\"status\":\"running\"}]}" + dockerUpdateNotice), want: "invalid UTF-8"},
+		{name: "near-match notice title", output: []byte(`{"sandboxes":[]}` + "\nDocker Sandbox Update Available\n"), want: "unexpected trailing output"},
+		{name: "unknown trailing output", output: []byte(`{"sandboxes":[]}` + "\nunrelated warning\n"), want: "unexpected trailing output"},
+		{name: "missing collection", output: []byte(`{}`), want: "missing sandboxes collection"},
+		{name: "duplicate", output: []byte(`{"sandboxes":[{"name":"project","status":"running"},{"name":"project","status":"running"}]}`), want: "2 exact-name matches"},
+		{name: "unknown", output: []byte(`{"sandboxes":[{"name":"project","status":"starting"}]}`), want: "unrecognized lifecycle state"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := (sbx.Client{Commands: &fakeCommandRunner{output: sbx.Output{Stdout: []byte(test.output)}}}).InspectSandbox(context.Background(), "project")
+			_, err := (sbx.Client{Commands: &fakeCommandRunner{output: sbx.Output{Stdout: test.output}}}).InspectSandbox(context.Background(), "project")
 			if err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("InspectSandbox() error = %v, want %q", err, test.want)
 			}
 		})
 	}
 }
+
+func TestInspectSandboxBoundsUnexpectedTrailingOutputError(t *testing.T) {
+	const privateListing = `{"sandboxes":[{"name":"private-project-at-/Users/example/secret","status":"running"}]}`
+	trailing := strings.Repeat("unrecognized output ", 100)
+	_, err := (sbx.Client{Commands: &fakeCommandRunner{output: sbx.Output{Stdout: []byte(privateListing + trailing)}}}).InspectSandbox(context.Background(), "project")
+	if err == nil || !strings.Contains(err.Error(), "unexpected trailing output") || !strings.Contains(err.Error(), "1999 bytes") {
+		t.Fatalf("InspectSandbox() error = %v, want bounded trailing-output classification", err)
+	}
+	if strings.Contains(err.Error(), privateListing) || strings.Contains(err.Error(), "private-project") || len(err.Error()) > 200 {
+		t.Fatalf("InspectSandbox() error exposes listing contents or is unbounded: %q", err)
+	}
+}
+
+const dockerUpdateNotice = `
+
+╭──────────────────────────────────────────────────────────────╮
+│ Docker Sandboxes Update Available                            │
+│                                                              │
+│ Current version: 0.35.0                                      │
+│ Available version: 0.38.0                                    │
+│ Release notes: https://docs.docker.com/ai/sandboxes/          │
+│ Upgrade with: docker desktop update                          │
+╰──────────────────────────────────────────────────────────────╯`
 
 func TestInspectSandboxReportsDockerDiagnostics(t *testing.T) {
 	commands := &fakeCommandRunner{output: sbx.Output{Stderr: []byte("daemon unavailable\n"), ExitCode: 7, Err: errors.New("exit 7")}}
