@@ -1,0 +1,27 @@
+openspec/changes/handle-sbx-json-update-notice/.openspec.yaml
+  s_fa8d6d76768d70::t_f661655454ba79 1-2
+openspec/changes/handle-sbx-json-update-notice/design.md
+  s_fa8d6d76768d70::t_d66814441b4111 1-121
+openspec/changes/handle-sbx-json-update-notice/proposal.md
+  s_fa8d6d76768d70::t_eed8cd6c76d9ce 1-35
+openspec/changes/handle-sbx-json-update-notice/specs/sandbox-lifecycle/spec.md
+  s_fa8d6d76768d70::t_aedf76e9451ba2 1-44
+openspec/changes/handle-sbx-json-update-notice/tasks.md
+  s_fa8d6d76768d70::t_73c81d0e7a7ab8 1-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "8dcd88e596d45f4b5c5879b054a26c63c6f27924",
+  "prompts": {},
+  "sessions": {
+    "s_fa8d6d76768d70": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a00497-177a-7631-8617-fdbb1bed42ac",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
