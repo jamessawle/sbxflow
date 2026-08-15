@@ -1,0 +1,25 @@
+internal/adapters/outbound/sbx/client.go
+  s_1a3f89ed710ba7::t_55690140622a92 170-171
+internal/adapters/outbound/sbx/state.go
+  s_1a3f89ed710ba7::t_e4dab7d047f4d6 1-44
+internal/application/lifecycle/up_test.go
+  s_1a3f89ed710ba7::t_544aacc53075f7 27-36,53-55,57-67,70,78-100
+openspec/changes/handle-sbx-json-update-notice/tasks.md
+  s_1a3f89ed710ba7::t_e378f31c37610e 3,7,13,15,18,23,25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "3fd563b2242e2992d4d892ebaa5ff1d0c45bc5f4",
+  "prompts": {},
+  "sessions": {
+    "s_1a3f89ed710ba7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a004ae-4227-7491-bdd4-56a84c15e742",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
