@@ -27,9 +27,8 @@
 - [x] 3.1 Run the targeted lifecycle and outbound-adapter tests and resolve any
       regression.
 - [x] 3.2 Run `mise run fmt`, resolving all formatting failures.
-- [ ] 3.3 Run `mise run validate`, resolving all specification, architecture,
-      vet, test, and build failures. Not run: `mise` was unavailable in the
-      environment used for this change. `go build ./...`, `go vet ./...`, and
-      `go test ./...` were run in its place and all pass; the remaining
-      specification and architecture checks still need a `mise` run before
-      merge.
+- [x] 3.3 Run `mise run validate`, resolving all specification, architecture,
+      vet, test, and build failures. `mise` was unavailable in the authoring
+      environment, so `go build ./...`, `go vet ./...`, and `go test ./...` were
+      run locally; `mise run validate` itself ran green in CI through the
+      `Validate` job.
