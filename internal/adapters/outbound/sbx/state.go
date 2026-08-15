@@ -28,6 +28,14 @@ func decodeSandboxListing(output []byte) (sandboxListing, error) {
 		return sandboxListing{}, err
 	}
 
+	// Decoding silently rewrites invalid UTF-8 inside quoted strings to
+	// U+FFFD, so a malformed name can match a configured name and a
+	// malformed status can misreport the lifecycle state.
+	document := output[:decoder.InputOffset()]
+	if !utf8.Valid(document) {
+		return sandboxListing{}, errors.New("invalid UTF-8 in machine-readable listing")
+	}
+
 	remainder := bytes.TrimSpace(output[decoder.InputOffset():])
 	if len(remainder) == 0 {
 		return listing, nil

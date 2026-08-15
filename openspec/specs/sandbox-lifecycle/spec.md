@@ -79,8 +79,8 @@ machine-readable listing, it SHALL accept one complete, valid listing followed
 only by Docker Sandboxes' known update-available notice. The notice SHALL NOT
 change the decoded sandbox state or prevent the selected lifecycle path from
 continuing. Inspection MUST continue to reject leading contamination,
-malformed or incomplete JSON, multiple JSON documents, and trailing output that
-is not the known update notice.
+malformed or incomplete JSON, invalid UTF-8 within the listing, multiple JSON
+documents, and trailing output that is not the known update notice.
 
 #### Scenario: Update notice follows a valid listing
 
@@ -100,6 +100,13 @@ is not the known update notice.
 
 - **WHEN** non-whitespace output precedes the machine-readable sandbox listing
 - **THEN** `up` reports the state-inspection failure
+- **AND** does not remove, create, or enter a sandbox
+
+#### Scenario: Listing contains invalid UTF-8
+
+- **WHEN** the machine-readable sandbox listing contains invalid UTF-8 bytes
+- **THEN** `up` reports the state-inspection failure rather than deriving state
+  from silently substituted replacement characters
 - **AND** does not remove, create, or enter a sandbox
 
 #### Scenario: Multiple machine-readable documents are returned
