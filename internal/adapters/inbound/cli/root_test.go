@@ -21,40 +21,43 @@ func TestRootHelp(t *testing.T) {
 
 	for name, args := range invocations {
 		t.Run(name, func(t *testing.T) {
-			stdout, stderr, err := execute(args)
-			if err != nil {
-				t.Fatalf("Execute() error = %v; stderr = %q", err, stderr)
-			}
-			if stderr != "" {
-				t.Fatalf("stderr = %q, want empty", stderr)
-			}
-
-			for _, want := range []string{
-				"Apply a repository's Docker Sandbox configuration and lifecycle",
-				"Usage:",
-				"sbxflow",
-				"Available Commands:",
-				"destroy ",
-				"down ",
-				"doctor ",
-				"help ",
-				"up ",
-				"validate ",
-				"Flags:",
-				"-h, --help",
-				"-v, --version",
-			} {
-				if !strings.Contains(stdout, want) {
-					t.Errorf("stdout does not contain %q:\n%s", want, stdout)
-				}
-			}
-
-			for _, unavailable := range []string{"completion", "man"} {
-				if strings.Contains(stdout, "\n  "+unavailable+" ") {
-					t.Errorf("stdout advertises unavailable command %q:\n%s", unavailable, stdout)
-				}
-			}
+			assertRootHelp(t, args)
 		})
+	}
+}
+
+func assertRootHelp(t *testing.T, args []string) {
+	t.Helper()
+	stdout, stderr, err := execute(args)
+	if err != nil {
+		t.Fatalf("Execute() error = %v; stderr = %q", err, stderr)
+	}
+	if stderr != "" {
+		t.Fatalf("stderr = %q, want empty", stderr)
+	}
+	assertContainsAll(t, stdout, []string{
+		"Apply a repository's Docker Sandbox configuration and lifecycle",
+		"Usage:", "sbxflow", "Available Commands:", "destroy ", "down ",
+		"doctor ", "help ", "up ", "validate ", "Flags:", "-h, --help", "-v, --version",
+	})
+	assertCommandsUnavailable(t, stdout, []string{"completion", "man"})
+}
+
+func assertContainsAll(t *testing.T, output string, expected []string) {
+	t.Helper()
+	for _, want := range expected {
+		if !strings.Contains(output, want) {
+			t.Errorf("output does not contain %q:\n%s", want, output)
+		}
+	}
+}
+
+func assertCommandsUnavailable(t *testing.T, output string, commands []string) {
+	t.Helper()
+	for _, command := range commands {
+		if strings.Contains(output, "\n  "+command+" ") {
+			t.Errorf("output advertises unavailable command %q:\n%s", command, output)
+		}
 	}
 }
 

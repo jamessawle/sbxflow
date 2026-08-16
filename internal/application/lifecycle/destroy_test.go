@@ -63,7 +63,11 @@ func TestDestroyRunnerRemovesExactSandboxWithSelectedSafeguardsAndAttachedStream
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			commands := &fakeCommandRunner{path: "/bin/sbx", output: sbx.Output{Stdout: []byte("other\nproject\n")}}
-			interactive := &fakeInteractiveRunner{}
+			interactive := &fakeInteractiveRunner{checkContext: func(ctx context.Context) {
+				if ctx.Value(destroyContextKey{}) != "preserved" {
+					t.Fatal("remove invocation did not preserve lifecycle context")
+				}
+			}}
 			var stdout, stderr bytes.Buffer
 			stdin := strings.NewReader("yes\n")
 			runner := DestroyRunner{
@@ -83,9 +87,6 @@ func TestDestroyRunnerRemovesExactSandboxWithSelectedSafeguardsAndAttachedStream
 			}
 			if !reflect.DeepEqual(interactive.invocation, want) {
 				t.Fatalf("invocation = %#v, want %#v", interactive.invocation, want)
-			}
-			if interactive.ctx.Value(destroyContextKey{}) != "preserved" {
-				t.Fatal("remove invocation did not preserve lifecycle context")
 			}
 		})
 	}

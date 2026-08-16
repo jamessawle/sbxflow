@@ -24,7 +24,20 @@ func TestExecutableStreamsAndExitStatuses(t *testing.T) {
 		t.Fatalf("build executable: %v\n%s", err, output)
 	}
 
-	t.Run("help succeeds on stdout", func(t *testing.T) {
+	t.Run("help succeeds on stdout", executableHelpTest(binary))
+	t.Run("up help advertises recreation", executableUpHelpTest(binary))
+	t.Run("version succeeds on stdout", executableVersionTest(binary))
+	t.Run("errors fail on stderr", executableUnknownCommandTest(binary))
+	t.Run("doctor reports checks and required failure", executableDoctorTest(binary))
+	t.Run("validate discovers configuration and preserves system state", executableValidateTest(binary))
+	t.Run("validate reports missing configuration", executableMissingConfigurationTest(binary))
+	t.Run("up creates or enters interactively with scoped trust", executableUpTest(binary))
+	t.Run("down resolves identity only and preserves Docker stop failure", executableDownTest(binary))
+	t.Run("destroy resolves the exact identity and preserves removal behavior", executableDestroyTest(binary))
+}
+
+func executableHelpTest(binary string) func(*testing.T) {
+	return func(t *testing.T) {
 		stdout, stderr, exitCode := runBinary(t, binary)
 		if exitCode != 0 {
 			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
@@ -35,9 +48,11 @@ func TestExecutableStreamsAndExitStatuses(t *testing.T) {
 		if stderr != "" {
 			t.Fatalf("stderr = %q, want empty", stderr)
 		}
-	})
+	}
+}
 
-	t.Run("up help advertises recreation", func(t *testing.T) {
+func executableUpHelpTest(binary string) func(*testing.T) {
+	return func(t *testing.T) {
 		stdout, stderr, exitCode := runBinary(t, binary, "up", "--help")
 		if exitCode != 0 || stderr != "" {
 			t.Fatalf("exit code = %d, stderr = %q", exitCode, stderr)
@@ -47,9 +62,11 @@ func TestExecutableStreamsAndExitStatuses(t *testing.T) {
 				t.Errorf("stdout does not contain %q:\n%s", want, stdout)
 			}
 		}
-	})
+	}
+}
 
-	t.Run("version succeeds on stdout", func(t *testing.T) {
+func executableVersionTest(binary string) func(*testing.T) {
+	return func(t *testing.T) {
 		stdout, stderr, exitCode := runBinary(t, binary, "--version")
 		if exitCode != 0 {
 			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
@@ -60,9 +77,11 @@ func TestExecutableStreamsAndExitStatuses(t *testing.T) {
 		if stderr != "" {
 			t.Fatalf("stderr = %q, want empty", stderr)
 		}
-	})
+	}
+}
 
-	t.Run("errors fail on stderr", func(t *testing.T) {
+func executableUnknownCommandTest(binary string) func(*testing.T) {
+	return func(t *testing.T) {
 		stdout, stderr, exitCode := runBinary(t, binary, "unknown")
 		if exitCode == 0 {
 			t.Fatal("exit code = 0, want non-zero")
@@ -73,9 +92,11 @@ func TestExecutableStreamsAndExitStatuses(t *testing.T) {
 		if !strings.Contains(strings.ToLower(stderr), "unknown command") || !strings.Contains(stderr, "unknown") {
 			t.Fatalf("stderr does not identify the unknown command: %s", stderr)
 		}
-	})
+	}
+}
 
-	t.Run("doctor reports checks and required failure", func(t *testing.T) {
+func executableDoctorTest(binary string) func(*testing.T) {
+	return func(t *testing.T) {
 		if runtime.GOOS == "windows" {
 			t.Skip("fake sbx fixture uses a POSIX shell script")
 		}
@@ -124,9 +145,11 @@ esac
 		if !strings.Contains(stderr, "required doctor checks failed") {
 			t.Fatalf("stderr does not report required failure: %q", stderr)
 		}
-	})
+	}
+}
 
-	t.Run("validate discovers configuration and preserves system state", func(t *testing.T) {
+func executableValidateTest(binary string) func(*testing.T) {
+	return func(t *testing.T) {
 		if runtime.GOOS == "windows" {
 			t.Skip("fake sbx fixture uses a POSIX shell script")
 		}
@@ -225,17 +248,21 @@ echo 'fixture accepted local kit'
 				t.Errorf("failure stderr does not contain %q:\n%s", want, stderr)
 			}
 		}
-	})
+	}
+}
 
-	t.Run("validate reports missing configuration", func(t *testing.T) {
+func executableMissingConfigurationTest(binary string) func(*testing.T) {
+	return func(t *testing.T) {
 		directory := t.TempDir()
 		stdout, stderr, exitCode := runBinaryInDirectory(t, binary, directory, []string{"validate"}, nil)
 		if exitCode == 0 || stdout != "" || !strings.Contains(stderr, "no sbxflow.yaml found") {
 			t.Fatalf("exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
 		}
-	})
+	}
+}
 
-	t.Run("up creates or enters interactively with scoped trust", func(t *testing.T) {
+func executableUpTest(binary string) func(*testing.T) {
+	return func(t *testing.T) {
 		if runtime.GOOS == "windows" {
 			t.Skip("fake sbx fixture uses a POSIX shell script")
 		}
@@ -591,9 +618,11 @@ esac
 				t.Fatalf("failed inspection calls contain mutation: %s", calls)
 			}
 		})
-	})
+	}
+}
 
-	t.Run("down resolves identity only and preserves Docker stop failure", func(t *testing.T) {
+func executableDownTest(binary string) func(*testing.T) {
+	return func(t *testing.T) {
 		if runtime.GOOS == "windows" {
 			t.Skip("fake sbx fixture uses a POSIX shell script")
 		}
@@ -661,9 +690,11 @@ esac
 		if got, want := string(calls), "ls --quiet\nstop executable-down\n"; got != want {
 			t.Fatalf("sbx calls = %q, want %q", got, want)
 		}
-	})
+	}
+}
 
-	t.Run("destroy resolves the exact identity and preserves removal behavior", func(t *testing.T) {
+func executableDestroyTest(binary string) func(*testing.T) {
+	return func(t *testing.T) {
 		if runtime.GOOS == "windows" {
 			t.Skip("fake sbx fixture uses a POSIX shell script")
 		}
@@ -792,7 +823,7 @@ esac
 				t.Fatalf("sbx calls = %q, want %q", got, want)
 			}
 		})
-	})
+	}
 }
 
 func runBinary(t *testing.T, binary string, args ...string) (string, string, int) {
