@@ -115,8 +115,10 @@ feat(config)!: replace the kits declaration format
 
 The required `Validate` check enforces this format whenever a pull request is
 opened, updated, reopened, or retitled. Pull requests must also pass the
-repository's CodeQL checks for Go and GitHub Actions. Intermediate commits on a
-branch do not need conventional messages because pull requests are squash
+repository's CodeQL checks for Go and GitHub Actions and the SonarQube quality
+gate. SonarQube evaluates the pull request's changed code, so existing findings
+in unchanged code do not block unrelated improvements. Intermediate commits on
+a branch do not need conventional messages because pull requests are squash
 merged.
 
 In the pull request body, summarize what changed and list the validation you
