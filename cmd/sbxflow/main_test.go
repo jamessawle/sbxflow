@@ -24,65 +24,82 @@ func TestExecutableStreamsAndExitStatuses(t *testing.T) {
 		t.Fatalf("build executable: %v\n%s", err, output)
 	}
 
-	t.Run("help succeeds on stdout", func(t *testing.T) {
-		stdout, stderr, exitCode := runBinary(t, binary)
-		if exitCode != 0 {
-			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
-		}
-		if !strings.Contains(stdout, "Usage:") {
-			t.Fatalf("stdout does not contain help usage: %s", stdout)
-		}
-		if stderr != "" {
-			t.Fatalf("stderr = %q, want empty", stderr)
-		}
-	})
+	runExecutableTest(t, "help succeeds on stdout", binary, executableHelpTest)
+	runExecutableTest(t, "up help advertises recreation", binary, executableUpHelpTest)
+	runExecutableTest(t, "version succeeds on stdout", binary, executableVersionTest)
+	runExecutableTest(t, "errors fail on stderr", binary, executableUnknownCommandTest)
+	runExecutableTest(t, "doctor reports checks and required failure", binary, executableDoctorTest)
+	runExecutableTest(t, "validate discovers configuration and preserves system state", binary, executableValidateTest)
+	runExecutableTest(t, "validate reports missing configuration", binary, executableMissingConfigurationTest)
+	runExecutableTest(t, "up creates or enters interactively with scoped trust", binary, executableUpTest)
+	runExecutableTest(t, "down resolves identity only and preserves Docker stop failure", binary, executableDownTest)
+	runExecutableTest(t, "destroy resolves the exact identity and preserves removal behavior", binary, executableDestroyTest)
+}
 
-	t.Run("up help advertises recreation", func(t *testing.T) {
-		stdout, stderr, exitCode := runBinary(t, binary, "up", "--help")
-		if exitCode != 0 || stderr != "" {
-			t.Fatalf("exit code = %d, stderr = %q", exitCode, stderr)
-		}
-		for _, want := range []string{"--recreate", "--force", "bypasses", "permanent state loss", "attached sessions"} {
-			if !strings.Contains(stdout, want) {
-				t.Errorf("stdout does not contain %q:\n%s", want, stdout)
-			}
-		}
-	})
+func runExecutableTest(t *testing.T, name, binary string, test func(*testing.T, string)) {
+	t.Helper()
+	t.Run(name, func(t *testing.T) { test(t, binary) })
+}
 
-	t.Run("version succeeds on stdout", func(t *testing.T) {
-		stdout, stderr, exitCode := runBinary(t, binary, "--version")
-		if exitCode != 0 {
-			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
-		}
-		if !strings.Contains(stdout, "development") {
-			t.Fatalf("stdout does not contain development build identity: %s", stdout)
-		}
-		if stderr != "" {
-			t.Fatalf("stderr = %q, want empty", stderr)
-		}
-	})
+func executableHelpTest(t *testing.T, binary string) {
+	stdout, stderr, exitCode := runBinary(t, binary)
+	if exitCode != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+	}
+	if !strings.Contains(stdout, "Usage:") {
+		t.Fatalf("stdout does not contain help usage: %s", stdout)
+	}
+	if stderr != "" {
+		t.Fatalf("stderr = %q, want empty", stderr)
+	}
+}
 
-	t.Run("errors fail on stderr", func(t *testing.T) {
-		stdout, stderr, exitCode := runBinary(t, binary, "unknown")
-		if exitCode == 0 {
-			t.Fatal("exit code = 0, want non-zero")
+func executableUpHelpTest(t *testing.T, binary string) {
+	stdout, stderr, exitCode := runBinary(t, binary, "up", "--help")
+	if exitCode != 0 || stderr != "" {
+		t.Fatalf("exit code = %d, stderr = %q", exitCode, stderr)
+	}
+	for _, want := range []string{"--recreate", "--force", "bypasses", "permanent state loss", "attached sessions"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("stdout does not contain %q:\n%s", want, stdout)
 		}
-		if stdout != "" {
-			t.Fatalf("stdout = %q, want empty", stdout)
-		}
-		if !strings.Contains(strings.ToLower(stderr), "unknown command") || !strings.Contains(stderr, "unknown") {
-			t.Fatalf("stderr does not identify the unknown command: %s", stderr)
-		}
-	})
+	}
+}
 
-	t.Run("doctor reports checks and required failure", func(t *testing.T) {
-		if runtime.GOOS == "windows" {
-			t.Skip("fake sbx fixture uses a POSIX shell script")
-		}
+func executableVersionTest(t *testing.T, binary string) {
+	stdout, stderr, exitCode := runBinary(t, binary, "--version")
+	if exitCode != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+	}
+	if !strings.Contains(stdout, "development") {
+		t.Fatalf("stdout does not contain development build identity: %s", stdout)
+	}
+	if stderr != "" {
+		t.Fatalf("stderr = %q, want empty", stderr)
+	}
+}
 
-		fakeDirectory := t.TempDir()
-		fakeSbx := filepath.Join(fakeDirectory, "sbx")
-		script := `#!/bin/sh
+func executableUnknownCommandTest(t *testing.T, binary string) {
+	stdout, stderr, exitCode := runBinary(t, binary, "unknown")
+	if exitCode == 0 {
+		t.Fatal("exit code = 0, want non-zero")
+	}
+	if stdout != "" {
+		t.Fatalf("stdout = %q, want empty", stdout)
+	}
+	if !strings.Contains(strings.ToLower(stderr), "unknown command") || !strings.Contains(stderr, "unknown") {
+		t.Fatalf("stderr does not identify the unknown command: %s", stderr)
+	}
+}
+
+func executableDoctorTest(t *testing.T, binary string) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake sbx fixture uses a POSIX shell script")
+	}
+
+	fakeDirectory := t.TempDir()
+	fakeSbx := filepath.Join(fakeDirectory, "sbx")
+	script := `#!/bin/sh
 case "$1" in
   version)
     echo 'sbx version: v0.35.0 fake'
@@ -103,40 +120,40 @@ case "$1" in
     ;;
 esac
 `
-		if err := os.WriteFile(fakeSbx, []byte(script), 0o700); err != nil {
-			t.Fatalf("write fake sbx: %v", err)
-		}
+	if err := os.WriteFile(fakeSbx, []byte(script), 0o700); err != nil {
+		t.Fatalf("write fake sbx: %v", err)
+	}
 
-		stdout, stderr, exitCode := runBinaryWithEnv(
-			t,
-			binary,
-			[]string{"doctor"},
-			[]string{"PATH=" + fakeDirectory},
-		)
-		if exitCode == 0 {
-			t.Fatalf("exit code = 0, want non-zero; stdout = %q", stdout)
+	stdout, stderr, exitCode := runBinaryWithEnv(
+		t,
+		binary,
+		[]string{"doctor"},
+		[]string{"PATH=" + fakeDirectory},
+	)
+	if exitCode == 0 {
+		t.Fatalf("exit code = 0, want non-zero; stdout = %q", stdout)
+	}
+	for _, want := range []string{"[PASS] sbx-compatibility", "[FAIL] docker-diagnostics", "[WARN] network-policy", "[WARN] kit-sources"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("stdout does not contain %q:\n%s", want, stdout)
 		}
-		for _, want := range []string{"[PASS] sbx-compatibility", "[FAIL] docker-diagnostics", "[WARN] network-policy", "[WARN] kit-sources"} {
-			if !strings.Contains(stdout, want) {
-				t.Errorf("stdout does not contain %q:\n%s", want, stdout)
-			}
-		}
-		if !strings.Contains(stderr, "required doctor checks failed") {
-			t.Fatalf("stderr does not report required failure: %q", stderr)
-		}
-	})
+	}
+	if !strings.Contains(stderr, "required doctor checks failed") {
+		t.Fatalf("stderr does not report required failure: %q", stderr)
+	}
+}
 
-	t.Run("validate discovers configuration and preserves system state", func(t *testing.T) {
-		if runtime.GOOS == "windows" {
-			t.Skip("fake sbx fixture uses a POSIX shell script")
-		}
+func executableValidateTest(t *testing.T, binary string) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake sbx fixture uses a POSIX shell script")
+	}
 
-		repository := t.TempDir()
-		localKit := filepath.Join(repository, "kits", "tooling")
-		if err := os.MkdirAll(localKit, 0o755); err != nil {
-			t.Fatalf("create local kit: %v", err)
-		}
-		configuration := `version: 1
+	repository := t.TempDir()
+	localKit := filepath.Join(repository, "kits", "tooling")
+	if err := os.MkdirAll(localKit, 0o755); err != nil {
+		t.Fatalf("create local kit: %v", err)
+	}
+	configuration := `version: 1
 sandbox:
   name: executable-test
   agent: codex
@@ -155,19 +172,19 @@ sandbox:
       - source: local
         kit: tooling
 `
-		declaration := filepath.Join(repository, "sbxflow.yaml")
-		if err := os.WriteFile(declaration, []byte(configuration), 0o600); err != nil {
-			t.Fatalf("write declaration: %v", err)
-		}
-		nested := filepath.Join(repository, "nested", "work")
-		if err := os.MkdirAll(nested, 0o755); err != nil {
-			t.Fatalf("create nested work directory: %v", err)
-		}
+	declaration := filepath.Join(repository, "sbxflow.yaml")
+	if err := os.WriteFile(declaration, []byte(configuration), 0o600); err != nil {
+		t.Fatalf("write declaration: %v", err)
+	}
+	nested := filepath.Join(repository, "nested", "work")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatalf("create nested work directory: %v", err)
+	}
 
-		fakeDirectory := t.TempDir()
-		logPath := filepath.Join(fakeDirectory, "calls.log")
-		fakeSbx := filepath.Join(fakeDirectory, "sbx")
-		script := `#!/bin/sh
+	fakeDirectory := t.TempDir()
+	logPath := filepath.Join(fakeDirectory, "calls.log")
+	fakeSbx := filepath.Join(fakeDirectory, "sbx")
+	script := `#!/bin/sh
 printf '%s\n' "$*" >> "$SBX_TEST_LOG"
 if [ "$1 $2" != "kit validate" ]; then
   echo 'state-mutating or remote invocation attempted' >&2
@@ -179,73 +196,83 @@ if [ "${SBX_TEST_REJECT:-}" = "1" ]; then
 fi
 echo 'fixture accepted local kit'
 `
-		if err := os.WriteFile(fakeSbx, []byte(script), 0o700); err != nil {
-			t.Fatalf("write fake sbx: %v", err)
-		}
+	if err := os.WriteFile(fakeSbx, []byte(script), 0o700); err != nil {
+		t.Fatalf("write fake sbx: %v", err)
+	}
 
-		stdout, stderr, exitCode := runBinaryInDirectory(
-			t,
-			binary,
-			nested,
-			[]string{"validate"},
-			[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath},
-		)
-		if exitCode != 0 || stderr != "" {
-			t.Fatalf("validate exit = %d, stderr = %q, stdout = %q", exitCode, stderr, stdout)
-		}
-		for _, want := range []string{declaration, "Derived State:", "github.com/example/kits", "Local Kits Allowed: true", "State: pass", "Findings: []"} {
-			if !strings.Contains(stdout, want) {
-				t.Errorf("stdout does not contain %q:\n%s", want, stdout)
-			}
-		}
-		calls, err := os.ReadFile(logPath)
-		if err != nil {
-			t.Fatalf("read fake sbx calls: %v", err)
-		}
-		canonicalLocalKit, err := filepath.EvalSymlinks(localKit)
-		if err != nil {
-			t.Fatalf("canonicalize local kit: %v", err)
-		}
-		if got := strings.TrimSpace(string(calls)); got != "kit validate "+canonicalLocalKit {
-			t.Fatalf("sbx calls = %q, want only local kit validation", got)
-		}
+	stdout, stderr, exitCode := runBinaryInDirectory(
+		t,
+		binary,
+		nested,
+		[]string{"validate"},
+		[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath},
+	)
+	assertValidateSuccess(t, stdout, stderr, exitCode, declaration, logPath, localKit)
 
-		stdout, stderr, exitCode = runBinaryInDirectory(
-			t,
-			binary,
-			nested,
-			[]string{"validate"},
-			[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_REJECT=1"},
-		)
-		if exitCode == 0 || stdout != "" || !strings.Contains(stderr, "fixture rejected local kit") {
-			t.Fatalf("rejected validate exit = %d, stderr = %q", exitCode, stderr)
-		}
-		for _, want := range []string{"Derived State:", "State: fail", "Findings:"} {
-			if !strings.Contains(stderr, want) {
-				t.Errorf("failure stderr does not contain %q:\n%s", want, stderr)
-			}
-		}
-	})
+	stdout, stderr, exitCode = runBinaryInDirectory(
+		t,
+		binary,
+		nested,
+		[]string{"validate"},
+		[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_REJECT=1"},
+	)
+	assertValidateFailure(t, stdout, stderr, exitCode)
+}
 
-	t.Run("validate reports missing configuration", func(t *testing.T) {
-		directory := t.TempDir()
-		stdout, stderr, exitCode := runBinaryInDirectory(t, binary, directory, []string{"validate"}, nil)
-		if exitCode == 0 || stdout != "" || !strings.Contains(stderr, "no sbxflow.yaml found") {
-			t.Fatalf("exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+func assertValidateSuccess(t *testing.T, stdout, stderr string, exitCode int, declaration, logPath, localKit string) {
+	t.Helper()
+	if exitCode != 0 || stderr != "" {
+		t.Fatalf("validate exit = %d, stderr = %q, stdout = %q", exitCode, stderr, stdout)
+	}
+	for _, want := range []string{declaration, "Derived State:", "github.com/example/kits", "Local Kits Allowed: true", "State: pass", "Findings: []"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("stdout does not contain %q:\n%s", want, stdout)
 		}
-	})
+	}
+	calls, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read fake sbx calls: %v", err)
+	}
+	canonicalLocalKit, err := filepath.EvalSymlinks(localKit)
+	if err != nil {
+		t.Fatalf("canonicalize local kit: %v", err)
+	}
+	if got := strings.TrimSpace(string(calls)); got != "kit validate "+canonicalLocalKit {
+		t.Fatalf("sbx calls = %q, want only local kit validation", got)
+	}
+}
 
-	t.Run("up creates or enters interactively with scoped trust", func(t *testing.T) {
-		if runtime.GOOS == "windows" {
-			t.Skip("fake sbx fixture uses a POSIX shell script")
+func assertValidateFailure(t *testing.T, stdout, stderr string, exitCode int) {
+	t.Helper()
+	if exitCode == 0 || stdout != "" || !strings.Contains(stderr, "fixture rejected local kit") {
+		t.Fatalf("rejected validate exit = %d, stderr = %q", exitCode, stderr)
+	}
+	for _, want := range []string{"Derived State:", "State: fail", "Findings:"} {
+		if !strings.Contains(stderr, want) {
+			t.Errorf("failure stderr does not contain %q:\n%s", want, stderr)
 		}
+	}
+}
 
-		repository := t.TempDir()
-		localKit := filepath.Join(repository, "kits", "tooling")
-		if err := os.MkdirAll(localKit, 0o755); err != nil {
-			t.Fatalf("create local kit: %v", err)
-		}
-		configuration := `version: 1
+func executableMissingConfigurationTest(t *testing.T, binary string) {
+	directory := t.TempDir()
+	stdout, stderr, exitCode := runBinaryInDirectory(t, binary, directory, []string{"validate"}, nil)
+	if exitCode == 0 || stdout != "" || !strings.Contains(stderr, "no sbxflow.yaml found") {
+		t.Fatalf("exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+	}
+}
+
+func executableUpTest(t *testing.T, binary string) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake sbx fixture uses a POSIX shell script")
+	}
+
+	repository := t.TempDir()
+	localKit := filepath.Join(repository, "kits", "tooling")
+	if err := os.MkdirAll(localKit, 0o755); err != nil {
+		t.Fatalf("create local kit: %v", err)
+	}
+	configuration := `version: 1
 sandbox:
   name: executable-up
   agent: codex
@@ -267,18 +294,18 @@ sandbox:
       - source: local
         kit: tooling
 `
-		declaration := filepath.Join(repository, "sbxflow.yaml")
-		if err := os.WriteFile(declaration, []byte(configuration), 0o600); err != nil {
-			t.Fatalf("write declaration: %v", err)
-		}
-		nested := filepath.Join(repository, "nested", "work")
-		if err := os.MkdirAll(nested, 0o755); err != nil {
-			t.Fatalf("create nested work directory: %v", err)
-		}
+	declaration := filepath.Join(repository, "sbxflow.yaml")
+	if err := os.WriteFile(declaration, []byte(configuration), 0o600); err != nil {
+		t.Fatalf("write declaration: %v", err)
+	}
+	nested := filepath.Join(repository, "nested", "work")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatalf("create nested work directory: %v", err)
+	}
 
-		fakeDirectory := t.TempDir()
-		fakeSbx := filepath.Join(fakeDirectory, "sbx")
-		script := `#!/bin/sh
+	fakeDirectory := t.TempDir()
+	fakeSbx := filepath.Join(fakeDirectory, "sbx")
+	script := `#!/bin/sh
 printf '%s\n' "$*" >> "$SBX_TEST_LOG"
 case "$1 $2" in
   "kit validate")
@@ -329,277 +356,322 @@ case "$1 $2" in
     ;;
 esac
 `
-		if err := os.WriteFile(fakeSbx, []byte(script), 0o700); err != nil {
-			t.Fatalf("write fake sbx: %v", err)
-		}
-		canonicalLocalKit, err := filepath.EvalSymlinks(localKit)
-		if err != nil {
-			t.Fatalf("canonicalize local kit: %v", err)
-		}
-		canonicalRepository, err := filepath.EvalSymlinks(repository)
-		if err != nil {
-			t.Fatalf("canonicalize repository: %v", err)
-		}
-		validationStatus := "Configuration valid: " + filepath.Join(canonicalRepository, "sbxflow.yaml") + "\n"
+	if err := os.WriteFile(fakeSbx, []byte(script), 0o700); err != nil {
+		t.Fatalf("write fake sbx: %v", err)
+	}
+	canonicalLocalKit, err := filepath.EvalSymlinks(localKit)
+	if err != nil {
+		t.Fatalf("canonicalize local kit: %v", err)
+	}
+	canonicalRepository, err := filepath.EvalSymlinks(repository)
+	if err != nil {
+		t.Fatalf("canonicalize repository: %v", err)
+	}
+	validationStatus := "Configuration valid: " + filepath.Join(canonicalRepository, "sbxflow.yaml") + "\n"
 
-		t.Run("force without recreate stops before validation and Docker", func(t *testing.T) {
-			missing := t.TempDir()
-			logPath := filepath.Join(fakeDirectory, "invalid-force-calls.log")
+	fixture := executableUpFixture{binary, nested, fakeDirectory, canonicalLocalKit, canonicalRepository, validationStatus}
+	t.Run("force without recreate stops before validation and Docker", fixture.forceWithoutRecreate)
+	t.Run("missing sandbox", fixture.missingSandbox)
+	t.Run("existing sandbox and failed session", fixture.existingSandbox)
+	t.Run("existing sandbox is force-recreated before creation", fixture.recreateExisting)
+	t.Run("running sandbox requires confirmation and preserves later input", fixture.confirmRunning)
+	t.Run("forced running recreation skips confirmation", fixture.forceRunning)
+	fixture.runEOFConfirmationCases(t)
+	t.Run("running sandbox decline stops before mutation", fixture.declineRunning)
+	t.Run("inspection failure stops before mutation", fixture.inspectionFailure)
+
+}
+
+type executableUpFixture struct {
+	binary, nested, fakeDirectory                            string
+	canonicalLocalKit, canonicalRepository, validationStatus string
+}
+
+func (fixture executableUpFixture) forceWithoutRecreate(t *testing.T) {
+	binary, nested, fakeDirectory := fixture.binary, fixture.nested, fixture.fakeDirectory
+	canonicalLocalKit, canonicalRepository, validationStatus := fixture.canonicalLocalKit, fixture.canonicalRepository, fixture.validationStatus
+	_, _, _, _, _, _ = binary, nested, fakeDirectory, canonicalLocalKit, canonicalRepository, validationStatus
+	missing := t.TempDir()
+	logPath := filepath.Join(fakeDirectory, "invalid-force-calls.log")
+	_, stderr, exitCode := runBinaryInDirectoryWithInput(
+		t, binary, missing, []string{"up", "--force"},
+		[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath}, "",
+	)
+	if exitCode == 0 || !strings.Contains(stderr, "--force requires --recreate") {
+		t.Fatalf("up --force exit = %d, stderr = %q", exitCode, stderr)
+	}
+	if _, err := os.Stat(logPath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("Docker call log exists or stat failed: %v", err)
+	}
+}
+
+func (fixture executableUpFixture) missingSandbox(t *testing.T) {
+	binary, nested, fakeDirectory := fixture.binary, fixture.nested, fixture.fakeDirectory
+	canonicalLocalKit, canonicalRepository, validationStatus := fixture.canonicalLocalKit, fixture.canonicalRepository, fixture.validationStatus
+	_, _, _, _, _, _ = binary, nested, fakeDirectory, canonicalLocalKit, canonicalRepository, validationStatus
+	logPath := filepath.Join(fakeDirectory, "missing-calls.log")
+	environmentPath := filepath.Join(fakeDirectory, "missing-env.log")
+	stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
+		t,
+		binary,
+		nested,
+		[]string{"up"},
+		[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath},
+		"hello creation\n",
+	)
+	if exitCode != 0 || !strings.Contains(stdout, "agent received: hello creation") || stderr != validationStatus+"docker create diagnostic\ndocker run diagnostic\n" {
+		t.Fatalf("up exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+	}
+	calls, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read calls: %v", err)
+	}
+	wantCreate := "create --name executable-up --kit git+https://github.com/example/kits.git#ref=v1&dir=remote-tooling --kit " + canonicalLocalKit + " codex " + canonicalRepository
+	for _, want := range []string{"kit validate " + canonicalLocalKit, "ls --json", wantCreate, "run codex --name executable-up"} {
+		if !strings.Contains(string(calls), want+"\n") {
+			t.Errorf("calls do not contain %q:\n%s", want, calls)
+		}
+	}
+	environment, err := os.ReadFile(environmentPath)
+	if err != nil {
+		t.Fatalf("read environment: %v", err)
+	}
+	trust := "allowed=[\"docker.io/\",\"github.com/example/kits\"]\nlocal=true\n"
+	if string(environment) != trust+trust {
+		t.Fatalf("environment = %q, want scoped trust on both creation and attachment %q", environment, trust+trust)
+	}
+}
+
+func (fixture executableUpFixture) existingSandbox(t *testing.T) {
+	binary, nested, fakeDirectory := fixture.binary, fixture.nested, fixture.fakeDirectory
+	canonicalLocalKit, canonicalRepository, validationStatus := fixture.canonicalLocalKit, fixture.canonicalRepository, fixture.validationStatus
+	_, _, _, _, _, _ = binary, nested, fakeDirectory, canonicalLocalKit, canonicalRepository, validationStatus
+	logPath := filepath.Join(fakeDirectory, "existing-calls.log")
+	environmentPath := filepath.Join(fakeDirectory, "existing-env.log")
+	stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
+		t,
+		binary,
+		nested,
+		[]string{"up"},
+		[]string{
+			"PATH=" + fakeDirectory,
+			"SBX_TEST_LOG=" + logPath,
+			"SBX_TEST_ENV_LOG=" + environmentPath,
+			"SBX_TEST_EXISTING=executable-up",
+			"SBX_TEST_RUN_EXIT=7",
+		},
+		"hello existing\n",
+	)
+	if exitCode != 7 || !strings.Contains(stdout, "agent received: hello existing") {
+		t.Fatalf("up exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+	}
+	if stderr != validationStatus+"docker run diagnostic\n" {
+		t.Fatalf("stderr = %q, want validation status followed by Docker diagnostic", stderr)
+	}
+	calls, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read calls: %v", err)
+	}
+	if !strings.Contains(string(calls), "run codex --name executable-up\n") {
+		t.Fatalf("calls do not contain existing invocation:\n%s", calls)
+	}
+	if strings.Contains(string(calls), "run codex --name executable-up --kit") || strings.Contains(string(calls), "run codex --name executable-up "+canonicalRepository) {
+		t.Fatalf("existing invocation contains creation inputs:\n%s", calls)
+	}
+}
+
+func (fixture executableUpFixture) recreateExisting(t *testing.T) {
+	binary, nested, fakeDirectory := fixture.binary, fixture.nested, fixture.fakeDirectory
+	canonicalLocalKit, canonicalRepository, validationStatus := fixture.canonicalLocalKit, fixture.canonicalRepository, fixture.validationStatus
+	_, _, _, _, _, _ = binary, nested, fakeDirectory, canonicalLocalKit, canonicalRepository, validationStatus
+	logPath := filepath.Join(fakeDirectory, "recreate-calls.log")
+	environmentPath := filepath.Join(fakeDirectory, "recreate-env.log")
+	stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
+		t,
+		binary,
+		nested,
+		[]string{"up", "--recreate"},
+		[]string{
+			"PATH=" + fakeDirectory,
+			"SBX_TEST_LOG=" + logPath,
+			"SBX_TEST_ENV_LOG=" + environmentPath,
+			"SBX_TEST_EXISTING=executable-up",
+		},
+		"hello replacement\n",
+	)
+	if exitCode != 0 || !strings.Contains(stdout, "agent received: hello replacement") || stderr != validationStatus+"docker create diagnostic\ndocker run diagnostic\n" {
+		t.Fatalf("up --recreate exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+	}
+	calls, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read calls: %v", err)
+	}
+	wantCreate := "create --name executable-up --kit git+https://github.com/example/kits.git#ref=v1&dir=remote-tooling --kit " + canonicalLocalKit + " codex " + canonicalRepository
+	wantCalls := []string{
+		"kit validate " + canonicalLocalKit,
+		"ls --json",
+		"rm --force executable-up",
+		"policy rm network --sandbox executable-up --resource api.example.com",
+		wantCreate,
+		"policy allow network --sandbox executable-up api.example.com",
+		"run codex --name executable-up",
+	}
+	if got := strings.Split(strings.TrimSpace(string(calls)), "\n"); !reflect.DeepEqual(got, wantCalls) {
+		t.Fatalf("calls = %#v, want %#v", got, wantCalls)
+	}
+}
+
+func (fixture executableUpFixture) confirmRunning(t *testing.T) {
+	binary, nested, fakeDirectory := fixture.binary, fixture.nested, fixture.fakeDirectory
+	canonicalLocalKit, canonicalRepository, validationStatus := fixture.canonicalLocalKit, fixture.canonicalRepository, fixture.validationStatus
+	_, _, _, _, _, _ = binary, nested, fakeDirectory, canonicalLocalKit, canonicalRepository, validationStatus
+	logPath := filepath.Join(fakeDirectory, "running-approved-calls.log")
+	environmentPath := filepath.Join(fakeDirectory, "running-approved-env.log")
+	stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
+		t, binary, nested, []string{"up", "--recreate"},
+		[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath, "SBX_TEST_EXISTING=executable-up", "SBX_TEST_STATUS=running"},
+		"yes\nhello approved replacement\n",
+	)
+	if exitCode != 0 || !strings.Contains(stdout, "agent received: hello approved replacement") {
+		t.Fatalf("up --recreate exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+	}
+	for _, want := range []string{validationStatus, "running sandbox \"executable-up\"", "other attached terminal sessions", "[y/N]", "docker run diagnostic"} {
+		if !strings.Contains(stderr, want) {
+			t.Errorf("stderr does not contain %q: %q", want, stderr)
+		}
+	}
+}
+
+func (fixture executableUpFixture) forceRunning(t *testing.T) {
+	binary, nested, fakeDirectory := fixture.binary, fixture.nested, fixture.fakeDirectory
+	canonicalLocalKit, canonicalRepository, validationStatus := fixture.canonicalLocalKit, fixture.canonicalRepository, fixture.validationStatus
+	_, _, _, _, _, _ = binary, nested, fakeDirectory, canonicalLocalKit, canonicalRepository, validationStatus
+	logPath := filepath.Join(fakeDirectory, "running-forced-calls.log")
+	environmentPath := filepath.Join(fakeDirectory, "running-forced-env.log")
+	stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
+		t, binary, nested, []string{"up", "--recreate", "--force"},
+		[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath, "SBX_TEST_EXISTING=executable-up", "SBX_TEST_STATUS=running"},
+		"hello forced replacement\n",
+	)
+	if exitCode != 0 || !strings.Contains(stdout, "agent received: hello forced replacement") {
+		t.Fatalf("forced up exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+	}
+	for _, unwanted := range []string{"running sandbox", "other attached terminal sessions", "[y/N]"} {
+		if strings.Contains(stderr, unwanted) {
+			t.Errorf("stderr contains confirmation marker %q: %q", unwanted, stderr)
+		}
+	}
+	calls, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read calls: %v", err)
+	}
+	wantCreate := "create --name executable-up --kit git+https://github.com/example/kits.git#ref=v1&dir=remote-tooling --kit " + canonicalLocalKit + " codex " + canonicalRepository
+	wantCalls := []string{
+		"kit validate " + canonicalLocalKit,
+		"ls --json",
+		"rm --force executable-up",
+		"policy rm network --sandbox executable-up --resource api.example.com",
+		wantCreate,
+		"policy allow network --sandbox executable-up api.example.com",
+		"run codex --name executable-up",
+	}
+	if got := strings.Split(strings.TrimSpace(string(calls)), "\n"); !reflect.DeepEqual(got, wantCalls) {
+		t.Fatalf("calls = %#v, want %#v", got, wantCalls)
+	}
+}
+
+func (fixture executableUpFixture) runEOFConfirmationCases(t *testing.T) {
+	binary, nested, fakeDirectory := fixture.binary, fixture.nested, fixture.fakeDirectory
+	_, _, _ = binary, nested, fakeDirectory
+	for _, test := range []struct {
+		name       string
+		input      string
+		wantError  string
+		wantMutate bool
+	}{
+		{name: "affirmative", input: "yes", wantMutate: true},
+		{name: "negative", input: "no", wantError: "recreation cancelled"},
+		{name: "malformed", input: "approve", wantError: "recreation cancelled"},
+		{name: "immediate EOF", wantError: "read confirmation response"},
+	} {
+		t.Run("running sandbox with "+test.name+" EOF-terminated confirmation", func(t *testing.T) {
+			logPath := filepath.Join(fakeDirectory, "running-eof-"+test.name+"-calls.log")
+			environmentPath := filepath.Join(fakeDirectory, "running-eof-"+test.name+"-env.log")
 			_, stderr, exitCode := runBinaryInDirectoryWithInput(
-				t, binary, missing, []string{"up", "--force"},
-				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath}, "",
-			)
-			if exitCode == 0 || !strings.Contains(stderr, "--force requires --recreate") {
-				t.Fatalf("up --force exit = %d, stderr = %q", exitCode, stderr)
-			}
-			if _, err := os.Stat(logPath); !errors.Is(err, os.ErrNotExist) {
-				t.Fatalf("Docker call log exists or stat failed: %v", err)
-			}
-		})
-
-		t.Run("missing sandbox", func(t *testing.T) {
-			logPath := filepath.Join(fakeDirectory, "missing-calls.log")
-			environmentPath := filepath.Join(fakeDirectory, "missing-env.log")
-			stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
-				t,
-				binary,
-				nested,
-				[]string{"up"},
-				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath},
-				"hello creation\n",
-			)
-			if exitCode != 0 || !strings.Contains(stdout, "agent received: hello creation") || stderr != validationStatus+"docker create diagnostic\ndocker run diagnostic\n" {
-				t.Fatalf("up exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
-			}
-			calls, err := os.ReadFile(logPath)
-			if err != nil {
-				t.Fatalf("read calls: %v", err)
-			}
-			wantCreate := "create --name executable-up --kit git+https://github.com/example/kits.git#ref=v1&dir=remote-tooling --kit " + canonicalLocalKit + " codex " + canonicalRepository
-			for _, want := range []string{"kit validate " + canonicalLocalKit, "ls --json", wantCreate, "run codex --name executable-up"} {
-				if !strings.Contains(string(calls), want+"\n") {
-					t.Errorf("calls do not contain %q:\n%s", want, calls)
-				}
-			}
-			environment, err := os.ReadFile(environmentPath)
-			if err != nil {
-				t.Fatalf("read environment: %v", err)
-			}
-			trust := "allowed=[\"docker.io/\",\"github.com/example/kits\"]\nlocal=true\n"
-			if string(environment) != trust+trust {
-				t.Fatalf("environment = %q, want scoped trust on both creation and attachment %q", environment, trust+trust)
-			}
-		})
-
-		t.Run("existing sandbox and failed session", func(t *testing.T) {
-			logPath := filepath.Join(fakeDirectory, "existing-calls.log")
-			environmentPath := filepath.Join(fakeDirectory, "existing-env.log")
-			stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
-				t,
-				binary,
-				nested,
-				[]string{"up"},
-				[]string{
-					"PATH=" + fakeDirectory,
-					"SBX_TEST_LOG=" + logPath,
-					"SBX_TEST_ENV_LOG=" + environmentPath,
-					"SBX_TEST_EXISTING=executable-up",
-					"SBX_TEST_RUN_EXIT=7",
-				},
-				"hello existing\n",
-			)
-			if exitCode != 7 || !strings.Contains(stdout, "agent received: hello existing") {
-				t.Fatalf("up exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
-			}
-			if stderr != validationStatus+"docker run diagnostic\n" {
-				t.Fatalf("stderr = %q, want validation status followed by Docker diagnostic", stderr)
-			}
-			calls, err := os.ReadFile(logPath)
-			if err != nil {
-				t.Fatalf("read calls: %v", err)
-			}
-			if !strings.Contains(string(calls), "run codex --name executable-up\n") {
-				t.Fatalf("calls do not contain existing invocation:\n%s", calls)
-			}
-			if strings.Contains(string(calls), "run codex --name executable-up --kit") || strings.Contains(string(calls), "run codex --name executable-up "+canonicalRepository) {
-				t.Fatalf("existing invocation contains creation inputs:\n%s", calls)
-			}
-		})
-
-		t.Run("existing sandbox is force-recreated before creation", func(t *testing.T) {
-			logPath := filepath.Join(fakeDirectory, "recreate-calls.log")
-			environmentPath := filepath.Join(fakeDirectory, "recreate-env.log")
-			stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
-				t,
-				binary,
-				nested,
-				[]string{"up", "--recreate"},
-				[]string{
-					"PATH=" + fakeDirectory,
-					"SBX_TEST_LOG=" + logPath,
-					"SBX_TEST_ENV_LOG=" + environmentPath,
-					"SBX_TEST_EXISTING=executable-up",
-				},
-				"hello replacement\n",
-			)
-			if exitCode != 0 || !strings.Contains(stdout, "agent received: hello replacement") || stderr != validationStatus+"docker create diagnostic\ndocker run diagnostic\n" {
-				t.Fatalf("up --recreate exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
-			}
-			calls, err := os.ReadFile(logPath)
-			if err != nil {
-				t.Fatalf("read calls: %v", err)
-			}
-			wantCreate := "create --name executable-up --kit git+https://github.com/example/kits.git#ref=v1&dir=remote-tooling --kit " + canonicalLocalKit + " codex " + canonicalRepository
-			wantCalls := []string{
-				"kit validate " + canonicalLocalKit,
-				"ls --json",
-				"rm --force executable-up",
-				"policy rm network --sandbox executable-up --resource api.example.com",
-				wantCreate,
-				"policy allow network --sandbox executable-up api.example.com",
-				"run codex --name executable-up",
-			}
-			if got := strings.Split(strings.TrimSpace(string(calls)), "\n"); !reflect.DeepEqual(got, wantCalls) {
-				t.Fatalf("calls = %#v, want %#v", got, wantCalls)
-			}
-		})
-
-		t.Run("running sandbox requires confirmation and preserves later input", func(t *testing.T) {
-			logPath := filepath.Join(fakeDirectory, "running-approved-calls.log")
-			environmentPath := filepath.Join(fakeDirectory, "running-approved-env.log")
-			stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
 				t, binary, nested, []string{"up", "--recreate"},
 				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath, "SBX_TEST_EXISTING=executable-up", "SBX_TEST_STATUS=running"},
-				"yes\nhello approved replacement\n",
+				test.input,
 			)
-			if exitCode != 0 || !strings.Contains(stdout, "agent received: hello approved replacement") {
-				t.Fatalf("up --recreate exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
-			}
-			for _, want := range []string{validationStatus, "running sandbox \"executable-up\"", "other attached terminal sessions", "[y/N]", "docker run diagnostic"} {
-				if !strings.Contains(stderr, want) {
-					t.Errorf("stderr does not contain %q: %q", want, stderr)
-				}
-			}
-		})
-
-		t.Run("forced running recreation skips confirmation", func(t *testing.T) {
-			logPath := filepath.Join(fakeDirectory, "running-forced-calls.log")
-			environmentPath := filepath.Join(fakeDirectory, "running-forced-env.log")
-			stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
-				t, binary, nested, []string{"up", "--recreate", "--force"},
-				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath, "SBX_TEST_EXISTING=executable-up", "SBX_TEST_STATUS=running"},
-				"hello forced replacement\n",
-			)
-			if exitCode != 0 || !strings.Contains(stdout, "agent received: hello forced replacement") {
-				t.Fatalf("forced up exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
-			}
-			for _, unwanted := range []string{"running sandbox", "other attached terminal sessions", "[y/N]"} {
-				if strings.Contains(stderr, unwanted) {
-					t.Errorf("stderr contains confirmation marker %q: %q", unwanted, stderr)
-				}
-			}
-			calls, err := os.ReadFile(logPath)
-			if err != nil {
-				t.Fatalf("read calls: %v", err)
-			}
-			wantCreate := "create --name executable-up --kit git+https://github.com/example/kits.git#ref=v1&dir=remote-tooling --kit " + canonicalLocalKit + " codex " + canonicalRepository
-			wantCalls := []string{
-				"kit validate " + canonicalLocalKit,
-				"ls --json",
-				"rm --force executable-up",
-				"policy rm network --sandbox executable-up --resource api.example.com",
-				wantCreate,
-				"policy allow network --sandbox executable-up api.example.com",
-				"run codex --name executable-up",
-			}
-			if got := strings.Split(strings.TrimSpace(string(calls)), "\n"); !reflect.DeepEqual(got, wantCalls) {
-				t.Fatalf("calls = %#v, want %#v", got, wantCalls)
-			}
-		})
-
-		for _, test := range []struct {
-			name       string
-			input      string
-			wantError  string
-			wantMutate bool
-		}{
-			{name: "affirmative", input: "yes", wantMutate: true},
-			{name: "negative", input: "no", wantError: "recreation cancelled"},
-			{name: "malformed", input: "approve", wantError: "recreation cancelled"},
-			{name: "immediate EOF", wantError: "read confirmation response"},
-		} {
-			t.Run("running sandbox with "+test.name+" EOF-terminated confirmation", func(t *testing.T) {
-				logPath := filepath.Join(fakeDirectory, "running-eof-"+test.name+"-calls.log")
-				environmentPath := filepath.Join(fakeDirectory, "running-eof-"+test.name+"-env.log")
-				_, stderr, exitCode := runBinaryInDirectoryWithInput(
-					t, binary, nested, []string{"up", "--recreate"},
-					[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath, "SBX_TEST_EXISTING=executable-up", "SBX_TEST_STATUS=running"},
-					test.input,
-				)
-				if (exitCode != 0) != (test.wantError != "") || !strings.Contains(stderr, test.wantError) {
-					t.Fatalf("up --recreate exit = %d, stderr = %q", exitCode, stderr)
-				}
-				calls, err := os.ReadFile(logPath)
-				if err != nil {
-					t.Fatalf("read calls: %v", err)
-				}
-				callLog := string(calls)
-				mutations := []string{"rm --force executable-up\n", "create --name executable-up ", "run codex --name executable-up\n"}
-				for _, mutation := range mutations {
-					if strings.Contains(callLog, mutation) != test.wantMutate {
-						t.Fatalf("call %q present = %v, want mutation %v; calls:\n%s", mutation, strings.Contains(callLog, mutation), test.wantMutate, calls)
-					}
-				}
-			})
-		}
-
-		t.Run("running sandbox decline stops before mutation", func(t *testing.T) {
-			logPath := filepath.Join(fakeDirectory, "running-declined-calls.log")
-			environmentPath := filepath.Join(fakeDirectory, "running-declined-env.log")
-			_, stderr, exitCode := runBinaryInDirectoryWithInput(
-				t, binary, nested, []string{"up", "--recreate"},
-				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath, "SBX_TEST_EXISTING=executable-up", "SBX_TEST_STATUS=running"},
-				"no\n",
-			)
-			if exitCode == 0 || !strings.Contains(stderr, "recreation cancelled") {
+			if (exitCode != 0) != (test.wantError != "") || !strings.Contains(stderr, test.wantError) {
 				t.Fatalf("up --recreate exit = %d, stderr = %q", exitCode, stderr)
 			}
 			calls, err := os.ReadFile(logPath)
 			if err != nil {
 				t.Fatalf("read calls: %v", err)
 			}
-			if strings.Contains(string(calls), "rm ") || strings.Contains(string(calls), "create ") || strings.Contains(string(calls), "run ") {
-				t.Fatalf("declined calls contain mutation: %s", calls)
+			callLog := string(calls)
+			mutations := []string{"rm --force executable-up\n", "create --name executable-up ", "run codex --name executable-up\n"}
+			for _, mutation := range mutations {
+				if strings.Contains(callLog, mutation) != test.wantMutate {
+					t.Fatalf("call %q present = %v, want mutation %v; calls:\n%s", mutation, strings.Contains(callLog, mutation), test.wantMutate, calls)
+				}
 			}
 		})
+	}
+}
 
-		t.Run("inspection failure stops before mutation", func(t *testing.T) {
-			logPath := filepath.Join(fakeDirectory, "inspection-failed-calls.log")
-			environmentPath := filepath.Join(fakeDirectory, "inspection-failed-env.log")
-			_, stderr, exitCode := runBinaryInDirectoryWithInput(
-				t, binary, nested, []string{"up", "--recreate"},
-				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath, "SBX_TEST_LS_FAIL=1"}, "",
-			)
-			if exitCode == 0 || !strings.Contains(stderr, "state unavailable") {
-				t.Fatalf("up --recreate exit = %d, stderr = %q", exitCode, stderr)
-			}
-			calls, err := os.ReadFile(logPath)
-			if err != nil {
-				t.Fatalf("read calls: %v", err)
-			}
-			if strings.Contains(string(calls), "rm ") || strings.Contains(string(calls), "create ") || strings.Contains(string(calls), "run ") {
-				t.Fatalf("failed inspection calls contain mutation: %s", calls)
-			}
-		})
-	})
+func (fixture executableUpFixture) declineRunning(t *testing.T) {
+	binary, nested, fakeDirectory := fixture.binary, fixture.nested, fixture.fakeDirectory
+	canonicalLocalKit, canonicalRepository, validationStatus := fixture.canonicalLocalKit, fixture.canonicalRepository, fixture.validationStatus
+	_, _, _, _, _, _ = binary, nested, fakeDirectory, canonicalLocalKit, canonicalRepository, validationStatus
+	logPath := filepath.Join(fakeDirectory, "running-declined-calls.log")
+	environmentPath := filepath.Join(fakeDirectory, "running-declined-env.log")
+	_, stderr, exitCode := runBinaryInDirectoryWithInput(
+		t, binary, nested, []string{"up", "--recreate"},
+		[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath, "SBX_TEST_EXISTING=executable-up", "SBX_TEST_STATUS=running"},
+		"no\n",
+	)
+	if exitCode == 0 || !strings.Contains(stderr, "recreation cancelled") {
+		t.Fatalf("up --recreate exit = %d, stderr = %q", exitCode, stderr)
+	}
+	calls, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read calls: %v", err)
+	}
+	if strings.Contains(string(calls), "rm ") || strings.Contains(string(calls), "create ") || strings.Contains(string(calls), "run ") {
+		t.Fatalf("declined calls contain mutation: %s", calls)
+	}
+}
 
-	t.Run("down resolves identity only and preserves Docker stop failure", func(t *testing.T) {
-		if runtime.GOOS == "windows" {
-			t.Skip("fake sbx fixture uses a POSIX shell script")
-		}
+func (fixture executableUpFixture) inspectionFailure(t *testing.T) {
+	binary, nested, fakeDirectory := fixture.binary, fixture.nested, fixture.fakeDirectory
+	canonicalLocalKit, canonicalRepository, validationStatus := fixture.canonicalLocalKit, fixture.canonicalRepository, fixture.validationStatus
+	_, _, _, _, _, _ = binary, nested, fakeDirectory, canonicalLocalKit, canonicalRepository, validationStatus
+	logPath := filepath.Join(fakeDirectory, "inspection-failed-calls.log")
+	environmentPath := filepath.Join(fakeDirectory, "inspection-failed-env.log")
+	_, stderr, exitCode := runBinaryInDirectoryWithInput(
+		t, binary, nested, []string{"up", "--recreate"},
+		[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath, "SBX_TEST_LS_FAIL=1"}, "",
+	)
+	if exitCode == 0 || !strings.Contains(stderr, "state unavailable") {
+		t.Fatalf("up --recreate exit = %d, stderr = %q", exitCode, stderr)
+	}
+	calls, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read calls: %v", err)
+	}
+	if strings.Contains(string(calls), "rm ") || strings.Contains(string(calls), "create ") || strings.Contains(string(calls), "run ") {
+		t.Fatalf("failed inspection calls contain mutation: %s", calls)
+	}
+}
 
-		repository := t.TempDir()
-		configuration := `version: 1
+func executableDownTest(t *testing.T, binary string) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake sbx fixture uses a POSIX shell script")
+	}
+
+	repository := t.TempDir()
+	configuration := `version: 1
 sandbox:
   name: executable-down
   agent: unsupported
@@ -612,18 +684,18 @@ sandbox:
       - source: missing
         kit: ../unsafe
 `
-		if err := os.WriteFile(filepath.Join(repository, "sbxflow.yaml"), []byte(configuration), 0o600); err != nil {
-			t.Fatalf("write declaration: %v", err)
-		}
-		nested := filepath.Join(repository, "nested", "work")
-		if err := os.MkdirAll(nested, 0o755); err != nil {
-			t.Fatalf("create nested work directory: %v", err)
-		}
+	if err := os.WriteFile(filepath.Join(repository, "sbxflow.yaml"), []byte(configuration), 0o600); err != nil {
+		t.Fatalf("write declaration: %v", err)
+	}
+	nested := filepath.Join(repository, "nested", "work")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatalf("create nested work directory: %v", err)
+	}
 
-		fakeDirectory := t.TempDir()
-		logPath := filepath.Join(fakeDirectory, "calls.log")
-		fakeSbx := filepath.Join(fakeDirectory, "sbx")
-		script := `#!/bin/sh
+	fakeDirectory := t.TempDir()
+	logPath := filepath.Join(fakeDirectory, "calls.log")
+	fakeSbx := filepath.Join(fakeDirectory, "sbx")
+	script := `#!/bin/sh
 printf '%s\n' "$*" >> "$SBX_TEST_LOG"
 case "$1 $2" in
   "ls --quiet")
@@ -640,36 +712,36 @@ case "$1 $2" in
     ;;
 esac
 `
-		if err := os.WriteFile(fakeSbx, []byte(script), 0o700); err != nil {
-			t.Fatalf("write fake sbx: %v", err)
-		}
+	if err := os.WriteFile(fakeSbx, []byte(script), 0o700); err != nil {
+		t.Fatalf("write fake sbx: %v", err)
+	}
 
-		stdout, stderr, exitCode := runBinaryInDirectory(
-			t,
-			binary,
-			nested,
-			[]string{"down"},
-			[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath},
-		)
-		if exitCode != 7 || stdout != "stopping executable-down\n" || stderr != "docker stop diagnostic\n" {
-			t.Fatalf("down exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
-		}
-		calls, err := os.ReadFile(logPath)
-		if err != nil {
-			t.Fatalf("read fake sbx calls: %v", err)
-		}
-		if got, want := string(calls), "ls --quiet\nstop executable-down\n"; got != want {
-			t.Fatalf("sbx calls = %q, want %q", got, want)
-		}
-	})
+	stdout, stderr, exitCode := runBinaryInDirectory(
+		t,
+		binary,
+		nested,
+		[]string{"down"},
+		[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath},
+	)
+	if exitCode != 7 || stdout != "stopping executable-down\n" || stderr != "docker stop diagnostic\n" {
+		t.Fatalf("down exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+	}
+	calls, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read fake sbx calls: %v", err)
+	}
+	if got, want := string(calls), "ls --quiet\nstop executable-down\n"; got != want {
+		t.Fatalf("sbx calls = %q, want %q", got, want)
+	}
+}
 
-	t.Run("destroy resolves the exact identity and preserves removal behavior", func(t *testing.T) {
-		if runtime.GOOS == "windows" {
-			t.Skip("fake sbx fixture uses a POSIX shell script")
-		}
+func executableDestroyTest(t *testing.T, binary string) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake sbx fixture uses a POSIX shell script")
+	}
 
-		repository := t.TempDir()
-		configuration := `version: 1
+	repository := t.TempDir()
+	configuration := `version: 1
 sandbox:
   name: executable-destroy
   agent: unsupported
@@ -682,17 +754,17 @@ sandbox:
       - source: missing
         kit: ../unsafe
 `
-		if err := os.WriteFile(filepath.Join(repository, "sbxflow.yaml"), []byte(configuration), 0o600); err != nil {
-			t.Fatalf("write declaration: %v", err)
-		}
-		nested := filepath.Join(repository, "nested", "work")
-		if err := os.MkdirAll(nested, 0o755); err != nil {
-			t.Fatalf("create nested work directory: %v", err)
-		}
+	if err := os.WriteFile(filepath.Join(repository, "sbxflow.yaml"), []byte(configuration), 0o600); err != nil {
+		t.Fatalf("write declaration: %v", err)
+	}
+	nested := filepath.Join(repository, "nested", "work")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatalf("create nested work directory: %v", err)
+	}
 
-		fakeDirectory := t.TempDir()
-		fakeSbx := filepath.Join(fakeDirectory, "sbx")
-		script := `#!/bin/sh
+	fakeDirectory := t.TempDir()
+	fakeSbx := filepath.Join(fakeDirectory, "sbx")
+	script := `#!/bin/sh
 printf '%s\n' "$*" >> "$SBX_TEST_LOG"
 case "$1 $2" in
   "ls --quiet")
@@ -720,79 +792,88 @@ case "$1 $2" in
     ;;
 esac
 `
-		if err := os.WriteFile(fakeSbx, []byte(script), 0o700); err != nil {
-			t.Fatalf("write fake sbx: %v", err)
-		}
+	if err := os.WriteFile(fakeSbx, []byte(script), 0o700); err != nil {
+		t.Fatalf("write fake sbx: %v", err)
+	}
 
-		t.Run("confirmed removal forwards input output and failure", func(t *testing.T) {
-			logPath := filepath.Join(fakeDirectory, "confirmed-calls.log")
-			stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
-				t,
-				binary,
-				nested,
-				[]string{"destroy"},
-				[]string{
-					"PATH=" + fakeDirectory,
-					"SBX_TEST_LOG=" + logPath,
-					"SBX_TEST_EXISTING=other\nexecutable-destroy\nexecutable-destroy-extra",
-					"SBX_TEST_REMOVE_EXIT=7",
-				},
-				"yes\n",
-			)
-			if exitCode != 7 || stdout != "confirm removal: answer=yes\n" || stderr != "docker remove diagnostic\n" {
-				t.Fatalf("destroy exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
-			}
-			calls, err := os.ReadFile(logPath)
-			if err != nil {
-				t.Fatalf("read fake sbx calls: %v", err)
-			}
-			if got, want := string(calls), "ls --quiet\nrm executable-destroy\n"; got != want {
-				t.Fatalf("sbx calls = %q, want %q", got, want)
-			}
-		})
+	destroyFixture := executableDestroyFixture{binary, nested, fakeDirectory}
+	t.Run("confirmed removal forwards input output and failure", destroyFixture.confirmedRemoval)
+	t.Run("force forwards Docker force for only the declared target", destroyFixture.forcedRemoval)
+	t.Run("absent exact target is idempotent", destroyFixture.absentRemoval)
+}
 
-		t.Run("force forwards Docker force for only the declared target", func(t *testing.T) {
-			logPath := filepath.Join(fakeDirectory, "forced-calls.log")
-			stdout, stderr, exitCode := runBinaryInDirectory(
-				t,
-				binary,
-				nested,
-				[]string{"destroy", "-f"},
-				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_EXISTING=executable-destroy"},
-			)
-			if exitCode != 0 || stdout != "forced removal\n" || stderr != "" {
-				t.Fatalf("destroy --force exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
-			}
-			calls, err := os.ReadFile(logPath)
-			if err != nil {
-				t.Fatalf("read fake sbx calls: %v", err)
-			}
-			if got, want := string(calls), "ls --quiet\nrm --force executable-destroy\n"; got != want {
-				t.Fatalf("sbx calls = %q, want %q", got, want)
-			}
-		})
+type executableDestroyFixture struct{ binary, nested, fakeDirectory string }
 
-		t.Run("absent exact target is idempotent", func(t *testing.T) {
-			logPath := filepath.Join(fakeDirectory, "absent-calls.log")
-			stdout, stderr, exitCode := runBinaryInDirectory(
-				t,
-				binary,
-				nested,
-				[]string{"destroy", "--force"},
-				[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_EXISTING=executable-destroy-extra"},
-			)
-			if exitCode != 0 || stdout != "" || stderr != "" {
-				t.Fatalf("absent destroy exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
-			}
-			calls, err := os.ReadFile(logPath)
-			if err != nil {
-				t.Fatalf("read fake sbx calls: %v", err)
-			}
-			if got, want := string(calls), "ls --quiet\n"; got != want {
-				t.Fatalf("sbx calls = %q, want %q", got, want)
-			}
-		})
-	})
+func (fixture executableDestroyFixture) confirmedRemoval(t *testing.T) {
+	binary, nested, fakeDirectory := fixture.binary, fixture.nested, fixture.fakeDirectory
+	logPath := filepath.Join(fakeDirectory, "confirmed-calls.log")
+	stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
+		t,
+		binary,
+		nested,
+		[]string{"destroy"},
+		[]string{
+			"PATH=" + fakeDirectory,
+			"SBX_TEST_LOG=" + logPath,
+			"SBX_TEST_EXISTING=other\nexecutable-destroy\nexecutable-destroy-extra",
+			"SBX_TEST_REMOVE_EXIT=7",
+		},
+		"yes\n",
+	)
+	if exitCode != 7 || stdout != "confirm removal: answer=yes\n" || stderr != "docker remove diagnostic\n" {
+		t.Fatalf("destroy exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+	}
+	calls, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read fake sbx calls: %v", err)
+	}
+	if got, want := string(calls), "ls --quiet\nrm executable-destroy\n"; got != want {
+		t.Fatalf("sbx calls = %q, want %q", got, want)
+	}
+}
+
+func (fixture executableDestroyFixture) forcedRemoval(t *testing.T) {
+	binary, nested, fakeDirectory := fixture.binary, fixture.nested, fixture.fakeDirectory
+	logPath := filepath.Join(fakeDirectory, "forced-calls.log")
+	stdout, stderr, exitCode := runBinaryInDirectory(
+		t,
+		binary,
+		nested,
+		[]string{"destroy", "-f"},
+		[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_EXISTING=executable-destroy"},
+	)
+	if exitCode != 0 || stdout != "forced removal\n" || stderr != "" {
+		t.Fatalf("destroy --force exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+	}
+	calls, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read fake sbx calls: %v", err)
+	}
+	if got, want := string(calls), "ls --quiet\nrm --force executable-destroy\n"; got != want {
+		t.Fatalf("sbx calls = %q, want %q", got, want)
+	}
+}
+
+func (fixture executableDestroyFixture) absentRemoval(t *testing.T) {
+	binary, nested, fakeDirectory := fixture.binary, fixture.nested, fixture.fakeDirectory
+	logPath := filepath.Join(fakeDirectory, "absent-calls.log")
+	stdout, stderr, exitCode := runBinaryInDirectory(
+		t,
+		binary,
+		nested,
+		[]string{"destroy", "--force"},
+		[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_EXISTING=executable-destroy-extra"},
+	)
+	if exitCode != 0 || stdout != "" || stderr != "" {
+		t.Fatalf("absent destroy exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+	}
+	calls, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read fake sbx calls: %v", err)
+	}
+	if got, want := string(calls), "ls --quiet\n"; got != want {
+		t.Fatalf("sbx calls = %q, want %q", got, want)
+	}
 }
 
 func runBinary(t *testing.T, binary string, args ...string) (string, string, int) {

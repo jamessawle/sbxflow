@@ -55,7 +55,11 @@ func TestDownRunnerAbsentAndSimilarNamesAreNoOps(t *testing.T) {
 
 func TestDownRunnerStopsExactExistingSandboxWithAttachedOutput(t *testing.T) {
 	commands := &fakeCommandRunner{path: "/bin/sbx", output: sbx.Output{Stdout: []byte("other\nproject\n")}}
-	interactive := &fakeInteractiveRunner{}
+	interactive := &fakeInteractiveRunner{checkContext: func(ctx context.Context) {
+		if ctx.Value(downContextKey{}) != "preserved" {
+			t.Fatal("stop invocation did not preserve lifecycle context")
+		}
+	}}
 	var stdout, stderr bytes.Buffer
 	runner := DownRunner{
 		Targets:   fakeTargetResolver{target: Target{Declaration: "/repo/sbxflow.yaml", Name: "project"}},
@@ -73,9 +77,6 @@ func TestDownRunnerStopsExactExistingSandboxWithAttachedOutput(t *testing.T) {
 	}
 	if !reflect.DeepEqual(interactive.invocation, want) {
 		t.Fatalf("invocation = %#v, want %#v", interactive.invocation, want)
-	}
-	if interactive.ctx.Value(downContextKey{}) != "preserved" {
-		t.Fatal("stop invocation did not preserve lifecycle context")
 	}
 }
 

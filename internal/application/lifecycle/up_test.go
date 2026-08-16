@@ -181,31 +181,46 @@ func TestRunnerSelectsExactMissingAndExistingArguments(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			commands := &fakeCommandRunner{path: "/bin/sbx", output: sbx.Output{Stdout: []byte(test.listOutput)}}
-			interactive := &fakeInteractiveRunner{}
-			var stdout, stderr bytes.Buffer
-			stdin := strings.NewReader("input")
-			runner := UpRunner{Validation: fakeValidator{report: validReport()}, Sandboxes: sbx.Client{Commands: commands, Interactive: interactive}}
-			_, err := runner.Run(context.Background(), "/repo/nested", UpOptions{}, Streams{In: stdin, Out: &stdout, Err: &stderr})
-			if err != nil {
-				t.Fatalf("Run() error = %v", err)
-			}
-			gotArgs := make([][]string, 0, len(interactive.invocations))
-			for _, invocation := range interactive.invocations {
-				gotArgs = append(gotArgs, invocation.Args)
-			}
-			if !reflect.DeepEqual(gotArgs, test.wantArgs) {
-				t.Fatalf("args = %#v, want %#v", gotArgs, test.wantArgs)
-			}
-			for index, invocation := range interactive.invocations {
-				if invocation.Executable != "/bin/sbx" || invocation.Stdin != stdin || invocation.Stdout != &stdout || invocation.Stderr != &stderr {
-					t.Fatalf("interactive invocation %d = %#v", index, invocation)
-				}
-				if got := invocation.Environment["DOCKER_SANDBOXES_KIT_ALLOWED_SOURCES"]; got != `["docker.io/","github.com/example/kits"]` {
-					t.Fatalf("invocation %d allowed sources = %q", index, got)
-				}
-			}
+			assertRunnerInvocations(t, test.listOutput, test.wantArgs)
 		})
+	}
+}
+
+func assertRunnerInvocations(t *testing.T, listOutput string, wantArgs [][]string) {
+	t.Helper()
+	commands := &fakeCommandRunner{path: "/bin/sbx", output: sbx.Output{Stdout: []byte(listOutput)}}
+	interactive := &fakeInteractiveRunner{}
+	var stdout, stderr bytes.Buffer
+	stdin := strings.NewReader("input")
+	runner := UpRunner{Validation: fakeValidator{report: validReport()}, Sandboxes: sbx.Client{Commands: commands, Interactive: interactive}}
+	_, err := runner.Run(context.Background(), "/repo/nested", UpOptions{}, Streams{In: stdin, Out: &stdout, Err: &stderr})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	assertInvocationArguments(t, interactive.invocations, wantArgs)
+	assertInvocationStreamsAndTrust(t, interactive.invocations, stdin, &stdout, &stderr)
+}
+
+func assertInvocationArguments(t *testing.T, invocations []sbx.InteractiveInvocation, want [][]string) {
+	t.Helper()
+	got := make([][]string, 0, len(invocations))
+	for _, invocation := range invocations {
+		got = append(got, invocation.Args)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("args = %#v, want %#v", got, want)
+	}
+}
+
+func assertInvocationStreamsAndTrust(t *testing.T, invocations []sbx.InteractiveInvocation, stdin io.Reader, stdout, stderr io.Writer) {
+	t.Helper()
+	for index, invocation := range invocations {
+		if invocation.Executable != "/bin/sbx" || invocation.Stdin != stdin || invocation.Stdout != stdout || invocation.Stderr != stderr {
+			t.Fatalf("interactive invocation %d = %#v", index, invocation)
+		}
+		if got := invocation.Environment["DOCKER_SANDBOXES_KIT_ALLOWED_SOURCES"]; got != `["docker.io/","github.com/example/kits"]` {
+			t.Fatalf("invocation %d allowed sources = %q", index, got)
+		}
 	}
 }
 
@@ -450,16 +465,21 @@ func (r *fakeCommandRunner) Run(_ context.Context, _ string, args ...string) sbx
 }
 
 type fakeInteractiveRunner struct {
-	calls       int
-	ctx         context.Context
-	invocation  sbx.InteractiveInvocation
-	invocations []sbx.InteractiveInvocation
-	err         error
+	calls        int
+	invocation   sbx.InteractiveInvocation
+	invocations  []sbx.InteractiveInvocation
+	err          error
+	checkContext func(context.Context)
 }
 
 func (r *fakeInteractiveRunner) Run(ctx context.Context, invocation sbx.InteractiveInvocation) error {
 	r.calls++
-	r.ctx = ctx
+	if ctx == nil {
+		panic("nil context")
+	}
+	if r.checkContext != nil {
+		r.checkContext(ctx)
+	}
 	r.invocation = invocation
 	r.invocations = append(r.invocations, invocation)
 	return r.err

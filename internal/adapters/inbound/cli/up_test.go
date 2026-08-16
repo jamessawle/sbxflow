@@ -120,18 +120,12 @@ func TestRunningRecreationConfirmationUsesCommandStreamsAndDefaultsNegative(t *t
 		{name: "immediate EOF", input: "", wantError: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			var stderr bytes.Buffer
-			got, err := (recreationConfirmer{}).ConfirmRunningSandboxRecreation("project", lifecycle.Streams{In: strings.NewReader(test.input), Err: &stderr})
-			if got != test.want || (err != nil) != test.wantError {
-				t.Fatalf("confirmation = %v, %v", got, err)
-			}
-			for _, want := range []string{"project", "permanently removes", "other attached terminal sessions", "[y/N]"} {
-				if !strings.Contains(stderr.String(), want) {
-					t.Errorf("warning does not contain %q: %s", want, stderr.String())
-				}
-			}
+			assertRecreationConfirmation(t, strings.NewReader(test.input), test.want, test.wantError)
 		})
 	}
+}
+
+func TestRunningRecreationConfirmationReportsReadErrors(t *testing.T) {
 	var stderr bytes.Buffer
 	_, err := (recreationConfirmer{}).ConfirmRunningSandboxRecreation("project", lifecycle.Streams{In: errorReader{}, Err: &stderr})
 	if err == nil || !strings.Contains(err.Error(), "read confirmation") {
@@ -147,6 +141,9 @@ func TestRunningRecreationConfirmationUsesCommandStreamsAndDefaultsNegative(t *t
 	if got || err != nil {
 		t.Fatalf("newline with EOF confirmation = %v, %v", got, err)
 	}
+}
+
+func TestRunningRecreationConfirmationHandlesDataAndEOFTogether(t *testing.T) {
 	for _, test := range []struct {
 		name  string
 		input string
@@ -156,12 +153,27 @@ func TestRunningRecreationConfirmationUsesCommandStreamsAndDefaultsNegative(t *t
 		{name: "negative", input: "no"},
 	} {
 		t.Run("same-read EOF "+test.name, func(t *testing.T) {
-			var stderr bytes.Buffer
-			got, err := (recreationConfirmer{}).ConfirmRunningSandboxRecreation("project", lifecycle.Streams{In: &eofWithDataReader{input: test.input}, Err: &stderr})
-			if got != test.want || err != nil {
-				t.Fatalf("confirmation = %v, %v", got, err)
-			}
+			assertRecreationConfirmation(t, &eofWithDataReader{input: test.input}, test.want, false)
 		})
+	}
+}
+
+func assertRecreationConfirmation(t *testing.T, input io.Reader, want, wantError bool) {
+	t.Helper()
+	var stderr bytes.Buffer
+	got, err := (recreationConfirmer{}).ConfirmRunningSandboxRecreation("project", lifecycle.Streams{In: input, Err: &stderr})
+	if got != want || (err != nil) != wantError {
+		t.Fatalf("confirmation = %v, %v", got, err)
+	}
+	assertRecreationWarning(t, stderr.String())
+}
+
+func assertRecreationWarning(t *testing.T, warning string) {
+	t.Helper()
+	for _, want := range []string{"project", "permanently removes", "other attached terminal sessions", "[y/N]"} {
+		if !strings.Contains(warning, want) {
+			t.Errorf("warning does not contain %q: %s", want, warning)
+		}
 	}
 }
 
