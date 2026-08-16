@@ -117,12 +117,9 @@ The required `Validate` check enforces this format whenever a pull request is
 opened, updated, reopened, or retitled. Pull requests must also pass the
 repository's CodeQL checks for Go and GitHub Actions and the SonarQube quality
 gate. SonarQube evaluates the pull request's changed code, so existing findings
-in unchanged code do not block unrelated improvements. Its coverage result is
-generated with the same race-enabled CGO configuration used by repository
-validation. Pull requests from forks skip this secret-dependent analysis;
-maintainers must ensure the SonarQube check runs after bringing such a change
-onto a repository branch. Intermediate commits on a branch do not need
-conventional messages because pull requests are squash merged.
+in unchanged code do not block unrelated improvements. Intermediate commits on
+a branch do not need conventional messages because pull requests are squash
+merged.
 
 In the pull request body, summarize what changed and list the validation you
 ran. All required checks must pass and conversations must be resolved before a
