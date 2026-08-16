@@ -82,14 +82,14 @@ type Inspector interface {
 	GetKitAllowedSources(context.Context, string) Output
 }
 
-// Lookup checks whether an exact sandbox exists.
-type Lookup interface {
-	SandboxExists(ctx context.Context, name string) (bool, error)
+// ExistenceChecker checks whether an exact sandbox exists.
+type ExistenceChecker interface {
+	Exists(ctx context.Context, name string) (bool, error)
 }
 
-// StateLookup inspects the lifecycle state of an exact sandbox name.
-type StateLookup interface {
-	InspectSandbox(ctx context.Context, name string) (State, error)
+// StateInspector inspects the lifecycle state of an exact sandbox name.
+type StateInspector interface {
+	Inspect(ctx context.Context, name string) (State, error)
 }
 
 // Creator creates a sandbox without attaching to its agent session, so that

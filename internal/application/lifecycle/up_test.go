@@ -14,7 +14,7 @@ import (
 	sandboxport "github.com/jamessawle/sbxflow/internal/ports/sandbox"
 )
 
-func TestInspectSandboxUsesExactMachineReadableState(t *testing.T) {
+func TestInspectUsesExactMachineReadableState(t *testing.T) {
 	for _, test := range []struct {
 		name   string
 		output string
@@ -37,9 +37,9 @@ func TestInspectSandboxUsesExactMachineReadableState(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			commands := &fakeCommandRunner{output: sbx.Output{Stdout: []byte(test.output)}}
-			got, err := (sbx.Client{Commands: commands}).InspectSandbox(context.Background(), "project")
+			got, err := (sbx.Client{Commands: commands}).Inspect(context.Background(), "project")
 			if err != nil || got != test.want {
-				t.Fatalf("sandboxExists() = %v, %v, want %v, nil", got, err, test.want)
+				t.Fatalf("Inspect() = %v, %v, want %v, nil", got, err, test.want)
 			}
 			if !reflect.DeepEqual(commands.args, []string{"ls", "--json"}) {
 				t.Fatalf("args = %#v", commands.args)
@@ -48,7 +48,7 @@ func TestInspectSandboxUsesExactMachineReadableState(t *testing.T) {
 	}
 }
 
-func TestInspectSandboxRejectsInvalidResults(t *testing.T) {
+func TestInspectRejectsInvalidResults(t *testing.T) {
 	for _, test := range []struct {
 		name   string
 		output []byte
@@ -70,23 +70,23 @@ func TestInspectSandboxRejectsInvalidResults(t *testing.T) {
 		{name: "unknown", output: []byte(`{"sandboxes":[{"name":"project","status":"starting"}]}`), want: "unrecognized lifecycle state"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := (sbx.Client{Commands: &fakeCommandRunner{output: sbx.Output{Stdout: test.output}}}).InspectSandbox(context.Background(), "project")
+			_, err := (sbx.Client{Commands: &fakeCommandRunner{output: sbx.Output{Stdout: test.output}}}).Inspect(context.Background(), "project")
 			if err == nil || !strings.Contains(err.Error(), test.want) {
-				t.Fatalf("InspectSandbox() error = %v, want %q", err, test.want)
+				t.Fatalf("Inspect() error = %v, want %q", err, test.want)
 			}
 		})
 	}
 }
 
-func TestInspectSandboxBoundsUnexpectedTrailingOutputError(t *testing.T) {
+func TestInspectBoundsUnexpectedTrailingOutputError(t *testing.T) {
 	const privateListing = `{"sandboxes":[{"name":"private-project-at-/Users/example/secret","status":"running"}]}`
 	trailing := strings.Repeat("unrecognized output ", 100)
-	_, err := (sbx.Client{Commands: &fakeCommandRunner{output: sbx.Output{Stdout: []byte(privateListing + trailing)}}}).InspectSandbox(context.Background(), "project")
+	_, err := (sbx.Client{Commands: &fakeCommandRunner{output: sbx.Output{Stdout: []byte(privateListing + trailing)}}}).Inspect(context.Background(), "project")
 	if err == nil || !strings.Contains(err.Error(), "unexpected trailing output") || !strings.Contains(err.Error(), "1999 bytes") {
-		t.Fatalf("InspectSandbox() error = %v, want bounded trailing-output classification", err)
+		t.Fatalf("Inspect() error = %v, want bounded trailing-output classification", err)
 	}
 	if strings.Contains(err.Error(), privateListing) || strings.Contains(err.Error(), "private-project") || len(err.Error()) > 200 {
-		t.Fatalf("InspectSandbox() error exposes listing contents or is unbounded: %q", err)
+		t.Fatalf("Inspect() error exposes listing contents or is unbounded: %q", err)
 	}
 }
 
@@ -101,11 +101,11 @@ const dockerUpdateNotice = `
 │ Upgrade with: docker desktop update                          │
 ╰──────────────────────────────────────────────────────────────╯`
 
-func TestInspectSandboxReportsDockerDiagnostics(t *testing.T) {
+func TestInspectReportsDockerDiagnostics(t *testing.T) {
 	commands := &fakeCommandRunner{output: sbx.Output{Stderr: []byte("daemon unavailable\n"), ExitCode: 7, Err: errors.New("exit 7")}}
-	_, err := (sbx.Client{Commands: commands}).InspectSandbox(context.Background(), "project")
+	_, err := (sbx.Client{Commands: commands}).Inspect(context.Background(), "project")
 	if err == nil || !strings.Contains(err.Error(), "sbx ls --json") || !strings.Contains(err.Error(), "daemon unavailable") {
-		t.Fatalf("sandboxExists() error = %v", err)
+		t.Fatalf("Inspect() error = %v", err)
 	}
 }
 
@@ -502,7 +502,7 @@ func (s *fakeUpSandboxes) RemoveNetworkResource(_ context.Context, request sandb
 	return s.cleanupErr
 }
 
-func (s *fakeUpSandboxes) InspectSandbox(_ context.Context, name string) (sandboxport.State, error) {
+func (s *fakeUpSandboxes) Inspect(_ context.Context, name string) (sandboxport.State, error) {
 	s.calls = append(s.calls, "lookup "+name)
 	if s.state == "" {
 		s.state = sandboxport.StateAbsent

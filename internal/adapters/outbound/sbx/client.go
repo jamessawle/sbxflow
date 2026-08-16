@@ -28,15 +28,15 @@ type Client struct {
 }
 
 var (
-	_ sandboxport.KitValidator  = Client{}
-	_ sandboxport.Inspector     = Client{}
-	_ sandboxport.Lookup        = Client{}
-	_ sandboxport.StateLookup   = Client{}
-	_ sandboxport.Creator       = Client{}
-	_ sandboxport.Runner        = Client{}
-	_ sandboxport.Stopper       = Client{}
-	_ sandboxport.Remover       = Client{}
-	_ sandboxport.NetworkPolicy = Client{}
+	_ sandboxport.KitValidator     = Client{}
+	_ sandboxport.Inspector        = Client{}
+	_ sandboxport.ExistenceChecker = Client{}
+	_ sandboxport.StateInspector   = Client{}
+	_ sandboxport.Creator          = Client{}
+	_ sandboxport.Runner           = Client{}
+	_ sandboxport.Stopper          = Client{}
+	_ sandboxport.Remover          = Client{}
+	_ sandboxport.NetworkPolicy    = Client{}
 )
 
 // NewClient constructs a production client with the supplied timeout for
@@ -130,8 +130,8 @@ func (c Client) ValidateKits(ctx context.Context, paths []string) ([]sandboxport
 	return outputs, nil
 }
 
-// SandboxExists reports whether the exact sandbox name exists.
-func (c Client) SandboxExists(ctx context.Context, name string) (bool, error) {
+// Exists reports whether the exact sandbox name exists.
+func (c Client) Exists(ctx context.Context, name string) (bool, error) {
 	executable, err := c.Commands.LookPath("sbx")
 	if err != nil {
 		return false, fmt.Errorf("locate sbx for sandbox lookup: %w", err)
@@ -152,9 +152,9 @@ func (c Client) SandboxExists(ctx context.Context, name string) (bool, error) {
 	return false, nil
 }
 
-// InspectSandbox reports the normalized lifecycle state of an exact sandbox
-// name from Docker's machine-readable listing.
-func (c Client) InspectSandbox(ctx context.Context, name string) (sandboxport.State, error) {
+// Inspect reports the normalized lifecycle state of an exact sandbox name from
+// Docker's machine-readable listing.
+func (c Client) Inspect(ctx context.Context, name string) (sandboxport.State, error) {
 	executable, err := c.Commands.LookPath("sbx")
 	if err != nil {
 		return "", fmt.Errorf("locate sbx for sandbox state inspection: %w", err)

@@ -10,7 +10,7 @@ import (
 type DownRunner struct {
 	Targets   TargetResolver
 	Sandboxes interface {
-		sandboxport.Lookup
+		sandboxport.ExistenceChecker
 		sandboxport.Stopper
 	}
 }
@@ -21,7 +21,7 @@ func (r DownRunner) Run(ctx context.Context, start string, streams Streams) erro
 	if err != nil {
 		return err
 	}
-	exists, err := r.Sandboxes.SandboxExists(ctx, target.Name)
+	exists, err := r.Sandboxes.Exists(ctx, target.Name)
 	if err != nil {
 		return err
 	}
