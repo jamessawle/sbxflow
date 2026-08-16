@@ -10,7 +10,7 @@ import (
 type DestroyRunner struct {
 	Targets   TargetResolver
 	Sandboxes interface {
-		sandboxport.Lookup
+		sandboxport.ExistenceChecker
 		removalSandbox
 	}
 }
@@ -21,7 +21,7 @@ func (r DestroyRunner) Run(ctx context.Context, start string, force bool, stream
 	if err != nil {
 		return err
 	}
-	exists, err := r.Sandboxes.SandboxExists(ctx, target.Name)
+	exists, err := r.Sandboxes.Exists(ctx, target.Name)
 	if err != nil {
 		return err
 	}

@@ -53,7 +53,7 @@ type RecreationConfirmer interface {
 type UpRunner struct {
 	Validation Validator
 	Sandboxes  interface {
-		sandboxport.StateLookup
+		sandboxport.StateInspector
 		sandboxport.Creator
 		sandboxport.Remover
 		sandboxport.Runner
@@ -88,7 +88,7 @@ func (r UpRunner) Run(ctx context.Context, start string, options UpOptions, stre
 	if err != nil {
 		return report, err
 	}
-	state, err := r.Sandboxes.InspectSandbox(ctx, plan.Name)
+	state, err := r.Sandboxes.Inspect(ctx, plan.Name)
 	if err != nil {
 		return report, err
 	}

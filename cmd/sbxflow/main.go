@@ -37,18 +37,18 @@ func main() {
 	var doctorInspector sandboxport.Inspector = doctorSandboxes
 	var localKitValidator sandboxport.KitValidator = lifecycleSandboxes
 	var upSandboxes interface {
-		sandboxport.StateLookup
+		sandboxport.StateInspector
 		sandboxport.Creator
 		sandboxport.Remover
 		sandboxport.Runner
 		sandboxport.NetworkPolicy
 	} = lifecycleSandboxes
 	var downSandboxes interface {
-		sandboxport.Lookup
+		sandboxport.ExistenceChecker
 		sandboxport.Stopper
 	} = lifecycleSandboxes
 	var destroySandboxes interface {
-		sandboxport.Lookup
+		sandboxport.ExistenceChecker
 		sandboxport.Remover
 		sandboxport.NetworkPolicy
 	} = lifecycleSandboxes
