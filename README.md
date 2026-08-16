@@ -3,6 +3,7 @@
 [![Latest release](https://img.shields.io/github/v/release/jamessawle/sbxflow)](https://github.com/jamessawle/sbxflow/releases/latest)
 [![License](https://img.shields.io/github/license/jamessawle/sbxflow)](LICENSE)
 [![Build status](https://github.com/jamessawle/sbxflow/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jamessawle/sbxflow/actions/workflows/ci.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=jamessawle_sbxflow&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=jamessawle_sbxflow)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/jamessawle/sbxflow/badge)](https://scorecard.dev/viewer/?uri=github.com/jamessawle/sbxflow)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14024/badge)](https://www.bestpractices.dev/projects/14024)
 
@@ -227,6 +228,10 @@ mise run validate
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the development and release workflows.
+Pull requests also run SonarQube Cloud against changed code. Its quality gate
+ratchets quality forward by blocking new reliability, security,
+maintainability, duplication, or coverage regressions without retroactively
+failing a pull request for issues in unchanged code.
 
 ## License
 
