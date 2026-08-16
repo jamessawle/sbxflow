@@ -44,50 +44,78 @@ func Link(configuration Configuration) (LinkedConfiguration, error) {
 	seenPrefixes := map[string]struct{}{"docker.io/": {}}
 
 	for index, selection := range configuration.Sandbox.Kits.Use {
-		source, ok := configuration.Sandbox.Kits.Sources[selection.Source]
-		if !ok {
-			return LinkedConfiguration{}, fmt.Errorf("sandbox.kits.use[%d].source references unknown source %q", index, selection.Source)
+		item, err := linkSelection(configuration.Sandbox.Kits.Sources, index, selection)
+		if err != nil {
+			return LinkedConfiguration{}, err
 		}
-
-		item := LinkedSelection{Index: index, Selection: selection, Source: source}
-		switch source.Type {
-		case SourceOCI:
-			if selection.Version == "" {
-				return LinkedConfiguration{}, fmt.Errorf("sandbox.kits.use[%d].version is required for OCI source %q", index, selection.Source)
-			}
-			var err error
-			item.RemoteReference, item.TrustPrefix, err = normalizeOCI(source.Base, selection.Kit, selection.Version)
-			if err != nil {
-				return LinkedConfiguration{}, fmt.Errorf("sandbox.kits.use[%d]: %w", index, err)
-			}
-		case SourceGit:
-			if selection.Version != "" {
-				return LinkedConfiguration{}, fmt.Errorf("sandbox.kits.use[%d].version is not valid for Git source %q", index, selection.Source)
-			}
-			var err error
-			item.RemoteReference, item.TrustPrefix, err = normalizeGit(source.Repo, source.Ref, selection.Kit)
-			if err != nil {
-				return LinkedConfiguration{}, fmt.Errorf("sandbox.kits.use[%d]: %w", index, err)
-			}
-		case SourceLocal:
-			if selection.Version != "" {
-				return LinkedConfiguration{}, fmt.Errorf("sandbox.kits.use[%d].version is not valid for local source %q", index, selection.Source)
-			}
-			linked.Trust.AllowLocalKits = true
-		default:
-			return LinkedConfiguration{}, fmt.Errorf("sandbox.kits.sources.%s.type %q is unsupported", selection.Source, source.Type)
-		}
-
-		if item.TrustPrefix != "" {
-			if _, exists := seenPrefixes[item.TrustPrefix]; !exists {
-				seenPrefixes[item.TrustPrefix] = struct{}{}
-				linked.Trust.AllowedSources = append(linked.Trust.AllowedSources, item.TrustPrefix)
-			}
-		}
+		updateTrust(&linked.Trust, seenPrefixes, item)
 		linked.Selections = append(linked.Selections, item)
 	}
 
 	return linked, nil
+}
+
+func linkSelection(sources map[string]Source, index int, selection Selection) (LinkedSelection, error) {
+	source, ok := sources[selection.Source]
+	if !ok {
+		return LinkedSelection{}, fmt.Errorf("sandbox.kits.use[%d].source references unknown source %q", index, selection.Source)
+	}
+	item := LinkedSelection{Index: index, Selection: selection, Source: source}
+	var err error
+	switch source.Type {
+	case SourceOCI:
+		item.RemoteReference, item.TrustPrefix, err = linkOCISelection(index, selection, source)
+	case SourceGit:
+		item.RemoteReference, item.TrustPrefix, err = linkGitSelection(index, selection, source)
+	case SourceLocal:
+		err = validateLocalSelection(index, selection)
+	default:
+		err = fmt.Errorf("sandbox.kits.sources.%s.type %q is unsupported", selection.Source, source.Type)
+	}
+	return item, err
+}
+
+func linkOCISelection(index int, selection Selection, source Source) (string, string, error) {
+	if selection.Version == "" {
+		return "", "", fmt.Errorf("sandbox.kits.use[%d].version is required for OCI source %q", index, selection.Source)
+	}
+	reference, prefix, err := normalizeOCI(source.Base, selection.Kit, selection.Version)
+	if err != nil {
+		return "", "", fmt.Errorf("sandbox.kits.use[%d]: %w", index, err)
+	}
+	return reference, prefix, nil
+}
+
+func linkGitSelection(index int, selection Selection, source Source) (string, string, error) {
+	if selection.Version != "" {
+		return "", "", fmt.Errorf("sandbox.kits.use[%d].version is not valid for Git source %q", index, selection.Source)
+	}
+	reference, prefix, err := normalizeGit(source.Repo, source.Ref, selection.Kit)
+	if err != nil {
+		return "", "", fmt.Errorf("sandbox.kits.use[%d]: %w", index, err)
+	}
+	return reference, prefix, nil
+}
+
+func validateLocalSelection(index int, selection Selection) error {
+	if selection.Version != "" {
+		return fmt.Errorf("sandbox.kits.use[%d].version is not valid for local source %q", index, selection.Source)
+	}
+	return nil
+}
+
+func updateTrust(trust *Trust, seenPrefixes map[string]struct{}, item LinkedSelection) {
+	if item.Source.Type == SourceLocal {
+		trust.AllowLocalKits = true
+	}
+	if item.TrustPrefix == "" {
+		return
+	}
+	if _, exists := seenPrefixes[item.TrustPrefix]; exists {
+		return
+	}
+	seenPrefixes[item.TrustPrefix] = struct{}{}
+	trust.AllowedSources = append(trust.AllowedSources, item.TrustPrefix)
 }
 
 func normalizeGit(repository, ref, kit string) (string, string, error) {

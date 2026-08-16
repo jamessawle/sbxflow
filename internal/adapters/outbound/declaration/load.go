@@ -70,70 +70,116 @@ func LoadLifecycleTarget(data []byte) (declarationport.LifecycleTarget, error) {
 		return declarationport.LifecycleTarget{}, err
 	}
 
+	root, err := lifecycleRoot(document)
+	if err != nil {
+		return declarationport.LifecycleTarget{}, err
+	}
+	if err := validateLifecycleVersion(root); err != nil {
+		return declarationport.LifecycleTarget{}, err
+	}
+	sandbox, err := lifecycleSandbox(root)
+	if err != nil {
+		return declarationport.LifecycleTarget{}, err
+	}
+	name, err := lifecycleName(sandbox)
+	if err != nil {
+		return declarationport.LifecycleTarget{}, err
+	}
+	allowedHosts, err := lifecycleAllowedHosts(sandbox)
+	if err != nil {
+		return declarationport.LifecycleTarget{}, err
+	}
+	return declarationport.LifecycleTarget{Name: name, AllowedHosts: allowedHosts}, nil
+}
+
+func lifecycleRoot(document any) (map[string]any, error) {
 	root, ok := document.(map[string]any)
 	if !ok {
-		return declarationport.LifecycleTarget{}, errors.New("configuration identity must be an object")
+		return nil, errors.New("configuration identity must be an object")
 	}
+	return root, nil
+}
+
+func validateLifecycleVersion(root map[string]any) error {
 	version, ok := root["version"]
 	if !ok {
-		return declarationport.LifecycleTarget{}, errors.New("configuration identity is missing version")
+		return errors.New("configuration identity is missing version")
 	}
 	versionNumber, ok := version.(float64)
 	if !ok {
-		return declarationport.LifecycleTarget{}, errors.New("configuration identity version must be an integer")
+		return errors.New("configuration identity version must be an integer")
 	}
 	if versionNumber != 1 {
-		return declarationport.LifecycleTarget{}, fmt.Errorf("unsupported configuration version %v", version)
+		return fmt.Errorf("unsupported configuration version %v", version)
 	}
+	return nil
+}
 
+func lifecycleSandbox(root map[string]any) (map[string]any, error) {
 	sandbox, ok := root["sandbox"]
 	if !ok {
-		return declarationport.LifecycleTarget{}, errors.New("configuration identity is missing sandbox")
+		return nil, errors.New("configuration identity is missing sandbox")
 	}
 	sandboxObject, ok := sandbox.(map[string]any)
 	if !ok {
-		return declarationport.LifecycleTarget{}, errors.New("configuration identity sandbox must be an object")
+		return nil, errors.New("configuration identity sandbox must be an object")
 	}
-	name, ok := sandboxObject["name"]
+	return sandboxObject, nil
+}
+
+func lifecycleName(sandbox map[string]any) (string, error) {
+	name, ok := sandbox["name"]
 	if !ok {
-		return declarationport.LifecycleTarget{}, errors.New("configuration identity is missing sandbox.name")
+		return "", errors.New("configuration identity is missing sandbox.name")
 	}
 	nameString, ok := name.(string)
 	if !ok {
-		return declarationport.LifecycleTarget{}, errors.New("configuration identity sandbox.name must be a string")
+		return "", errors.New("configuration identity sandbox.name must be a string")
 	}
 	if nameString == "" {
-		return declarationport.LifecycleTarget{}, errors.New("configuration identity sandbox.name must not be empty")
+		return "", errors.New("configuration identity sandbox.name must not be empty")
 	}
-	var allowedHosts []string
-	if network, exists := sandboxObject["network"]; exists {
-		networkObject, ok := network.(map[string]any)
-		if !ok {
-			return declarationport.LifecycleTarget{}, errors.New("configuration identity sandbox.network must be an object")
-		}
-		if hosts, exists := networkObject["allowedHosts"]; exists {
-			hostList, ok := hosts.([]any)
-			if !ok {
-				return declarationport.LifecycleTarget{}, errors.New("configuration identity sandbox.network.allowedHosts must be an array")
-			}
-			seen := make(map[string]struct{}, len(hostList))
-			for index, host := range hostList {
-				value, ok := host.(string)
-				if !ok || value == "" {
-					return declarationport.LifecycleTarget{}, fmt.Errorf("configuration identity sandbox.network.allowedHosts[%d] must be a non-empty string", index)
-				}
-				if !allowedHost(value) {
-					return declarationport.LifecycleTarget{}, fmt.Errorf("configuration identity %w", allowedHostsError(index, value))
-				}
-				if _, duplicate := seen[value]; duplicate {
-					return declarationport.LifecycleTarget{}, fmt.Errorf("configuration identity sandbox.network.allowedHosts[%d] duplicates %q", index, value)
-				}
-				seen[value] = struct{}{}
-				allowedHosts = append(allowedHosts, value)
-			}
-		}
+	return nameString, nil
+}
+
+func lifecycleAllowedHosts(sandbox map[string]any) ([]string, error) {
+	network, exists := sandbox["network"]
+	if !exists {
+		return nil, nil
 	}
-	return declarationport.LifecycleTarget{Name: nameString, AllowedHosts: allowedHosts}, nil
+	networkObject, ok := network.(map[string]any)
+	if !ok {
+		return nil, errors.New("configuration identity sandbox.network must be an object")
+	}
+	hosts, exists := networkObject["allowedHosts"]
+	if !exists {
+		return nil, nil
+	}
+	hostList, ok := hosts.([]any)
+	if !ok {
+		return nil, errors.New("configuration identity sandbox.network.allowedHosts must be an array")
+	}
+	return parseLifecycleAllowedHosts(hostList)
+}
+
+func parseLifecycleAllowedHosts(hostList []any) ([]string, error) {
+	allowedHosts := make([]string, 0, len(hostList))
+	seen := make(map[string]struct{}, len(hostList))
+	for index, host := range hostList {
+		value, ok := host.(string)
+		if !ok || value == "" {
+			return nil, fmt.Errorf("configuration identity sandbox.network.allowedHosts[%d] must be a non-empty string", index)
+		}
+		if !allowedHost(value) {
+			return nil, fmt.Errorf("configuration identity %w", allowedHostsError(index, value))
+		}
+		if _, duplicate := seen[value]; duplicate {
+			return nil, fmt.Errorf("configuration identity sandbox.network.allowedHosts[%d] duplicates %q", index, value)
+		}
+		seen[value] = struct{}{}
+		allowedHosts = append(allowedHosts, value)
+	}
+	return allowedHosts, nil
 }
 
 // allowedHostsError names the forms Docker Sandboxes can actually match, for the
