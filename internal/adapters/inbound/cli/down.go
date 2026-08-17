@@ -15,7 +15,8 @@ type DownRunner interface {
 	Run(ctx context.Context, start string, streams lifecycle.Streams) error
 }
 
-func newDownCommand(runner DownRunner) *cobra.Command {
+// NewDownCommand returns a command that stops a sandbox.
+func NewDownCommand(runner DownRunner) *cobra.Command {
 	return &cobra.Command{
 		Use:   "down",
 		Short: "Stop the repository's Docker Sandbox without removing it",

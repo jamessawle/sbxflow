@@ -124,11 +124,11 @@ func executeWithDoctor(args []string, info buildinfo.Info, runner DoctorRunner) 
 	var stdout, stderr bytes.Buffer
 	root := NewRootCommand(
 		Streams{In: strings.NewReader(""), Out: &stdout, Err: &stderr},
-		runner,
-		fakeValidateRunner{report: validation.Report{}},
-		&fakeUpRunner{},
-		&fakeDownRunner{},
-		&fakeDestroyRunner{},
+		NewDoctorCommand(runner),
+		NewValidateCommand(fakeValidateRunner{report: validation.Report{}}),
+		NewUpCommand(&fakeUpRunner{}),
+		NewDownCommand(&fakeDownRunner{}),
+		NewDestroyCommand(&fakeDestroyRunner{}),
 	)
 	root.Version = formatVersion(info)
 	root.SetArgs(args)

@@ -93,11 +93,7 @@ func executeWithDestroy(args []string, input string, runner DestroyRunner) (stri
 	var stdout, stderr bytes.Buffer
 	root := NewRootCommand(
 		Streams{In: strings.NewReader(input), Out: &stdout, Err: &stderr},
-		fakeDoctorRunner{},
-		fakeValidateRunner{},
-		&fakeUpRunner{},
-		&fakeDownRunner{},
-		runner,
+		NewDestroyCommand(runner),
 	)
 	root.SetArgs(args)
 	err := root.ExecuteContext(context.Background())

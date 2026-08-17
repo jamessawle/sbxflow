@@ -17,7 +17,8 @@ type UpRunner interface {
 	Run(ctx context.Context, start string, options lifecycle.UpOptions, streams lifecycle.Streams) (lifecycle.ValidationReport, error)
 }
 
-func newUpCommand(runner UpRunner) *cobra.Command {
+// NewUpCommand returns a command that creates or enters a sandbox.
+func NewUpCommand(runner UpRunner) *cobra.Command {
 	var recreate bool
 	var force bool
 	command := &cobra.Command{

@@ -20,8 +20,15 @@ type Streams struct {
 	Err io.Writer
 }
 
+// Invocation contains the process inputs used to execute the command tree.
+type Invocation struct {
+	Args      []string
+	Streams   Streams
+	BuildInfo buildinfo.Info
+}
+
 // NewRootCommand returns a fresh sbxflow root command.
-func NewRootCommand(streams Streams, doctorRunner DoctorRunner, validateRunner ValidateRunner, upRunner UpRunner, downRunner DownRunner, destroyRunner DestroyRunner) *cobra.Command {
+func NewRootCommand(streams Streams, commands ...*cobra.Command) *cobra.Command {
 	root := &cobra.Command{
 		Use:   "sbxflow",
 		Short: "Apply a repository's Docker Sandbox configuration and lifecycle",
@@ -59,23 +66,17 @@ func NewRootCommand(streams Streams, doctorRunner DoctorRunner, validateRunner V
 		return target.Help()
 	}
 	root.SetHelpCommand(help)
-	root.AddCommand(help, newDestroyCommand(destroyRunner), newDoctorCommand(doctorRunner), newDownCommand(downRunner), newUpCommand(upRunner), newValidateCommand(validateRunner))
+	root.AddCommand(help)
+	root.AddCommand(commands...)
 
 	return root
 }
 
 // Execute runs a fresh root command.
-func Execute(ctx context.Context, args []string, streams Streams, info buildinfo.Info, doctorRunner DoctorRunner, validateRunner ValidateRunner, upRunner UpRunner, downRunner DownRunner, destroyRunner DestroyRunner) error {
-	root := NewRootCommand(
-		streams,
-		doctorRunner,
-		validateRunner,
-		upRunner,
-		downRunner,
-		destroyRunner,
-	)
-	root.Version = formatVersion(info)
-	root.SetArgs(args)
+func Execute(ctx context.Context, invocation Invocation, commands ...*cobra.Command) error {
+	root := NewRootCommand(invocation.Streams, commands...)
+	root.Version = formatVersion(invocation.BuildInfo)
+	root.SetArgs(invocation.Args)
 
 	return root.ExecuteContext(ctx)
 }

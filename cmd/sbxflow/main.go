@@ -64,14 +64,16 @@ func main() {
 
 	err := cli.Execute(
 		context.Background(),
-		os.Args[1:],
-		cli.Streams{In: os.Stdin, Out: os.Stdout, Err: os.Stderr},
-		buildinfo.Current(),
-		doctorRunner,
-		validationRunner,
-		upRunner,
-		downRunner,
-		destroyRunner,
+		cli.Invocation{
+			Args:      os.Args[1:],
+			Streams:   cli.Streams{In: os.Stdin, Out: os.Stdout, Err: os.Stderr},
+			BuildInfo: buildinfo.Current(),
+		},
+		cli.NewDoctorCommand(doctorRunner),
+		cli.NewValidateCommand(validationRunner),
+		cli.NewUpCommand(upRunner),
+		cli.NewDownCommand(downRunner),
+		cli.NewDestroyCommand(destroyRunner),
 	)
 	if err != nil {
 		var exitError *exec.ExitError
