@@ -79,11 +79,7 @@ func executeWithDown(args []string, runner DownRunner) (string, string, error) {
 	var stdout, stderr bytes.Buffer
 	root := NewRootCommand(
 		Streams{In: strings.NewReader("input"), Out: &stdout, Err: &stderr},
-		fakeDoctorRunner{},
-		fakeValidateRunner{},
-		&fakeUpRunner{},
-		runner,
-		&fakeDestroyRunner{},
+		NewDownCommand(runner),
 	)
 	root.SetArgs(args)
 	err := root.ExecuteContext(context.Background())

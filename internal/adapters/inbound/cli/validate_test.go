@@ -101,11 +101,7 @@ func executeWithValidate(args []string, runner ValidateRunner) (string, string, 
 	var errorOutput strings.Builder
 	root := NewRootCommand(
 		Streams{In: strings.NewReader(""), Out: &output, Err: &errorOutput},
-		fakeDoctorRunner{},
-		runner,
-		&fakeUpRunner{},
-		&fakeDownRunner{},
-		&fakeDestroyRunner{},
+		NewValidateCommand(runner),
 	)
 	root.Version = formatVersion(buildinfo.Info{Version: "development"})
 	root.SetArgs(args)

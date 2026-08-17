@@ -19,7 +19,8 @@ type ValidateRunner interface {
 	Run(ctx context.Context, start string) validation.Report
 }
 
-func newValidateCommand(runner ValidateRunner) *cobra.Command {
+// NewValidateCommand returns a command that validates a repository declaration.
+func NewValidateCommand(runner ValidateRunner) *cobra.Command {
 	return &cobra.Command{
 		Use:   "validate",
 		Short: "Validate the repository's Docker Sandbox configuration",

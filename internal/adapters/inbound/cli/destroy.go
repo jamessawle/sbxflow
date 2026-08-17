@@ -15,7 +15,8 @@ type DestroyRunner interface {
 	Run(ctx context.Context, start string, force bool, streams lifecycle.Streams) error
 }
 
-func newDestroyCommand(runner DestroyRunner) *cobra.Command {
+// NewDestroyCommand returns a command that removes a sandbox.
+func NewDestroyCommand(runner DestroyRunner) *cobra.Command {
 	var force bool
 	cmd := &cobra.Command{
 		Use:   "destroy",

@@ -17,7 +17,8 @@ type DoctorRunner interface {
 	Run(ctx context.Context) doctor.Report
 }
 
-func newDoctorCommand(runner DoctorRunner) *cobra.Command {
+// NewDoctorCommand returns a command that runs system diagnostics.
+func NewDoctorCommand(runner DoctorRunner) *cobra.Command {
 	return &cobra.Command{
 		Use:   "doctor",
 		Short: "Check Docker Sandboxes system health and configuration",
