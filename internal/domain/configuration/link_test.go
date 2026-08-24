@@ -45,6 +45,7 @@ func TestLinkValidatesReferencesAndVersionRules(t *testing.T) {
 
 func TestLinkPreservesOrderAndDerivesTrust(t *testing.T) {
 	configuration := testConfiguration()
+	configuration.Sandbox.Hooks.Initialize = []Command{{Command: []string{"npm", "ci"}}}
 	configuration.Sandbox.Kits.Use = append(configuration.Sandbox.Kits.Use,
 		Selection{Source: "git", Kit: "second"},
 		Selection{Source: "oci", Kit: "image", Version: "v2"},
@@ -75,6 +76,10 @@ func TestLinkPreservesOrderAndDerivesTrust(t *testing.T) {
 	}
 	if got := linked.Selections[1].RemoteReference; got != "ghcr.io/example/image:v1" {
 		t.Fatalf("OCI RemoteReference = %q", got)
+	}
+	configuration.Sandbox.Hooks.Initialize[0].Command[0] = "changed"
+	if got := linked.Configuration.Sandbox.Hooks.Initialize[0].Command[0]; got != "npm" {
+		t.Fatalf("linked initialize command shares input storage: %q", got)
 	}
 }
 

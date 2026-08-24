@@ -46,6 +46,17 @@ type Sandbox struct {
 	Agent   string  `json:"agent" yaml:"agent"`
 	Kits    Kits    `json:"kits" yaml:"kits"`
 	Network Network `json:"network,omitempty" yaml:"network,omitempty"`
+	Hooks   Hooks   `json:"hooks,omitempty" yaml:"hooks,omitempty"`
+}
+
+// Hooks contains ordered commands run at defined sandbox lifecycle boundaries.
+type Hooks struct {
+	Initialize []Command `json:"initialize,omitempty" yaml:"initialize,omitempty"`
+}
+
+// Command is an executable and its arguments, preserved as a literal vector.
+type Command struct {
+	Command []string `json:"command" yaml:"command"`
 }
 
 // Network contains ordered sandbox-scoped network resources.

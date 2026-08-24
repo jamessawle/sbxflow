@@ -213,6 +213,37 @@ after the sandbox was removed, retry the resource reported in the error with:
 sbx policy rm network --sandbox <sandbox-name> --resource <resource>
 ```
 
+## Sandbox initialization
+
+Use `sandbox.hooks.initialize` to prepare a newly created sandbox before its
+agent starts. Each entry is a literal command argument vector; commands run in
+declaration order inside the sandbox with the repository workspace as their
+working directory:
+
+```yaml
+sandbox:
+  hooks:
+    initialize:
+      - command: [npm, ci]
+      - command: [sh, -c, "printf 'setup complete\n'"]
+```
+
+sbxflow does not add an implicit shell. Shell metacharacters are ordinary
+argument text unless the vector explicitly invokes a shell as in the second
+example. Standard output and error are forwarded to `sbxflow up`, while
+standard input is disconnected so setup cannot consume confirmation or agent
+input.
+
+Initialization runs only when `up` creates a missing sandbox, including after
+`up --recreate`; an ordinary `up` never reruns or reconciles hooks for an
+existing running or stopped sandbox. Recreate the sandbox to apply changed
+hooks. There is no implicit timeout, so readiness checks should be bounded.
+Cancellation or the first failed command prevents later commands and agent
+entry, then removes the newly created sandbox and its declared scoped
+resources. This rollback cannot undo changes already written to the
+host-mounted workspace, so commands should tolerate a complete retry after a
+partial run.
+
 ## Versioning
 
 sbxflow follows [Semantic Versioning](https://semver.org/). Before v1.0.0, minor releases may make incompatible changes to the CLI or configuration format; patch releases do not intentionally introduce incompatible changes.

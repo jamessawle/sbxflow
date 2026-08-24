@@ -34,6 +34,7 @@ type Trust struct {
 // Link resolves dynamic source references, validates source-specific selection
 // rules, and derives offline remote references and trust settings.
 func Link(configuration Configuration) (LinkedConfiguration, error) {
+	configuration.Sandbox.Hooks.Initialize = cloneCommands(configuration.Sandbox.Hooks.Initialize)
 	linked := LinkedConfiguration{
 		Configuration: configuration,
 		Selections:    make([]LinkedSelection, 0, len(configuration.Sandbox.Kits.Use)),
@@ -53,6 +54,14 @@ func Link(configuration Configuration) (LinkedConfiguration, error) {
 	}
 
 	return linked, nil
+}
+
+func cloneCommands(commands []Command) []Command {
+	cloned := make([]Command, len(commands))
+	for index, command := range commands {
+		cloned[index].Command = append([]string(nil), command.Command...)
+	}
+	return cloned
 }
 
 func linkSelection(sources map[string]Source, index int, selection Selection) (LinkedSelection, error) {

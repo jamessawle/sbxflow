@@ -157,6 +157,9 @@ func executableValidateTest(t *testing.T, binary string) {
 sandbox:
   name: executable-test
   agent: codex
+  hooks:
+    initialize:
+      - command: [must-not-run]
   kits:
     sources:
       remote:
@@ -279,6 +282,10 @@ sandbox:
   network:
     allowedHosts:
       - api.example.com
+  hooks:
+    initialize:
+      - command: [printf, hook-output]
+      - command: [sh, -c, "printf shell-hook"]
   kits:
     sources:
       remote:
@@ -334,6 +341,16 @@ case "$1 $2" in
 	"policy rm")
 		exit 0
 		;;
+	"exec --workdir")
+		if [ -n "${SBX_TEST_EXEC_EXIT:-}" ]; then
+			echo 'hook failed' >&2
+			exit "$SBX_TEST_EXEC_EXIT"
+		fi
+		case "$5" in
+			printf) printf '%s' "$6" ;;
+			sh) printf shell-hook ;;
+		esac
+		;;
   *)
     case "$1" in
       create)
@@ -379,12 +396,34 @@ esac
 	fixture.runEOFConfirmationCases(t)
 	t.Run("running sandbox decline stops before mutation", fixture.declineRunning)
 	t.Run("inspection failure stops before mutation", fixture.inspectionFailure)
+	t.Run("malformed hooks stop before Docker access", fixture.malformedHooks)
 
 }
 
 type executableUpFixture struct {
 	binary, nested, fakeDirectory                            string
 	canonicalLocalKit, canonicalRepository, validationStatus string
+}
+
+func (fixture executableUpFixture) malformedHooks(t *testing.T) {
+	declaration := filepath.Join(fixture.canonicalRepository, "sbxflow.yaml")
+	original, err := os.ReadFile(declaration)
+	if err != nil {
+		t.Fatal(err)
+	}
+	malformed := strings.Replace(string(original), "command: [printf, hook-output]", "command: []", 1)
+	if err := os.WriteFile(declaration, []byte(malformed), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.WriteFile(declaration, original, 0o600) })
+	logPath := filepath.Join(fixture.fakeDirectory, "malformed-hooks-calls.log")
+	_, stderr, exitCode := runBinaryInDirectory(t, fixture.binary, fixture.nested, []string{"up"}, []string{"PATH=" + fixture.fakeDirectory, "SBX_TEST_LOG=" + logPath})
+	if exitCode == 0 || !strings.Contains(stderr, "command") {
+		t.Fatalf("up exit = %d, stderr = %q", exitCode, stderr)
+	}
+	if _, err := os.Stat(logPath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("Docker call log exists or stat failed: %v", err)
+	}
 }
 
 func (fixture executableUpFixture) forceWithoutRecreate(t *testing.T) {
@@ -419,7 +458,7 @@ func (fixture executableUpFixture) missingSandbox(t *testing.T) {
 		[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath},
 		"hello creation\n",
 	)
-	if exitCode != 0 || !strings.Contains(stdout, "agent received: hello creation") || stderr != validationStatus+"docker create diagnostic\ndocker run diagnostic\n" {
+	if exitCode != 0 || !strings.Contains(stdout, "hook-outputshell-hookagent received: hello creation") || stderr != validationStatus+"docker create diagnostic\ndocker run diagnostic\n" {
 		t.Fatalf("up exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
 	}
 	calls, err := os.ReadFile(logPath)
@@ -427,7 +466,7 @@ func (fixture executableUpFixture) missingSandbox(t *testing.T) {
 		t.Fatalf("read calls: %v", err)
 	}
 	wantCreate := "create --name executable-up --kit git+https://github.com/example/kits.git#ref=v1&dir=remote-tooling --kit " + canonicalLocalKit + " codex " + canonicalRepository
-	for _, want := range []string{"kit validate " + canonicalLocalKit, "ls --json", wantCreate, "run codex --name executable-up"} {
+	for _, want := range []string{"kit validate " + canonicalLocalKit, "ls --json", wantCreate, "exec --workdir " + canonicalRepository + " executable-up printf hook-output", "exec --workdir " + canonicalRepository + " executable-up sh -c printf shell-hook", "run codex --name executable-up"} {
 		if !strings.Contains(string(calls), want+"\n") {
 			t.Errorf("calls do not contain %q:\n%s", want, calls)
 		}
@@ -514,6 +553,8 @@ func (fixture executableUpFixture) recreateExisting(t *testing.T) {
 		"policy rm network --sandbox executable-up --resource api.example.com",
 		wantCreate,
 		"policy allow network --sandbox executable-up api.example.com",
+		"exec --workdir " + canonicalRepository + " executable-up printf hook-output",
+		"exec --workdir " + canonicalRepository + " executable-up sh -c printf shell-hook",
 		"run codex --name executable-up",
 	}
 	if got := strings.Split(strings.TrimSpace(string(calls)), "\n"); !reflect.DeepEqual(got, wantCalls) {
@@ -573,6 +614,8 @@ func (fixture executableUpFixture) forceRunning(t *testing.T) {
 		"policy rm network --sandbox executable-up --resource api.example.com",
 		wantCreate,
 		"policy allow network --sandbox executable-up api.example.com",
+		"exec --workdir " + canonicalRepository + " executable-up printf hook-output",
+		"exec --workdir " + canonicalRepository + " executable-up sh -c printf shell-hook",
 		"run codex --name executable-up",
 	}
 	if got := strings.Split(strings.TrimSpace(string(calls)), "\n"); !reflect.DeepEqual(got, wantCalls) {
@@ -675,6 +718,9 @@ func executableDownTest(t *testing.T, binary string) {
 sandbox:
   name: executable-down
   agent: unsupported
+  hooks:
+    initialize:
+      - command: []
   kits:
     sources:
       local:
@@ -745,6 +791,9 @@ func executableDestroyTest(t *testing.T, binary string) {
 sandbox:
   name: executable-destroy
   agent: unsupported
+  hooks:
+    initialize:
+      - command: []
   kits:
     sources:
       local:

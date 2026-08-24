@@ -49,16 +49,20 @@ type RecreationConfirmer interface {
 	ConfirmRunningSandboxRecreation(name string, streams Streams) (bool, error)
 }
 
+// UpSandbox is the exact set of Docker Sandbox capabilities used by up.
+type UpSandbox interface {
+	sandboxport.StateInspector
+	sandboxport.Creator
+	sandboxport.Remover
+	sandboxport.Runner
+	sandboxport.CommandExecutor
+	sandboxport.NetworkPolicy
+}
+
 // UpRunner validates, inspects, and enters the declared sandbox.
 type UpRunner struct {
 	Validation Validator
-	Sandboxes  interface {
-		sandboxport.StateInspector
-		sandboxport.Creator
-		sandboxport.Remover
-		sandboxport.Runner
-		sandboxport.NetworkPolicy
-	}
+	Sandboxes  UpSandbox
 }
 
 // AttachedProcessError identifies a failure already rendered by the attached
@@ -151,15 +155,28 @@ func (r UpRunner) create(ctx context.Context, plan Plan, streams Streams) error 
 	if err != nil {
 		return AttachedProcessError{Err: err}
 	}
-	if len(plan.AllowedHosts) == 0 {
-		return nil
+	if len(plan.AllowedHosts) != 0 {
+		err = r.Sandboxes.AllowNetwork(ctx, sandboxport.NetworkAllowRequest{Name: plan.Name, Resources: plan.AllowedHosts})
+		if err != nil {
+			return r.rollbackCreation(ctx, plan, streams, err)
+		}
 	}
-	err = r.Sandboxes.AllowNetwork(ctx, sandboxport.NetworkAllowRequest{Name: plan.Name, Resources: plan.AllowedHosts})
-	if err == nil {
-		return nil
+	for index, command := range plan.Initialize {
+		err = r.Sandboxes.ExecuteCommand(ctx, sandboxport.CommandRequest{Name: plan.Name, Workspace: plan.Workspace, Command: command}, sandboxport.Streams{Out: streams.Out, Err: streams.Err})
+		if err != nil {
+			initializationErr := fmt.Errorf("initialize command %d %q: %w", index+1, command, err)
+			return r.rollbackCreation(ctx, plan, streams, initializationErr)
+		}
 	}
-	if rollback := removeSandbox(ctx, r.Sandboxes, plan.Name, plan.AllowedHosts, true, streams); rollback != nil {
-		return fmt.Errorf("%w; the created sandbox %q could not be removed again: %v", err, plan.Name, rollback)
+	return nil
+}
+
+func (r UpRunner) rollbackCreation(ctx context.Context, plan Plan, streams Streams, primary error) error {
+	// Cancellation stops the active initialization command but must not prevent
+	// cleanup of the incomplete sandbox it created.
+	cleanupContext := context.WithoutCancel(ctx)
+	if rollback := removeSandbox(cleanupContext, r.Sandboxes, plan.Name, plan.AllowedHosts, true, streams); rollback != nil {
+		return fmt.Errorf("%w; the created sandbox %q could not be removed again: %v", primary, plan.Name, rollback)
 	}
-	return err
+	return primary
 }
