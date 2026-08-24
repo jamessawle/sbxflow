@@ -7,9 +7,9 @@ Every declaration is checked against sbxflow's published
 [Draft 2020-12 JSON Schema](../schema/sbxflow.schema.json). From an example
 directory, run `sbxflow validate` to discover and validate its declaration.
 
-- [`personal-site/sbxflow.yaml`](personal-site/sbxflow.yaml) translates the
-  existing `personal-site/.docker-sbx/sandbox.sh` configuration and demonstrates
-  sandbox-scoped network resources.
+- [`node-project/sbxflow.yaml`](node-project/sbxflow.yaml) demonstrates
+  sandbox-scoped network resources and ordered initialization for a Node.js
+  repository.
 - [`source-types/sbxflow.yaml`](source-types/sbxflow.yaml) demonstrates Git,
   OCI, and local sources. A local source can select either a directory or a ZIP
   kit. Its local paths are illustrative; provide matching artifacts before
@@ -19,6 +19,14 @@ Each configuration separates two concerns:
 
 - `sources` names and pins reusable kit locations.
 - `use` selects kit artifacts in the order passed to Docker Sandboxes.
+
+The Node project example also declares creation-only `hooks.initialize`
+commands. Its bounded shell loop waits for the `language-node-npm` kit's
+sandbox-local `node_modules` mount before `npm ci` writes dependencies. Hooks
+run non-interactively in order and forward output; use an explicit shell for
+shell syntax. Changed hooks require `up --recreate`. A failed or cancelled hook
+removes the new sandbox and declared scoped resources, but cannot undo changes
+to the host-mounted workspace, so bootstrap commands should be safe to retry.
 
 Kit-source trust is derived from the selected sources and is not declared in the
 configuration. Remote Git and OCI selections are normalized without network

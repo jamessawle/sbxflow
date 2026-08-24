@@ -34,6 +34,7 @@ var (
 	_ sandboxport.StateInspector   = Client{}
 	_ sandboxport.Creator          = Client{}
 	_ sandboxport.Runner           = Client{}
+	_ sandboxport.CommandExecutor  = Client{}
 	_ sandboxport.Stopper          = Client{}
 	_ sandboxport.Remover          = Client{}
 	_ sandboxport.NetworkPolicy    = Client{}
@@ -50,6 +51,7 @@ func NewClient(timeout time.Duration) Client {
 
 type CreateRequest = sandboxport.CreateRequest
 type RunRequest = sandboxport.RunRequest
+type CommandRequest = sandboxport.CommandRequest
 type RemoveRequest = sandboxport.RemoveRequest
 type NetworkAllowRequest = sandboxport.NetworkAllowRequest
 type NetworkRemoveRequest = sandboxport.NetworkRemoveRequest
@@ -242,6 +244,23 @@ func (c Client) RunSandbox(ctx context.Context, request RunRequest, streams Stre
 		Stdin:       streams.In,
 		Stdout:      streams.Out,
 		Stderr:      streams.Err,
+	})
+}
+
+// ExecuteCommand runs a literal argument vector in the sandbox workspace. It
+// deliberately leaves stdin detached while forwarding stdout and stderr.
+func (c Client) ExecuteCommand(ctx context.Context, request CommandRequest, streams Streams) error {
+	executable, err := c.Commands.LookPath("sbx")
+	if err != nil {
+		return fmt.Errorf("locate sbx for sandbox command execution: %w", err)
+	}
+	args := []string{"exec", "--workdir", request.Workspace, request.Name}
+	args = append(args, request.Command...)
+	return c.Interactive.Run(ctx, InteractiveInvocation{
+		Executable: executable,
+		Args:       args,
+		Stdout:     streams.Out,
+		Stderr:     streams.Err,
 	})
 }
 

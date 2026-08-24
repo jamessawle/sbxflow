@@ -1,0 +1,45 @@
+version: 1
+
+sandbox:
+  name: node-project
+  agent: codex
+
+  network:
+    allowedHosts:
+      - registry.npmjs.org
+
+  hooks:
+    initialize:
+      - command:
+          - bash
+          - -c
+          - |
+            for _ in {1..300}; do
+              mountpoint -q "$WORKSPACE_DIR/node_modules" && exit 0
+              sleep 0.1
+            done
+            echo "Timed out waiting for the sandbox-local node_modules mount." >&2
+            exit 1
+      - command: [npm, ci]
+
+  kits:
+    sources:
+      community:
+        type: git
+        repo: https://github.com/docker/sbx-kits-contrib.git
+        ref: v0.16.0
+
+      project:
+        type: git
+        repo: https://github.com/example/sbx-kits.git
+        ref: v1.0.0
+
+    use:
+      - source: community
+        kit: mise
+
+      - source: project
+        kit: language/node-npm
+
+      - source: project
+        kit: mise/network-node

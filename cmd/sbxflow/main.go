@@ -36,13 +36,7 @@ func main() {
 	var targetResolver declarationport.TargetResolver = declarations
 	var doctorInspector sandboxport.Inspector = doctorSandboxes
 	var localKitValidator sandboxport.KitValidator = lifecycleSandboxes
-	var upSandboxes interface {
-		sandboxport.StateInspector
-		sandboxport.Creator
-		sandboxport.Remover
-		sandboxport.Runner
-		sandboxport.NetworkPolicy
-	} = lifecycleSandboxes
+	var upSandboxes lifecycle.UpSandbox = lifecycleSandboxes
 	var downSandboxes interface {
 		sandboxport.ExistenceChecker
 		sandboxport.Stopper

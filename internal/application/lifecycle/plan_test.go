@@ -11,7 +11,7 @@ func TestNewPlanPreservesKitOrderAndTrust(t *testing.T) {
 	report := configuration.Validation{
 		Declaration: "/repo/sbxflow.yaml",
 		Linked: configuration.LinkedConfiguration{
-			Configuration: configuration.Configuration{Sandbox: configuration.Sandbox{Name: "project", Agent: "codex", Network: configuration.Network{AllowedHosts: []string{"first.example", "second.example"}}}},
+			Configuration: configuration.Configuration{Sandbox: configuration.Sandbox{Name: "project", Agent: "codex", Network: configuration.Network{AllowedHosts: []string{"first.example", "second.example"}}, Hooks: configuration.Hooks{Initialize: []configuration.Command{{Command: []string{"npm", "ci"}}}}}},
 			Selections: []configuration.LinkedSelection{
 				{Index: 0, Source: configuration.Source{Type: configuration.SourceGit}, RemoteReference: "git+https://github.com/example/kits.git#ref=v1&dir=git-kit"},
 				{Index: 1, Source: configuration.Source{Type: configuration.SourceLocal}},
@@ -48,6 +48,13 @@ func TestNewPlanPreservesKitOrderAndTrust(t *testing.T) {
 	}
 	if !reflect.DeepEqual(plan.AllowedHosts, []string{"first.example", "second.example"}) {
 		t.Fatalf("AllowedHosts = %#v", plan.AllowedHosts)
+	}
+	if !reflect.DeepEqual(plan.Initialize, [][]string{{"npm", "ci"}}) {
+		t.Fatalf("Initialize = %#v", plan.Initialize)
+	}
+	report.Linked.Configuration.Sandbox.Hooks.Initialize[0].Command[0] = "changed"
+	if plan.Initialize[0][0] != "npm" {
+		t.Fatalf("Initialize shares declaration storage: %#v", plan.Initialize)
 	}
 }
 

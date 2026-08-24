@@ -17,6 +17,7 @@ type Plan struct {
 	Kits         []string
 	Trust        configuration.Trust
 	AllowedHosts []string
+	Initialize   [][]string
 }
 
 // NewPlan converts a successful validation report into ordered Docker
@@ -50,6 +51,10 @@ func NewPlan(report configuration.Validation) (Plan, error) {
 		kits = append(kits, selection.RemoteReference)
 	}
 
+	initialize := make([][]string, len(report.Linked.Configuration.Sandbox.Hooks.Initialize))
+	for index, command := range report.Linked.Configuration.Sandbox.Hooks.Initialize {
+		initialize[index] = append([]string(nil), command.Command...)
+	}
 	return Plan{
 		Name:         report.Linked.Configuration.Sandbox.Name,
 		Agent:        report.Linked.Configuration.Sandbox.Agent,
@@ -57,5 +62,6 @@ func NewPlan(report configuration.Validation) (Plan, error) {
 		Kits:         kits,
 		Trust:        report.Linked.Trust,
 		AllowedHosts: append([]string(nil), report.Linked.Configuration.Sandbox.Network.AllowedHosts...),
+		Initialize:   initialize,
 	}, nil
 }

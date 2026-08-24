@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	declarationport "github.com/jamessawle/sbxflow/internal/ports/declaration"
 )
 
 func TestLoadRepositoryExamples(t *testing.T) {
@@ -128,6 +130,35 @@ sandbox:
 	}
 }
 
+func TestLoadPreservesOrderedInitializationCommands(t *testing.T) {
+	document := `version: 1
+sandbox:
+  name: demo
+  agent: codex
+  hooks:
+    initialize:
+      - command: [bash, -c, "printf '%s' literal"]
+      - command: [npm, ci]
+  kits:
+    sources:
+      community:
+        type: git
+        repo: https://github.com/example/kits.git
+        ref: v1
+    use:
+      - source: community
+        kit: tooling
+`
+	configuration, err := Load([]byte(document))
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	want := []declarationport.Command{{Command: []string{"bash", "-c", "printf '%s' literal"}}, {Command: []string{"npm", "ci"}}}
+	if !reflect.DeepEqual(configuration.Sandbox.Hooks.Initialize, want) {
+		t.Fatalf("initialize = %#v, want %#v", configuration.Sandbox.Hooks.Initialize, want)
+	}
+}
+
 func TestLoadRejectsInvalidDocuments(t *testing.T) {
 	valid := `version: 1
 sandbox:
@@ -163,6 +194,11 @@ sandbox:
 		"empty network host":     {document: strings.Replace(valid, "  kits:", "  network:\n    allowedHosts: ['']\n  kits:", 1), want: "allowedHosts"},
 		"duplicate network host": {document: strings.Replace(valid, "  kits:", "  network:\n    allowedHosts: [example.com, example.com]\n  kits:", 1), want: "items at 0 and 1 are equal"},
 		"unknown network field":  {document: strings.Replace(valid, "  kits:", "  network:\n    unknown: true\n  kits:", 1), want: "unknown"},
+		"empty command vector":   {document: strings.Replace(valid, "  kits:", "  hooks:\n    initialize:\n      - command: []\n  kits:", 1), want: "command"},
+		"missing command vector": {document: strings.Replace(valid, "  kits:", "  hooks:\n    initialize:\n      - {}\n  kits:", 1), want: "command"},
+		"empty command argument": {document: strings.Replace(valid, "  kits:", "  hooks:\n    initialize:\n      - command: [npm, '']\n  kits:", 1), want: "command"},
+		"unknown hooks field":    {document: strings.Replace(valid, "  kits:", "  hooks:\n    unknown: true\n  kits:", 1), want: "unknown"},
+		"unknown command field":  {document: strings.Replace(valid, "  kits:", "  hooks:\n    initialize:\n      - command: [npm, ci]\n        unknown: true\n  kits:", 1), want: "unknown"},
 		// Docker Sandboxes accepts a URL resource but matches requests by host and
 		// port, so such a rule would never take effect.
 		"network host URL":  {document: strings.Replace(valid, "  kits:", "  network:\n    allowedHosts: ['https://example.com']\n  kits:", 1), want: "optional :port suffix"},

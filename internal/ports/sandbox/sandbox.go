@@ -40,6 +40,13 @@ type RunRequest struct {
 	AllowLocalKits bool
 }
 
+// CommandRequest executes one literal command vector inside a sandbox workspace.
+type CommandRequest struct {
+	Name      string
+	Workspace string
+	Command   []string
+}
+
 // RemoveRequest contains the safeguards and streams for sandbox removal.
 type RemoveRequest struct {
 	Name    string
@@ -101,6 +108,11 @@ type Creator interface {
 // Runner enters an existing sandbox.
 type Runner interface {
 	RunSandbox(ctx context.Context, request RunRequest, streams Streams) error
+}
+
+// CommandExecutor executes a non-interactive command with attached output.
+type CommandExecutor interface {
+	ExecuteCommand(ctx context.Context, request CommandRequest, streams Streams) error
 }
 
 // Stopper stops a sandbox without removing it.

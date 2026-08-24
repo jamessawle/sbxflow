@@ -486,21 +486,32 @@ func (r *fakeInteractiveRunner) Run(ctx context.Context, invocation sbx.Interact
 }
 
 type fakeUpSandboxes struct {
-	state           sandboxport.State
-	lookupErr       error
-	removeErr       error
-	createErr       error
-	runErr          error
-	calls           []string
-	removeRequest   sandboxport.RemoveRequest
-	createRequest   sandboxport.CreateRequest
-	createStreams   sandboxport.Streams
-	runRequest      sandboxport.RunRequest
-	runStreams      sandboxport.Streams
-	allowErr        error
-	cleanupErr      error
-	allowRequest    sandboxport.NetworkAllowRequest
-	cleanupRequests []sandboxport.NetworkRemoveRequest
+	state            sandboxport.State
+	lookupErr        error
+	removeErr        error
+	createErr        error
+	runErr           error
+	calls            []string
+	removeRequest    sandboxport.RemoveRequest
+	createRequest    sandboxport.CreateRequest
+	createStreams    sandboxport.Streams
+	runRequest       sandboxport.RunRequest
+	runStreams       sandboxport.Streams
+	allowErr         error
+	cleanupErr       error
+	allowRequest     sandboxport.NetworkAllowRequest
+	cleanupRequests  []sandboxport.NetworkRemoveRequest
+	executeRequests  []sandboxport.CommandRequest
+	executeStreams   []sandboxport.Streams
+	executeErr       error
+	removeContextErr error
+}
+
+func (s *fakeUpSandboxes) ExecuteCommand(_ context.Context, request sandboxport.CommandRequest, streams sandboxport.Streams) error {
+	s.calls = append(s.calls, "execute "+request.Name)
+	s.executeRequests = append(s.executeRequests, request)
+	s.executeStreams = append(s.executeStreams, streams)
+	return s.executeErr
 }
 
 func (s *fakeUpSandboxes) CreateSandbox(_ context.Context, request sandboxport.CreateRequest, streams sandboxport.Streams) error {
@@ -530,8 +541,9 @@ func (s *fakeUpSandboxes) Inspect(_ context.Context, name string) (sandboxport.S
 	return s.state, s.lookupErr
 }
 
-func (s *fakeUpSandboxes) RemoveSandbox(_ context.Context, request sandboxport.RemoveRequest) error {
+func (s *fakeUpSandboxes) RemoveSandbox(ctx context.Context, request sandboxport.RemoveRequest) error {
 	s.calls = append(s.calls, "remove "+request.Name)
+	s.removeContextErr = ctx.Err()
 	s.removeRequest = request
 	return s.removeErr
 }
