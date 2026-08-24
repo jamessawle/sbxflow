@@ -87,7 +87,7 @@ the archive for your operating system and architecture together with
 `checksums.txt`. For example, on Linux amd64:
 
 ```sh
-version=0.1.5
+version=0.2.0
 archive="sbxflow_${version}_linux_amd64.tar.gz"
 base_url="https://github.com/jamessawle/sbxflow/releases/download/v${version}"
 curl -LO "${base_url}/${archive}"
@@ -127,7 +127,7 @@ you also intend to remove a repository's declared sandbox and persisted state.
 
 Checks whether Docker Sandboxes is installed at a compatible version, summarizes Docker's diagnostics, and reports global network and kit-source policy posture. It does not read `sbxflow.yaml` or change the host configuration.
 
-sbxflow v0.1.5 supports `sbx` versions from v0.35.0 up to, but not including, v0.38.0.
+sbxflow v0.2.0 supports `sbx` versions from v0.35.0 up to, but not including, v0.38.0.
 
 ### `sbxflow validate`
 
