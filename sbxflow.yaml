@@ -9,6 +9,7 @@ sandbox:
       - www.bestpractices.dev
       - scorecard.dev
       - api.scorecard.dev
+      - sonarcloud.io
 
   kits:
     sources:
