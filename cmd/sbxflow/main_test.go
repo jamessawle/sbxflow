@@ -320,9 +320,6 @@ record_environment() {
     printf '=== %s ===\n' "$operation" >> "$SBX_TEST_DOCUMENT_LOG"
     while IFS= read -r line; do printf '%s\n' "$line" >> "$SBX_TEST_DOCUMENT_LOG"; done < "$environment_file"
   fi
-  if [ -n "${SBX_TEST_PATH_LOG:-}" ]; then
-    printf '%s\n' "$environment_file" >> "$SBX_TEST_PATH_LOG"
-  fi
 }
 case "$1" in
   env) ;;
@@ -521,15 +518,32 @@ func (fixture executableUpFixture) assertCreationRun(t *testing.T, run creationR
 func (fixture executableUpFixture) missingSandbox(t *testing.T) {
 	logPath := filepath.Join(fixture.fakeDirectory, "missing-calls.log")
 	environmentPath := filepath.Join(fixture.fakeDirectory, "missing-env.log")
+	documentPath := filepath.Join(fixture.fakeDirectory, "missing-documents.log")
 	fixture.assertCreationRun(t, creationRun{
-		label:       "up",
-		args:        []string{"up"},
-		environment: []string{"PATH=" + fixture.fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath},
-		logPath:     logPath,
-		input:       "hello creation\n",
-		wantStdout:  "hook-outputshell-hookagent received: hello creation",
-		wantCalls:   fixture.creationCalls(),
+		label: "up",
+		args:  []string{"up"},
+		environment: []string{
+			"PATH=" + fixture.fakeDirectory,
+			"SBX_TEST_LOG=" + logPath,
+			"SBX_TEST_ENV_LOG=" + environmentPath,
+			"SBX_TEST_DOCUMENT_LOG=" + documentPath,
+		},
+		logPath:    logPath,
+		input:      "hello creation\n",
+		wantStdout: "hook-outputshell-hookagent received: hello creation",
+		wantCalls:  fixture.creationCalls(),
 	})
+	documents, err := os.ReadFile(documentPath)
+	if err != nil {
+		t.Fatalf("read environment documents: %v", err)
+	}
+	document := "schemaVersion: \"1\"\nname: executable-up\nagent: codex\nworkspace: " + fixture.canonicalRepository +
+		"\nkits:\n- \"git+https://github.com/example/kits.git#ref=v1&dir=remote-tooling\"\n- " + fixture.canonicalLocalKit + "\n"
+	wantDocuments := "=== create ===\n" + document + "=== exec ===\n" + document + "=== exec ===\n" + document + "=== run ===\n" + document
+	if string(documents) != wantDocuments {
+		t.Fatalf("environment documents = %q, want %q", documents, wantDocuments)
+	}
+
 	environment, err := os.ReadFile(environmentPath)
 	if err != nil {
 		t.Fatalf("read environment: %v", err)

@@ -25,6 +25,8 @@ func TestCompatibilityCheck(t *testing.T) {
 		{name: "lower boundary", lookupPath: "/fake/sbx", output: successfulOutput("sbx version: v0.39.0 abc\n"), wantStatus: StatusPass, wantText: "compatible"},
 		{name: "upper supported", lookupPath: "/fake/sbx", output: successfulOutput("sbx version: v0.39.99 abc\n"), wantStatus: StatusPass, wantText: "compatible"},
 		{name: "exclusive upper boundary", lookupPath: "/fake/sbx", output: successfulOutput("sbx version: v0.40.0 abc\n"), wantStatus: StatusFail, wantText: "unsupported"},
+		{name: "pre-release at lower boundary", lookupPath: "/fake/sbx", output: successfulOutput("sbx version: v0.39.0-rc.1 abc\n"), wantStatus: StatusFail, wantText: "pre-release"},
+		{name: "build metadata is released", lookupPath: "/fake/sbx", output: successfulOutput("sbx version: v0.39.0+build.7 abc\n"), wantStatus: StatusPass, wantText: "compatible"},
 	}
 
 	for _, test := range tests {

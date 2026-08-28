@@ -129,7 +129,8 @@ Checks whether Docker Sandboxes is installed at a compatible version, summarizes
 
 sbxflow requires `sbx` 0.39.x: v0.39.0 or newer, but earlier than v0.40.0.
 The upper bound is deliberate while Docker's sandbox-environment interface is
-experimental.
+experimental. Pre-release builds such as `v0.39.0-rc.1` are rejected; build
+metadata such as `v0.39.0+build.7` is ignored.
 
 ### `sbxflow validate`
 

@@ -60,7 +60,8 @@
       lifecycle application, and doctor boundaries.
 - [x] 6.2 Run repository formatting, linting, architecture, and full validation
       commands documented in `CONTRIBUTING.md`.
-- [x] 6.3 Repeat the disposable SBX 0.39 full-kit smoke test with
-      `jamessawle/sbx-kits@v2026.08.03`, standalone allowed hosts, initialization,
-      entry, failure rollback, and final environment removal, then verify no test
-      sandbox or policy remains.
+- [ ] 6.3 Not run — no Docker daemon was available. Repeat the disposable SBX
+      0.39 full-kit smoke test with `jamessawle/sbx-kits@v2026.08.03`,
+      standalone allowed hosts, initialization, entry, failure rollback, and
+      final environment removal, then verify no test sandbox or policy
+      remains.

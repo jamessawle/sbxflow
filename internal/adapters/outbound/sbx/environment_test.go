@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -150,6 +151,16 @@ func TestEnvironmentCommandsUseExactArgumentsStreamsAndScopedTrust(t *testing.T)
 		t.Fatal(err)
 	}
 
+	assertArguments(t, interactive)
+	assertScopedTrust(t, interactive)
+	assertStreams(t, interactive, stdin, &stdout, &stderr)
+	assertDocuments(t, interactive)
+}
+
+// assertArguments checks each recorded argument vector, with the rendered
+// environment path replaced by a placeholder.
+func assertArguments(t *testing.T, interactive *recordingInteractiveRunner) {
+	t.Helper()
 	wantArgs := [][]string{
 		{"env", "create", "<file>"},
 		{"env", "run", "<file>"},
@@ -164,6 +175,12 @@ func TestEnvironmentCommandsUseExactArgumentsStreamsAndScopedTrust(t *testing.T)
 	if !reflect.DeepEqual(gotArgs, wantArgs) {
 		t.Fatalf("arguments = %#v, want %#v", gotArgs, wantArgs)
 	}
+}
+
+// assertScopedTrust checks that kit trust reaches the kit-consuming commands
+// and no other.
+func assertScopedTrust(t *testing.T, interactive *recordingInteractiveRunner) {
+	t.Helper()
 	for index, invocation := range interactive.invocations[:3] {
 		if invocation.Environment[allowedSourcesEnvironment] != `["docker.io/","github.com/example/"]` || invocation.Environment[allowLocalEnvironment] != "true" {
 			t.Fatalf("invocation %d trust = %#v", index, invocation.Environment)
@@ -172,19 +189,34 @@ func TestEnvironmentCommandsUseExactArgumentsStreamsAndScopedTrust(t *testing.T)
 	if interactive.invocations[3].Environment != nil {
 		t.Fatalf("removal trust = %#v, want none", interactive.invocations[3].Environment)
 	}
+}
+
+// assertStreams checks stream attachment and that every rendered environment
+// was removed once its command returned.
+func assertStreams(t *testing.T, interactive *recordingInteractiveRunner, stdin io.Reader, stdout, stderr io.Writer) {
+	t.Helper()
 	if interactive.invocations[0].Stdin != stdin || interactive.invocations[1].Stdin != stdin || interactive.invocations[2].Stdin != nil || interactive.invocations[3].Stdin != stdin {
 		t.Fatalf("stdin attachments = %#v", interactive.invocations)
 	}
 	for index, invocation := range interactive.invocations {
-		if invocation.Stdout != &stdout || invocation.Stderr != &stderr {
+		if invocation.Stdout != stdout || invocation.Stderr != stderr {
 			t.Fatalf("invocation %d output streams = %#v", index, invocation)
 		}
 		if _, err := os.Stat(interactive.paths[index]); !errors.Is(err, os.ErrNotExist) {
 			t.Fatalf("temporary path %d still exists or stat failed: %v", index, err)
 		}
 	}
-	if !bytes.Contains(interactive.documents[0], []byte("kits:\n- first\n- second\n")) || !bytes.Equal(interactive.documents[0], interactive.documents[1]) || !bytes.Equal(interactive.documents[1], interactive.documents[2]) {
-		t.Fatalf("full environment documents differ or lost kit order: %q", interactive.documents)
+}
+
+// assertDocuments checks that the kit-consuming commands share one full
+// document and that removal renders an identity-only document.
+func assertDocuments(t *testing.T, interactive *recordingInteractiveRunner) {
+	t.Helper()
+	if !bytes.Contains(interactive.documents[0], []byte("kits:\n- first\n- second\n")) {
+		t.Fatalf("full environment document lost kit order: %s", interactive.documents[0])
+	}
+	if !bytes.Equal(interactive.documents[0], interactive.documents[1]) || !bytes.Equal(interactive.documents[1], interactive.documents[2]) {
+		t.Fatalf("full environment documents differ: %q", interactive.documents[:3])
 	}
 	if bytes.Contains(interactive.documents[3], []byte("kits:")) || !bytes.Contains(interactive.documents[3], []byte("name: project\n")) {
 		t.Fatalf("removal document is not identity-only: %s", interactive.documents[3])
