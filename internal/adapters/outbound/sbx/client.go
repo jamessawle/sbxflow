@@ -38,7 +38,7 @@ var (
 	_ sandboxport.CommandExecutor  = Client{}
 	_ sandboxport.Stopper          = Client{}
 	_ sandboxport.Remover          = Client{}
-	_ sandboxport.NetworkPolicy    = Client{}
+	_ sandboxport.NetworkAllower   = Client{}
 )
 
 // NewClient constructs a production client with the supplied timeout for
@@ -55,12 +55,6 @@ type RunRequest = sandboxport.RunRequest
 type CommandRequest = sandboxport.CommandRequest
 type RemoveRequest = sandboxport.RemoveRequest
 type NetworkAllowRequest = sandboxport.NetworkAllowRequest
-type NetworkRemoveRequest = sandboxport.NetworkRemoveRequest
-
-// absentPolicyDiagnostics are the diagnostics Docker Sandboxes emits when there
-// is nothing left to remove, either because the sandbox has no scoped policy or
-// because the resource is not part of it.
-var absentPolicyDiagnostics = []string{"no scoped policy found", "rule not found"}
 
 // AllowNetwork adds ordered resources to a local rule scoped to one sandbox.
 // Docker Sandboxes takes the resources as one comma-separated argument and
@@ -75,33 +69,6 @@ func (c Client) AllowNetwork(ctx context.Context, request NetworkAllowRequest) e
 	}
 	output := c.Commands.Run(ctx, executable, "policy", "allow", "network", "--sandbox", request.Name, strings.Join(request.Resources, ","))
 	return capturedError(output, "allow network resources for Docker Sandbox %q", request.Name)
-}
-
-// RemoveNetworkResource removes one resource from a sandbox-scoped local rule.
-// Removing a resource that is already absent succeeds, so cleanup stays
-// idempotent when Docker Sandboxes has already discarded the scoped policy
-// along with its sandbox.
-func (c Client) RemoveNetworkResource(ctx context.Context, request NetworkRemoveRequest) error {
-	executable, err := c.Commands.LookPath("sbx")
-	if err != nil {
-		return fmt.Errorf("locate sbx for sandbox network cleanup: %w", err)
-	}
-	output := c.Commands.Run(ctx, executable, "policy", "rm", "network", "--sandbox", request.Name, "--resource", request.Resource)
-	if output.Err != nil && reportsAbsentPolicy(output) {
-		return nil
-	}
-	return capturedError(output, "remove network resource %q for Docker Sandbox %q", request.Resource, request.Name)
-}
-
-// reportsAbsentPolicy reports whether command output indicates that the network policy or resource is absent.
-func reportsAbsentPolicy(output sandboxport.Output) bool {
-	diagnostics := strings.ToLower(string(output.Stderr) + string(output.Stdout))
-	for _, absent := range absentPolicyDiagnostics {
-		if strings.Contains(diagnostics, absent) {
-			return true
-		}
-	}
-	return false
 }
 
 // capturedError formats a command error with the operation context and available diagnostics.

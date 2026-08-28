@@ -62,12 +62,6 @@ type NetworkAllowRequest struct {
 	Resources []string
 }
 
-// NetworkRemoveRequest removes one resource from a sandbox-scoped local rule.
-type NetworkRemoveRequest struct {
-	Name     string
-	Resource string
-}
-
 // State is the normalized lifecycle state of an exact sandbox name.
 type State string
 
@@ -127,11 +121,10 @@ type Remover interface {
 	RemoveSandbox(ctx context.Context, request RemoveRequest) error
 }
 
-// NetworkPolicy manages sandbox-scoped local network allow resources. The
-// sandbox must already exist before resources can be scoped to it.
-// RemoveNetworkResource is idempotent: a resource that is already absent, or a
-// sandbox that has no scoped policy at all, is not an error.
-type NetworkPolicy interface {
+// NetworkAllower scopes local network allow resources to one sandbox. The
+// sandbox must already exist before resources can be scoped to it. Removal is
+// not a port capability: Docker Sandboxes discards a sandbox-scoped policy
+// along with the environment that owns it.
+type NetworkAllower interface {
 	AllowNetwork(context.Context, NetworkAllowRequest) error
-	RemoveNetworkResource(context.Context, NetworkRemoveRequest) error
 }

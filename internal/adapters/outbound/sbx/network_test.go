@@ -48,37 +48,11 @@ func TestAllowNetworkJoinsOrderedResourcesAndSkipsEmptyInput(t *testing.T) {
 	}
 }
 
-func TestRemoveNetworkResourceTreatsAbsentPolicyAsRemoved(t *testing.T) {
-	for _, test := range []struct {
-		name       string
-		diagnostic string
-	}{
-		{name: "no scoped policy", diagnostic: "ERROR: remove network rule: no scoped policy found for sandbox \"project\"\n"},
-		{name: "rule absent", diagnostic: "ERROR: remove network rule: remove-resource: rule not found\n"},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			runner := &networkRunner{path: "/bin/sbx", outputs: []Output{{Stderr: []byte(test.diagnostic), ExitCode: 1, Err: errors.New("exit status 1")}}}
-			client := Client{Commands: runner}
-			if err := client.RemoveNetworkResource(context.Background(), NetworkRemoveRequest{Name: "project", Resource: "first.example"}); err != nil {
-				t.Fatalf("RemoveNetworkResource() error = %v, want nil for an already absent resource", err)
-			}
-		})
-	}
-}
-
-func TestNetworkPolicyFailuresPreserveDiagnostics(t *testing.T) {
-	runner := &networkRunner{path: "/bin/sbx", outputs: []Output{{Stderr: []byte("resource rejected\n"), Err: errors.New("exit 7")}, {Stdout: []byte("cleanup denied\n"), Err: errors.New("exit 8")}}}
+func TestAllowNetworkFailurePreservesDiagnostics(t *testing.T) {
+	runner := &networkRunner{path: "/bin/sbx", outputs: []Output{{Stderr: []byte("resource rejected\n"), Err: errors.New("exit 7")}}}
 	client := Client{Commands: runner}
 	err := client.AllowNetwork(context.Background(), NetworkAllowRequest{Name: "project", Resources: []string{"bad"}})
-	if err == nil || !strings.Contains(err.Error(), "resource rejected") {
+	if err == nil || !strings.Contains(err.Error(), "resource rejected") || !strings.Contains(err.Error(), "project") {
 		t.Fatalf("AllowNetwork() error = %v", err)
-	}
-	err = client.RemoveNetworkResource(context.Background(), NetworkRemoveRequest{Name: "project", Resource: "bad"})
-	if err == nil || !strings.Contains(err.Error(), "cleanup denied") || !strings.Contains(err.Error(), "bad") {
-		t.Fatalf("RemoveNetworkResource() error = %v", err)
-	}
-	want := []string{"policy", "rm", "network", "--sandbox", "project", "--resource", "bad"}
-	if !reflect.DeepEqual(runner.calls[1].args, want) {
-		t.Fatalf("remove args = %#v, want %#v", runner.calls[1].args, want)
 	}
 }

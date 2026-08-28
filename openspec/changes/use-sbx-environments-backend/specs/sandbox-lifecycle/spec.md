@@ -318,12 +318,15 @@ sandbox-scoped resource is outside sbxflow's ownership guarantees.
 #### Scenario: Sandbox removal fails
 
 - **WHEN** Docker Sandboxes does not remove the sandbox
-- **THEN** the lifecycle operation reports the removal failure
+- **THEN** the lifecycle operation reports the removal failure with Docker's
+  diagnostic output
 - **AND** does not report its declared sandbox-scoped network access as removed
+- **AND** exits with a non-zero status
 
 #### Scenario: Network cleanup fails after removal
 
-- **WHEN** Docker Sandboxes reports that the sandbox was removed but its
-  declared network access was not completely removed
-- **THEN** the lifecycle operation reports that removal was incomplete
+- **WHEN** Docker Sandboxes reports that it removed the sandbox but could not
+  completely remove the network access scoped to it
+- **THEN** the lifecycle operation reports that removal was incomplete with
+  Docker's diagnostic output
 - **AND** exits with a non-zero status

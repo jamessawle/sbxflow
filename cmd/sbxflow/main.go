@@ -44,7 +44,6 @@ func main() {
 	var destroySandboxes interface {
 		sandboxport.ExistenceChecker
 		sandboxport.Remover
-		sandboxport.NetworkPolicy
 	} = lifecycleSandboxes
 	configurationResolver := configuration.Resolver{
 		Declarations: declarationLoader,

@@ -56,7 +56,7 @@ type UpSandbox interface {
 	sandboxport.Remover
 	sandboxport.Runner
 	sandboxport.CommandExecutor
-	sandboxport.NetworkPolicy
+	sandboxport.NetworkAllower
 }
 
 // UpRunner validates, inspects, and enters the declared sandbox.

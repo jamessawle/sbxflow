@@ -106,7 +106,24 @@ func TestRemovalDelegatesScopedResourceCleanupToEnvironmentRemoval(t *testing.T)
 	}
 	sandboxes = &fakeUpSandboxes{}
 	err = removeSandbox(context.Background(), sandboxes, "project", true, Streams{})
-	if err != nil || !reflect.DeepEqual(sandboxes.calls, []string{"remove project"}) || len(sandboxes.cleanupRequests) != 0 {
+	if err != nil || !reflect.DeepEqual(sandboxes.calls, []string{"remove project"}) {
 		t.Fatalf("removeSandbox() = %v, calls %#v", err, sandboxes.calls)
+	}
+}
+
+// Environment removal owns sandbox-scoped cleanup, so an incomplete cleanup is
+// reported by the same failed removal that Docker already rendered.
+func TestIncompleteNetworkCleanupIsReportedAsAFailedRemoval(t *testing.T) {
+	dockerErr := errors.New("removed sandbox but could not remove network rule")
+	sandboxes := &fakeUpSandboxes{removeErr: dockerErr}
+
+	err := removeSandbox(context.Background(), sandboxes, "project", true, Streams{})
+
+	var rendered AttachedProcessError
+	if !errors.As(err, &rendered) || !errors.Is(err, dockerErr) {
+		t.Fatalf("removeSandbox() = %v, want Docker diagnostic reported as rendered", err)
+	}
+	if !strings.Contains(err.Error(), "network rule") {
+		t.Fatalf("removeSandbox() error = %q, want the Docker cleanup diagnostic", err)
 	}
 }

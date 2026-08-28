@@ -505,9 +505,7 @@ type fakeUpSandboxes struct {
 	runRequest       sandboxport.RunRequest
 	runStreams       sandboxport.Streams
 	allowErr         error
-	cleanupErr       error
 	allowRequest     sandboxport.NetworkAllowRequest
-	cleanupRequests  []sandboxport.NetworkRemoveRequest
 	executeRequests  []sandboxport.CommandRequest
 	executeStreams   []sandboxport.Streams
 	executeErr       error
@@ -532,12 +530,6 @@ func (s *fakeUpSandboxes) AllowNetwork(_ context.Context, request sandboxport.Ne
 	s.calls = append(s.calls, "allow "+request.Name)
 	s.allowRequest = request
 	return s.allowErr
-}
-
-func (s *fakeUpSandboxes) RemoveNetworkResource(_ context.Context, request sandboxport.NetworkRemoveRequest) error {
-	s.calls = append(s.calls, "cleanup "+request.Resource)
-	s.cleanupRequests = append(s.cleanupRequests, request)
-	return s.cleanupErr
 }
 
 func (s *fakeUpSandboxes) Inspect(_ context.Context, name string) (sandboxport.State, error) {
