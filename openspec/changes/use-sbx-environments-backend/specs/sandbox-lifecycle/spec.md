@@ -286,7 +286,18 @@ sandbox.
   `sbxflow destroy --force`
 - **THEN** `destroy` succeeds without invoking the shared removal operation
 
+## REMOVED Requirements
+
 ### Requirement: Sandbox removal cleans up declared network access
+
+**Reason**: Environment removal owns sandbox-scoped cleanup, so sbxflow no
+longer performs or separately reports per-resource network cleanup.
+
+**Migration**: Replaced by "Sandbox removal discards sandbox-scoped resources".
+
+## ADDED Requirements
+
+### Requirement: Sandbox removal discards sandbox-scoped resources
 
 The shared lifecycle removal operation used by `destroy` and `up --recreate`
 SHALL remove the exact sandbox and its declared sandbox-scoped network access.
@@ -315,18 +326,11 @@ sandbox-scoped resource is outside sbxflow's ownership guarantees.
 - **AND** applies the current declaration's allowed hosts to the replacement
   between provisioning it and entering it
 
-#### Scenario: Sandbox removal fails
+#### Scenario: Removal is incomplete
 
-- **WHEN** Docker Sandboxes does not remove the sandbox
-- **THEN** the lifecycle operation reports the removal failure with Docker's
+- **WHEN** Docker Sandboxes does not remove the sandbox, or removes it without
+  completely removing the network access scoped to it
+- **THEN** the lifecycle operation reports the incomplete removal with Docker's
   diagnostic output
-- **AND** does not report its declared sandbox-scoped network access as removed
-- **AND** exits with a non-zero status
-
-#### Scenario: Network cleanup fails after removal
-
-- **WHEN** Docker Sandboxes reports that it removed the sandbox but could not
-  completely remove the network access scoped to it
-- **THEN** the lifecycle operation reports that removal was incomplete with
-  Docker's diagnostic output
+- **AND** does not report the sandbox or its declared network access as removed
 - **AND** exits with a non-zero status
