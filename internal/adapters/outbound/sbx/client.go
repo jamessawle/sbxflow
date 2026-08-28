@@ -23,8 +23,9 @@ type Streams = sandboxport.Streams
 // Client invokes Docker Sandboxes through injected captured and interactive
 // process runners.
 type Client struct {
-	Commands    Runner
-	Interactive InteractiveRunner
+	Commands           Runner
+	Interactive        InteractiveRunner
+	TemporaryDirectory string
 }
 
 var (
@@ -37,7 +38,7 @@ var (
 	_ sandboxport.CommandExecutor  = Client{}
 	_ sandboxport.Stopper          = Client{}
 	_ sandboxport.Remover          = Client{}
-	_ sandboxport.NetworkPolicy    = Client{}
+	_ sandboxport.NetworkAllower   = Client{}
 )
 
 // NewClient constructs a production client with the supplied timeout for
@@ -54,12 +55,6 @@ type RunRequest = sandboxport.RunRequest
 type CommandRequest = sandboxport.CommandRequest
 type RemoveRequest = sandboxport.RemoveRequest
 type NetworkAllowRequest = sandboxport.NetworkAllowRequest
-type NetworkRemoveRequest = sandboxport.NetworkRemoveRequest
-
-// absentPolicyDiagnostics are the diagnostics Docker Sandboxes emits when there
-// is nothing left to remove, either because the sandbox has no scoped policy or
-// because the resource is not part of it.
-var absentPolicyDiagnostics = []string{"no scoped policy found", "rule not found"}
 
 // AllowNetwork adds ordered resources to a local rule scoped to one sandbox.
 // Docker Sandboxes takes the resources as one comma-separated argument and
@@ -74,33 +69,6 @@ func (c Client) AllowNetwork(ctx context.Context, request NetworkAllowRequest) e
 	}
 	output := c.Commands.Run(ctx, executable, "policy", "allow", "network", "--sandbox", request.Name, strings.Join(request.Resources, ","))
 	return capturedError(output, "allow network resources for Docker Sandbox %q", request.Name)
-}
-
-// RemoveNetworkResource removes one resource from a sandbox-scoped local rule.
-// Removing a resource that is already absent succeeds, so cleanup stays
-// idempotent when Docker Sandboxes has already discarded the scoped policy
-// along with its sandbox.
-func (c Client) RemoveNetworkResource(ctx context.Context, request NetworkRemoveRequest) error {
-	executable, err := c.Commands.LookPath("sbx")
-	if err != nil {
-		return fmt.Errorf("locate sbx for sandbox network cleanup: %w", err)
-	}
-	output := c.Commands.Run(ctx, executable, "policy", "rm", "network", "--sandbox", request.Name, "--resource", request.Resource)
-	if output.Err != nil && reportsAbsentPolicy(output) {
-		return nil
-	}
-	return capturedError(output, "remove network resource %q for Docker Sandbox %q", request.Resource, request.Name)
-}
-
-// reportsAbsentPolicy reports whether command output indicates that the network policy or resource is absent.
-func reportsAbsentPolicy(output sandboxport.Output) bool {
-	diagnostics := strings.ToLower(string(output.Stderr) + string(output.Stdout))
-	for _, absent := range absentPolicyDiagnostics {
-		if strings.Contains(diagnostics, absent) {
-			return true
-		}
-	}
-	return false
 }
 
 // capturedError formats a command error with the operation context and available diagnostics.
@@ -201,66 +169,56 @@ func (c Client) Inspect(ctx context.Context, name string) (sandboxport.State, er
 // CreateSandbox provisions a sandbox without attaching to its agent, so a
 // caller can scope policy to the new sandbox before entering it.
 func (c Client) CreateSandbox(ctx context.Context, request CreateRequest, streams Streams) error {
-	executable, err := c.Commands.LookPath("sbx")
-	if err != nil {
-		return fmt.Errorf("locate sbx for sandbox creation: %w", err)
-	}
-	trust, err := kitTrustEnvironment(request.AllowedSources, request.AllowLocalKits)
-	if err != nil {
-		return err
-	}
-
-	args := []string{"create", "--name", request.Name}
-	for _, kit := range request.Kits {
-		args = append(args, "--kit", kit)
-	}
-	args = append(args, request.Agent, request.Workspace)
-
-	return c.Interactive.Run(ctx, InteractiveInvocation{
-		Executable:  executable,
-		Args:        args,
-		Environment: trust,
-		Stdin:       streams.In,
-		Stdout:      streams.Out,
-		Stderr:      streams.Err,
-	})
+	return c.runEnvironmentCommand(ctx, "sandbox creation", request.Environment,
+		func(path string) []string { return []string{"env", "create", path} },
+		InteractiveInvocation{Stdin: streams.In, Stdout: streams.Out, Stderr: streams.Err},
+	)
 }
 
 // RunSandbox enters an existing sandbox and remains attached until sbx exits.
 func (c Client) RunSandbox(ctx context.Context, request RunRequest, streams Streams) error {
-	executable, err := c.Commands.LookPath("sbx")
-	if err != nil {
-		return fmt.Errorf("locate sbx for sandbox execution: %w", err)
-	}
-	trust, err := kitTrustEnvironment(request.AllowedSources, request.AllowLocalKits)
-	if err != nil {
-		return err
-	}
-
-	return c.Interactive.Run(ctx, InteractiveInvocation{
-		Executable:  executable,
-		Args:        []string{"run", request.Agent, "--name", request.Name},
-		Environment: trust,
-		Stdin:       streams.In,
-		Stdout:      streams.Out,
-		Stderr:      streams.Err,
-	})
+	return c.runEnvironmentCommand(ctx, "sandbox execution", request.Environment,
+		func(path string) []string { return []string{"env", "run", path} },
+		InteractiveInvocation{Stdin: streams.In, Stdout: streams.Out, Stderr: streams.Err},
+	)
 }
 
 // ExecuteCommand runs a literal argument vector in the sandbox workspace. It
 // deliberately leaves stdin detached while forwarding stdout and stderr.
 func (c Client) ExecuteCommand(ctx context.Context, request CommandRequest, streams Streams) error {
+	return c.runEnvironmentCommand(ctx, "sandbox command execution", request.Environment,
+		func(path string) []string {
+			return append([]string{"env", "exec", path, "--"}, request.Command...)
+		},
+		InteractiveInvocation{Stdout: streams.Out, Stderr: streams.Err},
+	)
+}
+
+// runEnvironmentCommand renders the environment to a manifest and runs one
+// interactive `sbx env` subcommand against it under the kit trust variables.
+// The purpose names the operation in the executable lookup failure.
+func (c Client) runEnvironmentCommand(
+	ctx context.Context,
+	purpose string,
+	environment sandboxport.Environment,
+	arguments func(path string) []string,
+	invocation InteractiveInvocation,
+) error {
 	executable, err := c.Commands.LookPath("sbx")
 	if err != nil {
-		return fmt.Errorf("locate sbx for sandbox command execution: %w", err)
+		return fmt.Errorf("locate sbx for %s: %w", purpose, err)
 	}
-	args := []string{"exec", "--workdir", request.Workspace, request.Name}
-	args = append(args, request.Command...)
-	return c.Interactive.Run(ctx, InteractiveInvocation{
-		Executable: executable,
-		Args:       args,
-		Stdout:     streams.Out,
-		Stderr:     streams.Err,
+	trust, err := kitTrustEnvironment(environment.AllowedSources, environment.AllowLocalKits)
+	if err != nil {
+		return err
+	}
+	return withRenderedEnvironment(func() (renderedEnvironment, error) {
+		return c.renderEnvironment(environment)
+	}, func(path string) error {
+		invocation.Executable = executable
+		invocation.Args = arguments(path)
+		invocation.Environment = trust
+		return c.Interactive.Run(ctx, invocation)
 	})
 }
 
@@ -298,16 +256,17 @@ func (c Client) RemoveSandbox(ctx context.Context, request RemoveRequest) error 
 	if err != nil {
 		return fmt.Errorf("locate sbx for sandbox removal: %w", err)
 	}
-	args := []string{"rm", request.Name}
-	if request.Force {
-		args = []string{"rm", "--force", request.Name}
-	}
-	return c.Interactive.Run(ctx, InteractiveInvocation{
-		Executable: executable,
-		Args:       args,
-		Stdin:      request.Streams.In,
-		Stdout:     request.Streams.Out,
-		Stderr:     request.Streams.Err,
+	return withRenderedEnvironment(func() (renderedEnvironment, error) {
+		return c.renderRemovalEnvironment(request.Name)
+	}, func(path string) error {
+		args := []string{"env", "rm", path}
+		if request.Force {
+			args = []string{"env", "rm", "--force", path}
+		}
+		return c.Interactive.Run(ctx, InteractiveInvocation{
+			Executable: executable, Args: args,
+			Stdin: request.Streams.In, Stdout: request.Streams.Out, Stderr: request.Streams.Err,
+		})
 	})
 }
 

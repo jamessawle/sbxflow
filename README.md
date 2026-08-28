@@ -127,7 +127,10 @@ you also intend to remove a repository's declared sandbox and persisted state.
 
 Checks whether Docker Sandboxes is installed at a compatible version, summarizes Docker's diagnostics, and reports global network and kit-source policy posture. It does not read `sbxflow.yaml` or change the host configuration.
 
-sbxflow v0.2.0 supports `sbx` versions from v0.35.0 up to, but not including, v0.38.0.
+sbxflow requires `sbx` 0.39.x: v0.39.0 or newer, but earlier than v0.40.0.
+The upper bound is deliberate while Docker's sandbox-environment interface is
+experimental. Pre-release builds such as `v0.39.0-rc.1` are rejected; build
+metadata such as `v0.39.0+build.7` is ignored.
 
 ### `sbxflow validate`
 
@@ -141,7 +144,13 @@ sbxflow up --recreate
 sbxflow up --recreate --force
 ```
 
-Validates the declaration, then creates and enters a missing sandbox or enters an existing one. An existing sandbox's workspace and kits are not inspected or reconciled when the declaration changes.
+Validates the declaration, then creates and enters a missing sandbox or enters
+an existing one. The public configuration remains `sbxflow.yaml`; internally,
+sbxflow renders a private, short-lived Docker Sandbox environment file outside
+the workspace for each lifecycle operation. That generated file is an adapter
+detail, not additional repository configuration. An existing sandbox's
+workspace and kits are not inspected or reconciled when the declaration
+changes.
 
 Use `--recreate` to replace an existing sandbox from the current declaration. Recreation permanently removes the sandbox's installed tools, Docker images, agent history, configuration changes, and other persisted state. A running sandbox requires confirmation; a stopped sandbox does not. The repository's host workspace is not deleted.
 
@@ -202,16 +211,10 @@ from taking effect. An ordinary `up` never reconciles an existing sandbox when
 this list changes; use `up --recreate` to remove the currently declared resources
 and apply the current declaration to the replacement.
 
-Declared resources are owned by sbxflow. Both `destroy` and recreation remove the
-sandbox first, then remove each currently declared resource. Docker Sandboxes
-ordinarily discards a sandbox-scoped policy along with its sandbox, so this
-cleanup is idempotent and a resource that is already gone is not an error. Avoid
-manually modifying overlapping sandbox-scoped resources. If cleanup does fail
-after the sandbox was removed, retry the resource reported in the error with:
-
-```text
-sbx policy rm network --sandbox <sandbox-name> --resource <resource>
-```
+Declared resources are owned by sbxflow. Both `destroy` and recreation remove
+the sandbox through its generated environment definition. Docker Sandboxes then
+removes resources scoped to that environment, including the standalone network
+rule. Avoid manually modifying overlapping sandbox-scoped resources.
 
 ## Sandbox initialization
 

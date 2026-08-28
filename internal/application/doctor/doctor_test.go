@@ -43,7 +43,7 @@ func TestRunnerSharesFactsAndWarningOnlySucceeds(t *testing.T) {
 				Status: StatusPass,
 				Provides: map[Fact]string{
 					FactSbxExecutable: "/usr/local/bin/sbx",
-					FactSbxCompatible: "0.35.0",
+					FactSbxCompatible: "0.39.0",
 				},
 			}
 		}},

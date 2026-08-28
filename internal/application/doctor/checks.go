@@ -10,14 +10,14 @@ import (
 )
 
 const (
-	// The v0.35.0 command contracts were verified against the released binary.
-	// Docker's current v0.37.x CLI reference retains all four contracts. Exclude
-	// the next minor until its pre-1.0 schemas have been deliberately verified.
-	SupportedSbxMinimum          = "v0.35.0"
-	SupportedSbxMaximumExclusive = "v0.38.0"
+	// Declarative sandbox environments were introduced in v0.39.0. Their
+	// interface is experimental, so exclude the next minor until it has been
+	// deliberately verified.
+	SupportedSbxMinimum          = "v0.39.0"
+	SupportedSbxMaximumExclusive = "v0.40.0"
 )
 
-var sbxVersionPattern = regexp.MustCompile(`(?m)^sbx version:\s*v?(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.-]+)?(?:\s|$)`)
+var sbxVersionPattern = regexp.MustCompile(`(?m)^sbx version:\s*v?(\d+)\.(\d+)\.(\d+)(-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?(?:\s|$)`)
 
 type compatibilityCheck struct{}
 
@@ -49,6 +49,14 @@ func (compatibilityCheck) Run(ctx context.Context, environment Environment) Resu
 			Status:   StatusFail,
 			Summary:  "sbx returned an unrecognized version",
 			Guidance: fmt.Sprintf("Install a supported sbx version (%s to <%s).", SupportedSbxMinimum, SupportedSbxMaximumExclusive),
+		}
+	}
+
+	if version.prerelease != "" {
+		return Result{
+			Status:   StatusFail,
+			Summary:  fmt.Sprintf("sbx %s is a pre-release and is unsupported", version),
+			Guidance: fmt.Sprintf("Install a released sbx version (%s to <%s).", SupportedSbxMinimum, SupportedSbxMaximumExclusive),
 		}
 	}
 
@@ -325,26 +333,29 @@ type semanticVersion struct {
 	major int
 	minor int
 	patch int
+	// prerelease keeps the leading hyphen, and is empty for a released
+	// version. Build metadata is discarded because it carries no precedence.
+	prerelease string
 }
 
 func (v semanticVersion) String() string {
-	return fmt.Sprintf("v%d.%d.%d", v.major, v.minor, v.patch)
+	return fmt.Sprintf("v%d.%d.%d%s", v.major, v.minor, v.patch, v.prerelease)
 }
 
 func parseSbxVersion(output string) (semanticVersion, bool) {
 	matches := sbxVersionPattern.FindStringSubmatch(output)
-	if len(matches) != 4 {
+	if len(matches) != 5 {
 		return semanticVersion{}, false
 	}
 	components := make([]int, 3)
-	for index, match := range matches[1:] {
+	for index, match := range matches[1:4] {
 		component, err := strconv.Atoi(match)
 		if err != nil {
 			return semanticVersion{}, false
 		}
 		components[index] = component
 	}
-	return semanticVersion{major: components[0], minor: components[1], patch: components[2]}, true
+	return semanticVersion{major: components[0], minor: components[1], patch: components[2], prerelease: matches[4]}, true
 }
 
 func compareVersions(left, right semanticVersion) int {
@@ -361,5 +372,5 @@ func compareVersions(left, right semanticVersion) int {
 	return 0
 }
 
-func supportedMinimum() semanticVersion { return semanticVersion{major: 0, minor: 35, patch: 0} }
-func supportedMaximum() semanticVersion { return semanticVersion{major: 0, minor: 38, patch: 0} }
+func supportedMinimum() semanticVersion { return semanticVersion{major: 0, minor: 39, patch: 0} }
+func supportedMaximum() semanticVersion { return semanticVersion{major: 0, minor: 40, patch: 0} }

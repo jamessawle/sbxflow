@@ -124,70 +124,102 @@ documents, and trailing output that is not the known update notice.
 
 ### Requirement: Up can replace an existing sandbox from the current declaration
 
-When recreation is requested, `up` SHALL inspect the lifecycle state of the exact declared sandbox before removal. An absent sandbox SHALL follow the ordinary creation path, and a stopped sandbox SHALL be force-removed without additional confirmation. A running sandbox SHALL be force-removed only after the user explicitly confirms a warning that recreation can terminate other attached sessions or explicitly requests forced recreation. The removal SHALL remain limited to the exact declared name and SHALL permanently discard the removed sandbox's persisted state without deleting files from the repository's host workspace.
+When recreation is requested, `up` SHALL inspect the lifecycle state of the
+exact declared sandbox before removal. An absent sandbox SHALL follow the
+ordinary creation path, and a stopped sandbox SHALL be force-removed without
+additional confirmation. A running sandbox SHALL be force-removed only after
+the user explicitly confirms a warning that recreation can terminate other
+attached sessions or explicitly requests forced recreation. The shared removal
+operation SHALL remain limited to the exact declared name and SHALL permanently
+discard the removed sandbox's persisted state without deleting files from the
+repository's host workspace.
 
-If lifecycle state cannot be determined, or unforced confirmation cannot be obtained or is declined, `up` SHALL stop without removing, creating, entering, or otherwise changing the sandbox. A force request without recreation SHALL be rejected before configuration validation, sandbox inspection, or any other lifecycle work.
+If lifecycle state cannot be determined, or unforced confirmation cannot be
+obtained or is declined, `up` SHALL stop without removing, creating, entering,
+or otherwise changing the sandbox. A force request without recreation SHALL be
+rejected before configuration validation, sandbox inspection, or any other
+lifecycle work.
 
 #### Scenario: Existing sandbox is recreated
 
-- **WHEN** the exact declared sandbox exists, a user invokes `sbxflow up --recreate`, and any required running-sandbox confirmation is granted
-- **THEN** `up` invokes `sbx rm --force` with that sandbox name
+- **WHEN** the exact declared sandbox exists, a user invokes
+  `sbxflow up --recreate`, and any required running-sandbox confirmation is
+  granted
+- **THEN** `up` invokes the shared removal operation with force for that exact
+  name
 - **AND** Docker does not ask for an additional removal confirmation
-- **AND** after successful removal, `up` creates and enters a sandbox with the declared name, agent, repository workspace, selected kits, and derived trust
+- **AND** after successful removal, `up` creates and enters a sandbox with
+  the declared name, agent, repository workspace, selected kits, and derived
+  trust
 
 #### Scenario: Running sandbox recreation is confirmed
 
-- **WHEN** the exact declared sandbox is running, recreation is requested without force, and the user confirms the warning
-- **THEN** `up` invokes `sbx rm --force` with that sandbox name
-- **AND** after successful removal, `up` creates and enters a sandbox with the declared name, agent, repository workspace, selected kits, and derived trust
+- **WHEN** the exact declared sandbox is running, recreation is requested
+  without force, and the user confirms the warning
+- **THEN** `up` invokes the shared removal operation with force for the exact
+  name
+- **AND** after successful removal, `up` creates and enters its replacement
+  from the current declaration
 
 #### Scenario: Running sandbox recreation is forced
 
-- **WHEN** the exact declared sandbox is running and forced recreation is requested
+- **WHEN** the exact declared sandbox is running and forced recreation is
+  requested
 - **THEN** `up` does not request interactive confirmation
-- **AND** invokes `sbx rm --force` with the exact declared sandbox name
-- **AND** after successful removal, creates and enters its replacement from the current declaration
+- **AND** invokes the shared removal operation with force for the exact declared
+  name
+- **AND** after successful removal, creates and enters its replacement from the
+  current declaration
 
 #### Scenario: Running sandbox recreation is declined
 
-- **WHEN** the exact declared sandbox is running, unforced recreation is requested, and the user declines or provides no affirmative response
-- **THEN** `up` cancels recreation without removing, creating, or entering a sandbox
+- **WHEN** the exact declared sandbox is running, unforced recreation is
+  requested, and the user declines or provides no affirmative response
+- **THEN** `up` cancels recreation without removing, creating, or entering a
+  sandbox
 - **AND** exits with a non-zero status
 
 #### Scenario: Running sandbox confirmation is unavailable
 
-- **WHEN** the exact declared sandbox is running, unforced recreation is requested, and confirmation input cannot be obtained
+- **WHEN** the exact declared sandbox is running, unforced recreation is
+  requested, and confirmation input cannot be obtained
 - **THEN** `up` reports that recreation was not confirmed
 - **AND** does not remove, create, or enter a sandbox
 - **AND** exits with a non-zero status
 
 #### Scenario: Existing stopped sandbox is recreated
 
-- **WHEN** the exact declared sandbox exists in a stopped state and recreation is requested with or without force
+- **WHEN** the exact declared sandbox exists in a stopped state and recreation
+  is requested with or without force
 - **THEN** `up` force-removes it without an additional confirmation prompt
 - **AND** creates and enters its replacement from the current declaration
 
 #### Scenario: Missing sandbox follows creation path
 
-- **WHEN** the exact declared sandbox is absent and recreation is requested with or without force
-- **THEN** `up` creates and enters the sandbox through the ordinary missing-sandbox path
+- **WHEN** the exact declared sandbox is absent and recreation is requested
+  with or without force
+- **THEN** `up` creates and enters the sandbox through the ordinary missing-
+  sandbox path
 
 #### Scenario: Force without recreation is rejected
 
 - **WHEN** lifecycle is requested with force enabled and recreation disabled
-- **THEN** `up` reports the invalid option combination before configuration validation or sandbox inspection
+- **THEN** `up` reports the invalid option combination before configuration
+  validation or sandbox inspection
 - **AND** does not remove, create, or enter a sandbox
 
 #### Scenario: Recreation state inspection fails
 
-- **WHEN** Docker Sandboxes cannot report a recognized lifecycle state for the exact declared sandbox
+- **WHEN** Docker Sandboxes cannot report a recognized lifecycle state for the
+  exact declared sandbox
 - **THEN** `up` reports the inspection failure
 - **AND** does not remove, create, or enter a sandbox
 - **AND** exits with a non-zero status
 
 #### Scenario: Recreation removal fails
 
-- **WHEN** Docker Sandboxes cannot force-remove an approved, forced, or stopped declared sandbox
+- **WHEN** Docker Sandboxes cannot force-remove an approved, forced, or stopped
+  declared sandbox
 - **THEN** its diagnostic output remains visible to the user
 - **AND** `up` does not create or enter a sandbox
 - **AND** exits with a non-zero status
@@ -202,31 +234,30 @@ If lifecycle state cannot be determined, or unforced confirmation cannot be obta
 
 When the declared sandbox name is absent, `up` SHALL provision a sandbox under
 that name with the repository workspace and every selected kit in declaration
-order, and SHALL then attach to that named sandbox so its agent session is
-entered interactively. Provisioning and attachment SHALL be separate requests so
-that a declared network rule can be applied between them: the provisioning
-request SHALL carry the creation inputs, and the attachment request SHALL name
-only the sandbox and its declared agent. Remote kits SHALL use their linked
+order, and SHALL then enter its agent session interactively. Provisioning and
+interactive entry SHALL remain separate lifecycle operations so a declared
+network rule can be applied between them. Remote kits SHALL use their linked
 execution references, and local kits SHALL use their safely resolved absolute
 host paths.
 
 #### Scenario: Missing sandbox uses a Git kit
 
 - **WHEN** the declared sandbox is absent and selects a Git kit
-- **THEN** the provisioning request includes the linked Git execution
+- **THEN** the provisioning operation includes the linked Git execution
   reference
 - **AND** includes the declared name, agent, and repository workspace
 
 #### Scenario: Missing sandbox uses an OCI kit
 
 - **WHEN** the declared sandbox is absent and selects an OCI kit
-- **THEN** the provisioning request includes the linked OCI execution
-  reference with its declared version
+- **THEN** the provisioning operation includes the linked OCI execution
+  reference
+  with its declared version
 
 #### Scenario: Missing sandbox uses a local kit
 
 - **WHEN** the declared sandbox is absent and selects a valid local kit
-- **THEN** the provisioning request includes the canonical absolute path
+- **THEN** the provisioning operation includes the canonical absolute path
   produced by local-kit resolution
 
 #### Scenario: Multiple kits are selected
@@ -237,13 +268,12 @@ host paths.
 #### Scenario: Provisioned sandbox is entered
 
 - **WHEN** provisioning succeeds and any declared network rule has been applied
-- **THEN** `up` attaches to that sandbox by name
+- **THEN** `up` enters the declared sandbox
 - **AND** the agent session is entered interactively
 
 #### Scenario: Docker cannot provision the sandbox
 
-- **WHEN** Docker Sandboxes rejects or cannot complete the provisioning
-  request
+- **WHEN** Docker Sandboxes rejects or cannot complete provisioning
 - **THEN** its diagnostic output remains visible to the user
 - **AND** `up` does not attach to a sandbox
 - **AND** exits with a non-zero status
@@ -298,10 +328,10 @@ policy.
 ### Requirement: Existing sandbox is entered without reconciliation
 
 When the declared sandbox name already exists, `up` SHALL ask Docker Sandboxes
-to run the declared agent in that named sandbox without passing workspace, kit,
-or network creation inputs. `up` SHALL NOT inspect or reconcile the existing
-sandbox's workspace, kits, declared network access, or other creation
-configuration unless recreation was requested.
+to enter that exact sandbox. `up` SHALL NOT inspect, compare, or explicitly
+reconcile the existing sandbox's workspace, kits, declared network access, or
+other creation configuration unless recreation was requested. Docker Sandboxes
+SHALL remain authoritative for the existing sandbox's configuration.
 
 #### Scenario: Existing sandbox is running
 
@@ -336,23 +366,24 @@ configuration unless recreation was requested.
 - **THEN** `up` does not add, remove, or compare its sandbox-scoped network rule
 - **AND** enters the existing sandbox through Docker Sandboxes
 
-### Requirement: Kit trust is scoped to the Docker run process
+### Requirement: Kit trust is process-scoped
 
 The `up` command SHALL provide the linked configuration's derived remote-source
-allowlist and local-kit permission to its Docker Sandbox agent-run process
-without changing persistent global Docker Sandbox settings.
+allowlist and local-kit permission to Docker Sandboxes when resolving selected
+kit references, without changing persistent global Docker Sandbox settings.
 
 #### Scenario: Missing sandbox uses non-default sources
 
 - **WHEN** creation requires selected Git, OCI, or local kit sources
-- **THEN** the Docker run process receives exactly the derived trust values
+- **THEN** Docker Sandboxes receives exactly the derived trust values for kit
+  resolution
 - **AND** source resolution remains subject to any stricter organisation policy
 
 #### Scenario: Existing sandbox is entered
 
 - **WHEN** the declared sandbox already exists
-- **THEN** the same process-local trust values are provided to the Docker run
-  process
+- **THEN** the same process-local trust values are available to Docker
+  Sandboxes for kit resolution during entry
 - **AND** no global setting is modified
 
 ### Requirement: Up preserves the interactive agent session
@@ -504,24 +535,23 @@ validation pipeline.
 After resolving the lifecycle target, `destroy` SHALL determine whether a
 sandbox whose name exactly equals the declared `sandbox.name` exists. When it
 exists, `destroy` SHALL ask Docker Sandboxes to remove that exact sandbox and
-all associated sandbox resources through the shared removal operation, which
-then cleans up the sandbox's declared network resources. Success SHALL require
-both phases. When it does not exist, `destroy` SHALL succeed without creating,
-starting, stopping, or removing a sandbox.
+its sandbox-scoped resources through the shared removal operation. When it does
+not exist, `destroy` SHALL succeed without creating, starting, stopping, or
+removing a sandbox.
 
 #### Scenario: Declared sandbox exists
 
 - **WHEN** Docker Sandboxes reports the exact declared name as an existing
   sandbox
-- **THEN** `destroy` invokes `sbx rm` with that name
-- **AND** cleans up its declared network resources once the removal completes
-- **AND** exits successfully when both the removal and that cleanup complete
+- **THEN** `destroy` invokes the shared removal operation for that exact name
+- **AND** exits successfully when removal completes
 
 #### Scenario: Declared sandbox is absent
 
 - **WHEN** Docker Sandboxes reports no sandbox whose name exactly equals the
   declared name
-- **THEN** `destroy` exits successfully without invoking `sbx rm`
+- **THEN** `destroy` exits successfully without invoking the shared removal
+  operation
 
 #### Scenario: Only a similar sandbox name exists
 
@@ -579,14 +609,15 @@ sandbox.
 
 - **WHEN** the exact declared sandbox exists and the user invokes
   `sbxflow destroy --force`
-- **THEN** `destroy` invokes `sbx rm --force` with that sandbox name
+- **THEN** `destroy` invokes the shared removal operation with force for that
+  exact name
 - **AND** Docker does not ask for confirmation
 
 #### Scenario: Forced destruction target is absent
 
 - **WHEN** the declared sandbox is absent and the user invokes
   `sbxflow destroy --force`
-- **THEN** `destroy` succeeds without invoking `sbx rm`
+- **THEN** `destroy` succeeds without invoking the shared removal operation
 
 ### Requirement: Destroy permanently removes sandbox state while preserving the host workspace
 
@@ -608,29 +639,26 @@ behavior.
 - **WHEN** the declared sandbox is destroyed
 - **THEN** files in the repository's host workspace remain intact
 
-### Requirement: Sandbox removal cleans up declared network access
+### Requirement: Sandbox removal discards sandbox-scoped resources
 
 The shared lifecycle removal operation used by `destroy` and `up --recreate`
-SHALL remove the exact sandbox and SHALL then remove every network resource
-currently declared for that sandbox, each by sandbox name and resource. Removing
-a resource that is already absent SHALL succeed, because Docker Sandboxes
-ordinarily discards a sandbox-scoped policy along with its sandbox and rejects a
-removal request naming any resource it cannot find. Declared resources are owned
-by sbxflow; manually modifying an overlapping sandbox-scoped resource is outside
-sbxflow's ownership guarantees.
+SHALL remove the exact sandbox and its declared sandbox-scoped network access.
+Successful removal SHALL leave no declared network resource scoped to that
+sandbox. Network access that is already absent SHALL be treated as removed.
+Declared resources remain owned by sbxflow; manually modifying an overlapping
+sandbox-scoped resource is outside sbxflow's ownership guarantees.
 
 #### Scenario: Destroy removes a sandbox with declared network access
 
 - **WHEN** `destroy` successfully removes a sandbox whose declaration contains
   allowed hosts
-- **THEN** it removes each declared resource from the local rule scoped to that
-  sandbox
+- **THEN** its declared sandbox-scoped network access is also removed
 
 #### Scenario: Declared network access is already absent
 
-- **WHEN** removal reaches a declared resource that Docker Sandboxes no longer
-  holds, or a sandbox that has no scoped policy at all
-- **THEN** cleanup treats that resource as already removed
+- **WHEN** the declared network resources are already absent when the sandbox
+  is removed
+- **THEN** the shared removal operation treats that access as already removed
 - **AND** the lifecycle operation succeeds
 
 #### Scenario: Recreation replaces declared network access
@@ -640,18 +668,13 @@ sbxflow's ownership guarantees.
 - **AND** applies the current declaration's allowed hosts to the replacement
   between provisioning it and entering it
 
-#### Scenario: Sandbox removal fails
+#### Scenario: Removal is incomplete
 
-- **WHEN** Docker Sandboxes does not remove the sandbox
-- **THEN** the lifecycle operation reports the removal failure
-- **AND** does not remove its declared sandbox-scoped network resources
-
-#### Scenario: Network cleanup fails after removal
-
-- **WHEN** the sandbox was removed but Docker Sandboxes cannot remove a declared
-  network resource for a reason other than its absence
-- **THEN** the lifecycle operation reports that the sandbox was removed but
-  network cleanup was incomplete
+- **WHEN** Docker Sandboxes does not remove the sandbox, or removes it without
+  completely removing the network access scoped to it
+- **THEN** the lifecycle operation reports the incomplete removal with Docker's
+  diagnostic output
+- **AND** does not report the sandbox or its declared network access as removed
 - **AND** exits with a non-zero status
 
 ### Requirement: Up initializes newly created sandboxes before agent entry

@@ -21,7 +21,7 @@ sandbox:
       sbx-kits:
         type: git
         repo: https://github.com/jamessawle/sbx-kits.git
-        ref: v2026.08.02
+        ref: v2026.08.03
 
     use:
       - source: community

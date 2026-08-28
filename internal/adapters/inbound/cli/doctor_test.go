@@ -38,7 +38,7 @@ func TestDoctorHelp(t *testing.T) {
 
 func TestDoctorRendersDeterministicResults(t *testing.T) {
 	report := doctor.Report{Results: []doctor.Result{
-		{ID: "sbx-compatibility", Status: doctor.StatusPass, Grade: doctor.GradeRequired, Summary: "sbx v0.35.0 is compatible"},
+		{ID: "sbx-compatibility", Status: doctor.StatusPass, Grade: doctor.GradeRequired, Summary: "sbx v0.39.0 is compatible"},
 		{ID: "docker-diagnostics", Status: doctor.StatusWarn, Grade: doctor.GradeRequired, Summary: "3 passed, 1 warned, 0 failed, 0 skipped", Guidance: "Run `sbx diagnose` for detailed results."},
 		{ID: "network-policy", Status: doctor.StatusSkip, Grade: doctor.GradeAdvisory, Summary: "prerequisite unavailable: daemon"},
 	}}
@@ -54,7 +54,7 @@ func TestDoctorRendersDeterministicResults(t *testing.T) {
 	if stderr != "" {
 		t.Fatalf("stderr = %q, want empty", stderr)
 	}
-	want := "[PASS] sbx-compatibility: sbx v0.35.0 is compatible\n" +
+	want := "[PASS] sbx-compatibility: sbx v0.39.0 is compatible\n" +
 		"[WARN] docker-diagnostics: 3 passed, 1 warned, 0 failed, 0 skipped\n" +
 		"  Run `sbx diagnose` for detailed results.\n" +
 		"[SKIP] network-policy: prerequisite unavailable: daemon\n"

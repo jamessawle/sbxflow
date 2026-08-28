@@ -21,9 +21,9 @@ type Streams struct {
 	Err io.Writer
 }
 
-// CreateRequest contains the inputs needed to create a sandbox without
-// attaching to its agent session.
-type CreateRequest struct {
+// Environment is a backend-neutral sandbox definition shared by lifecycle
+// operations that may need to resolve its selected kits.
+type Environment struct {
 	Name           string
 	Agent          string
 	Workspace      string
@@ -32,19 +32,21 @@ type CreateRequest struct {
 	AllowLocalKits bool
 }
 
+// CreateRequest contains the environment to create without attaching to its
+// agent session.
+type CreateRequest struct {
+	Environment Environment
+}
+
 // RunRequest contains the inputs needed to enter an existing sandbox.
 type RunRequest struct {
-	Name           string
-	Agent          string
-	AllowedSources []string
-	AllowLocalKits bool
+	Environment Environment
 }
 
 // CommandRequest executes one literal command vector inside a sandbox workspace.
 type CommandRequest struct {
-	Name      string
-	Workspace string
-	Command   []string
+	Environment Environment
+	Command     []string
 }
 
 // RemoveRequest contains the safeguards and streams for sandbox removal.
@@ -58,12 +60,6 @@ type RemoveRequest struct {
 type NetworkAllowRequest struct {
 	Name      string
 	Resources []string
-}
-
-// NetworkRemoveRequest removes one resource from a sandbox-scoped local rule.
-type NetworkRemoveRequest struct {
-	Name     string
-	Resource string
 }
 
 // State is the normalized lifecycle state of an exact sandbox name.
@@ -125,11 +121,10 @@ type Remover interface {
 	RemoveSandbox(ctx context.Context, request RemoveRequest) error
 }
 
-// NetworkPolicy manages sandbox-scoped local network allow resources. The
-// sandbox must already exist before resources can be scoped to it.
-// RemoveNetworkResource is idempotent: a resource that is already absent, or a
-// sandbox that has no scoped policy at all, is not an error.
-type NetworkPolicy interface {
+// NetworkAllower scopes local network allow resources to one sandbox. The
+// sandbox must already exist before resources can be scoped to it. Removal is
+// not a port capability: Docker Sandboxes discards a sandbox-scoped policy
+// along with the environment that owns it.
+type NetworkAllower interface {
 	AllowNetwork(context.Context, NetworkAllowRequest) error
-	RemoveNetworkResource(context.Context, NetworkRemoveRequest) error
 }
