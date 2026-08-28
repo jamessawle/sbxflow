@@ -412,7 +412,7 @@ executing any command.
 
 ### Requirement: Sandbox workspace mode is explicitly selectable
 
-The version 1 declaration SHALL accept an optional `sandbox.workspace` object with at least one property and no unknown properties. Its `mode` property SHALL accept exactly `direct` or `clone`. When `sandbox.workspace` or its mode is omitted, validation SHALL retain `direct` as the effective compatibility behavior; an explicit `direct` or `clone` SHALL be retained exactly as the repository's intended workspace mode.
+The version 1 declaration SHALL accept an optional `sandbox.workspace` object with at least one property and no unknown properties. Its `mode` property SHALL accept exactly `direct` or `clone`. Only when `sandbox.workspace` is omitted SHALL validation retain `direct` as the effective compatibility behavior; an explicit `direct` or `clone` SHALL be retained exactly as the repository's intended workspace mode.
 
 #### Scenario: Direct mode is explicit
 
