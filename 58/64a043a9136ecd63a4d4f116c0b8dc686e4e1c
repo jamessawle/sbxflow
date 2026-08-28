@@ -1,0 +1,19 @@
+README.md
+  s_0cbfb3004ddf90::t_8fd1ffe63ecc5a 90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "5864a043a9136ecd63a4d4f116c0b8dc686e4e1c",
+  "prompts": {},
+  "sessions": {
+    "s_0cbfb3004ddf90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e6b41be-127e-4777-b696-9e7f816c4700",
+        "model": "claude-opus-5"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
