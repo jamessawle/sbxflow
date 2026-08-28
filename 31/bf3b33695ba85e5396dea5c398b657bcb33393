@@ -1,0 +1,25 @@
+openspec/changes/use-sbx-environments-backend/.openspec.yaml
+  s_9e073684831aa6::t_471257cb1b8146 1-2
+openspec/changes/use-sbx-environments-backend/design.md
+  s_9e073684831aa6::t_e1be3e0e075af0 1-212
+openspec/changes/use-sbx-environments-backend/tasks.md
+  s_9e073684831aa6::t_2ba1eaa7ccc462 1-66
+openspec/changes/use-sbx-environments-backend/proposal.md
+  s_9e073684831aa6::t_a7e89f3c44da41 1-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "31bf3b33695ba85e5396dea5c398b657bcb33393",
+  "prompts": {},
+  "sessions": {
+    "s_9e073684831aa6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0475f-25d9-7d62-869b-744d24fcff1a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
