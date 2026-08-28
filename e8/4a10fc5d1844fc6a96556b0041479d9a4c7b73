@@ -1,0 +1,29 @@
+README.md
+  s_fda1f42c0fb35c::t_0ecc318d0324cf 132-133
+cmd/sbxflow/main_test.go
+  s_fda1f42c0fb35c::t_fb27c41df95301 521,523-534,536-546
+internal/adapters/outbound/sbx/environment_test.go
+  s_fda1f42c0fb35c::t_c68911fb5e029a 7,154-163,178-183,192-197,202,209-219
+internal/application/doctor/checks.go
+  s_fda1f42c0fb35c::t_3c24fa564f86a6 20,55-62,336-338,342,347,351,358
+internal/application/doctor/checks_test.go
+  s_fda1f42c0fb35c::t_377054c7727c5f 28-29
+openspec/changes/archive/2026-08-28-use-sbx-environments-backend/tasks.md
+  s_fda1f42c0fb35c::t_4d4dd7e1b92e2d 63-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "e84a10fc5d1844fc6a96556b0041479d9a4c7b73",
+  "prompts": {},
+  "sessions": {
+    "s_fda1f42c0fb35c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bd9778ba-b511-41f9-a77b-a9504b40c770",
+        "model": "claude-opus-5"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
