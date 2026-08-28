@@ -1,0 +1,19 @@
+openspec/changes/use-sbx-environments-backend/specs/sandbox-lifecycle/spec.md
+  s_7d334229fdfc6a::t_60efdb5dbb25db 289-290,293-301,329,331-333,335
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "e1e491fe5ed3b200339a5ed742fe42c1380c07b5",
+  "prompts": {},
+  "sessions": {
+    "s_7d334229fdfc6a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "60a2dc0f-3c91-48f6-bc6a-5f5297339eee",
+        "model": "claude-opus-5"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
