@@ -474,39 +474,62 @@ func (fixture executableUpFixture) forceWithoutRecreate(t *testing.T) {
 	}
 }
 
-func (fixture executableUpFixture) missingSandbox(t *testing.T) {
-	binary, nested, fakeDirectory := fixture.binary, fixture.nested, fixture.fakeDirectory
-	canonicalLocalKit, canonicalRepository, validationStatus := fixture.canonicalLocalKit, fixture.canonicalRepository, fixture.validationStatus
-	_, _, _, _, _, _ = binary, nested, fakeDirectory, canonicalLocalKit, canonicalRepository, validationStatus
-	logPath := filepath.Join(fakeDirectory, "missing-calls.log")
-	environmentPath := filepath.Join(fakeDirectory, "missing-env.log")
-	stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
-		t,
-		binary,
-		nested,
-		[]string{"up"},
-		[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath},
-		"hello creation\n",
-	)
-	if exitCode != 0 || !strings.Contains(stdout, "hook-outputshell-hookagent received: hello creation") || stderr != validationStatus+"docker create diagnostic\ndocker run diagnostic\n" {
-		t.Fatalf("up exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
-	}
-	calls, err := os.ReadFile(logPath)
-	if err != nil {
-		t.Fatalf("read calls: %v", err)
-	}
-	wantCalls := []string{
-		"kit validate " + canonicalLocalKit,
-		"ls --json",
+// creationRun describes an `up` invocation that is expected to create the
+// sandbox and attach to its agent.
+type creationRun struct {
+	label       string
+	args        []string
+	environment []string
+	logPath     string
+	input       string
+	wantStdout  string
+	wantCalls   []string
+}
+
+// creationCalls returns the sbx invocations expected of a creating `up` run,
+// with any preceding invocations inserted before creation.
+func (fixture executableUpFixture) creationCalls(preceding ...string) []string {
+	calls := []string{"kit validate " + fixture.canonicalLocalKit, "ls --json"}
+	calls = append(calls, preceding...)
+	return append(calls,
 		"env create <env>",
 		"policy allow network --sandbox executable-up api.example.com",
 		"env exec <env> -- printf hook-output",
 		"env exec <env> -- sh -c printf shell-hook",
 		"env run <env>",
+	)
+}
+
+// assertCreationRun runs the described `up` invocation and asserts it succeeded
+// with the expected agent output and sbx invocations.
+func (fixture executableUpFixture) assertCreationRun(t *testing.T, run creationRun) {
+	t.Helper()
+	stdout, stderr, exitCode := runBinaryInDirectoryWithInput(t, fixture.binary, fixture.nested, run.args, run.environment, run.input)
+	wantStderr := fixture.validationStatus + "docker create diagnostic\ndocker run diagnostic\n"
+	if exitCode != 0 || !strings.Contains(stdout, run.wantStdout) || stderr != wantStderr {
+		t.Fatalf("%s exit = %d, stdout = %q, stderr = %q", run.label, exitCode, stdout, stderr)
 	}
-	if got := strings.Split(strings.TrimSpace(string(calls)), "\n"); !reflect.DeepEqual(got, wantCalls) {
-		t.Fatalf("calls = %#v, want %#v", got, wantCalls)
+	calls, err := os.ReadFile(run.logPath)
+	if err != nil {
+		t.Fatalf("read calls: %v", err)
 	}
+	if got := strings.Split(strings.TrimSpace(string(calls)), "\n"); !reflect.DeepEqual(got, run.wantCalls) {
+		t.Fatalf("calls = %#v, want %#v", got, run.wantCalls)
+	}
+}
+
+func (fixture executableUpFixture) missingSandbox(t *testing.T) {
+	logPath := filepath.Join(fixture.fakeDirectory, "missing-calls.log")
+	environmentPath := filepath.Join(fixture.fakeDirectory, "missing-env.log")
+	fixture.assertCreationRun(t, creationRun{
+		label:       "up",
+		args:        []string{"up"},
+		environment: []string{"PATH=" + fixture.fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_ENV_LOG=" + environmentPath},
+		logPath:     logPath,
+		input:       "hello creation\n",
+		wantStdout:  "hook-outputshell-hookagent received: hello creation",
+		wantCalls:   fixture.creationCalls(),
+	})
 	environment, err := os.ReadFile(environmentPath)
 	if err != nil {
 		t.Fatalf("read environment: %v", err)
@@ -556,44 +579,22 @@ func (fixture executableUpFixture) existingSandbox(t *testing.T) {
 }
 
 func (fixture executableUpFixture) recreateExisting(t *testing.T) {
-	binary, nested, fakeDirectory := fixture.binary, fixture.nested, fixture.fakeDirectory
-	canonicalLocalKit, canonicalRepository, validationStatus := fixture.canonicalLocalKit, fixture.canonicalRepository, fixture.validationStatus
-	_, _, _, _, _, _ = binary, nested, fakeDirectory, canonicalLocalKit, canonicalRepository, validationStatus
-	logPath := filepath.Join(fakeDirectory, "recreate-calls.log")
-	environmentPath := filepath.Join(fakeDirectory, "recreate-env.log")
-	stdout, stderr, exitCode := runBinaryInDirectoryWithInput(
-		t,
-		binary,
-		nested,
-		[]string{"up", "--recreate"},
-		[]string{
-			"PATH=" + fakeDirectory,
+	logPath := filepath.Join(fixture.fakeDirectory, "recreate-calls.log")
+	environmentPath := filepath.Join(fixture.fakeDirectory, "recreate-env.log")
+	fixture.assertCreationRun(t, creationRun{
+		label: "up --recreate",
+		args:  []string{"up", "--recreate"},
+		environment: []string{
+			"PATH=" + fixture.fakeDirectory,
 			"SBX_TEST_LOG=" + logPath,
 			"SBX_TEST_ENV_LOG=" + environmentPath,
 			"SBX_TEST_EXISTING=executable-up",
 		},
-		"hello replacement\n",
-	)
-	if exitCode != 0 || !strings.Contains(stdout, "agent received: hello replacement") || stderr != validationStatus+"docker create diagnostic\ndocker run diagnostic\n" {
-		t.Fatalf("up --recreate exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
-	}
-	calls, err := os.ReadFile(logPath)
-	if err != nil {
-		t.Fatalf("read calls: %v", err)
-	}
-	wantCalls := []string{
-		"kit validate " + canonicalLocalKit,
-		"ls --json",
-		"env rm --force <env>",
-		"env create <env>",
-		"policy allow network --sandbox executable-up api.example.com",
-		"env exec <env> -- printf hook-output",
-		"env exec <env> -- sh -c printf shell-hook",
-		"env run <env>",
-	}
-	if got := strings.Split(strings.TrimSpace(string(calls)), "\n"); !reflect.DeepEqual(got, wantCalls) {
-		t.Fatalf("calls = %#v, want %#v", got, wantCalls)
-	}
+		logPath:    logPath,
+		input:      "hello replacement\n",
+		wantStdout: "agent received: hello replacement",
+		wantCalls:  fixture.creationCalls("env rm --force <env>"),
+	})
 }
 
 func (fixture executableUpFixture) confirmRunning(t *testing.T) {
@@ -934,48 +935,56 @@ func (fixture executableDestroyFixture) confirmedRemoval(t *testing.T) {
 	}
 }
 
-func (fixture executableDestroyFixture) forcedRemoval(t *testing.T) {
-	binary, nested, fakeDirectory := fixture.binary, fixture.nested, fixture.fakeDirectory
-	logPath := filepath.Join(fakeDirectory, "forced-calls.log")
+// forcedRemovalRun describes a `destroy` invocation that skips confirmation.
+type forcedRemovalRun struct {
+	logName    string
+	args       []string
+	existing   string
+	wantStdout string
+	wantCalls  string
+}
+
+// assertForcedRemoval runs the described `destroy` invocation and asserts it
+// succeeded quietly with the expected sbx invocations.
+func (fixture executableDestroyFixture) assertForcedRemoval(t *testing.T, run forcedRemovalRun) {
+	t.Helper()
+	logPath := filepath.Join(fixture.fakeDirectory, run.logName)
 	stdout, stderr, exitCode := runBinaryInDirectory(
 		t,
-		binary,
-		nested,
-		[]string{"destroy", "-f"},
-		[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_EXISTING=executable-destroy"},
+		fixture.binary,
+		fixture.nested,
+		run.args,
+		[]string{"PATH=" + fixture.fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_EXISTING=" + run.existing},
 	)
-	if exitCode != 0 || stdout != "forced removal\n" || stderr != "" {
-		t.Fatalf("destroy --force exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
+	if exitCode != 0 || stdout != run.wantStdout || stderr != "" {
+		t.Fatalf("%v exit = %d, stdout = %q, stderr = %q", run.args, exitCode, stdout, stderr)
 	}
 	calls, err := os.ReadFile(logPath)
 	if err != nil {
 		t.Fatalf("read fake sbx calls: %v", err)
 	}
-	if got, want := string(calls), "ls --quiet\nenv rm --force <env>\n"; got != want {
-		t.Fatalf("sbx calls = %q, want %q", got, want)
+	if got := string(calls); got != run.wantCalls {
+		t.Fatalf("sbx calls = %q, want %q", got, run.wantCalls)
 	}
 }
 
+func (fixture executableDestroyFixture) forcedRemoval(t *testing.T) {
+	fixture.assertForcedRemoval(t, forcedRemovalRun{
+		logName:    "forced-calls.log",
+		args:       []string{"destroy", "-f"},
+		existing:   "executable-destroy",
+		wantStdout: "forced removal\n",
+		wantCalls:  "ls --quiet\nenv rm --force <env>\n",
+	})
+}
+
 func (fixture executableDestroyFixture) absentRemoval(t *testing.T) {
-	binary, nested, fakeDirectory := fixture.binary, fixture.nested, fixture.fakeDirectory
-	logPath := filepath.Join(fakeDirectory, "absent-calls.log")
-	stdout, stderr, exitCode := runBinaryInDirectory(
-		t,
-		binary,
-		nested,
-		[]string{"destroy", "--force"},
-		[]string{"PATH=" + fakeDirectory, "SBX_TEST_LOG=" + logPath, "SBX_TEST_EXISTING=executable-destroy-extra"},
-	)
-	if exitCode != 0 || stdout != "" || stderr != "" {
-		t.Fatalf("absent destroy exit = %d, stdout = %q, stderr = %q", exitCode, stdout, stderr)
-	}
-	calls, err := os.ReadFile(logPath)
-	if err != nil {
-		t.Fatalf("read fake sbx calls: %v", err)
-	}
-	if got, want := string(calls), "ls --quiet\n"; got != want {
-		t.Fatalf("sbx calls = %q, want %q", got, want)
-	}
+	fixture.assertForcedRemoval(t, forcedRemovalRun{
+		logName:   "absent-calls.log",
+		args:      []string{"destroy", "--force"},
+		existing:  "executable-destroy-extra",
+		wantCalls: "ls --quiet\n",
+	})
 }
 
 func runBinary(t *testing.T, binary string, args ...string) (string, string, int) {
