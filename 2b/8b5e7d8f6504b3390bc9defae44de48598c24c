@@ -1,0 +1,29 @@
+internal/adapters/outbound/sbx/client.go
+  s_7d334229fdfc6a::t_00acbff827d16f 41
+internal/adapters/outbound/sbx/network_test.go
+  s_7d334229fdfc6a::t_cf2f0793132275 51-52,55
+internal/application/lifecycle/network_test.go
+  s_7d334229fdfc6a::t_0871bc40da8578 109,113-129
+internal/application/lifecycle/up.go
+  s_7d334229fdfc6a::t_cb7c844c79fd99 59
+internal/ports/sandbox/sandbox.go
+  s_7d334229fdfc6a::t_aaa2286854fb19 124-128
+openspec/changes/use-sbx-environments-backend/specs/sandbox-lifecycle/spec.md
+  s_7d334229fdfc6a::t_201785ebbe725f 321-322,324,328-331
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "2b8b5e7d8f6504b3390bc9defae44de48598c24c",
+  "prompts": {},
+  "sessions": {
+    "s_7d334229fdfc6a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "60a2dc0f-3c91-48f6-bc6a-5f5297339eee",
+        "model": "claude-opus-5"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
