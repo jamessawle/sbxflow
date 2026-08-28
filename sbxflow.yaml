@@ -11,6 +11,11 @@ sandbox:
       - api.scorecard.dev
       - sonarcloud.io
 
+  hooks:
+    initialize:
+      - command: [mise, trust, --yes, mise.toml]
+      - command: [mise, run, setup]
+
   kits:
     sources:
       community:
