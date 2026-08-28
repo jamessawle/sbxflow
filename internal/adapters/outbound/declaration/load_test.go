@@ -76,6 +76,30 @@ sandbox:
 	}
 }
 
+func TestLoadPreservesWorkspaceModePresence(t *testing.T) {
+	base := `version: 1
+sandbox:
+  name: demo
+  agent: codex
+  kits:
+    sources:
+      community: {type: git, repo: https://example.test/kits.git, ref: v1}
+    use:
+      - {source: community, kit: tooling}
+`
+	omitted, err := Load([]byte(base))
+	if err != nil || omitted.Sandbox.Workspace != nil {
+		t.Fatalf("omitted workspace = %#v, %v", omitted.Sandbox.Workspace, err)
+	}
+	for _, mode := range []declarationport.WorkspaceMode{declarationport.WorkspaceModeDirect, declarationport.WorkspaceModeClone} {
+		document := strings.Replace(base, "  kits:", "  workspace:\n    mode: "+string(mode)+"\n  kits:", 1)
+		configuration, loadErr := Load([]byte(document))
+		if loadErr != nil || configuration.Sandbox.Workspace == nil || configuration.Sandbox.Workspace.Mode != mode {
+			t.Fatalf("mode %q workspace = %#v, %v", mode, configuration.Sandbox.Workspace, loadErr)
+		}
+	}
+}
+
 func TestLoadRepositoryDeclaration(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
@@ -185,9 +209,12 @@ sandbox:
 		"multiple documents": {document: valid + "---\n" + valid, want: "exactly one"},
 		"unsupported version": {document: strings.Replace(valid, "version: 1", "version: 2", 1),
 			want: "version"},
-		"unsupported agent":  {document: strings.Replace(valid, "agent: codex", "agent: typo", 1), want: "/sandbox/agent"},
-		"unknown root field": {document: valid + "unknown: true\n", want: "additional properties"},
-		"wrong source shape": {document: strings.Replace(valid, "        ref: v1", "        base: ghcr.io/example", 1), want: "sources"},
+		"unsupported agent":          {document: strings.Replace(valid, "agent: codex", "agent: typo", 1), want: "/sandbox/agent"},
+		"unknown root field":         {document: valid + "unknown: true\n", want: "additional properties"},
+		"empty workspace":            {document: strings.Replace(valid, "  kits:", "  workspace: {}\n  kits:", 1), want: "minProperties"},
+		"unknown workspace field":    {document: strings.Replace(valid, "  kits:", "  workspace:\n    unknown: true\n  kits:", 1), want: "unknown"},
+		"unsupported workspace mode": {document: strings.Replace(valid, "  kits:", "  workspace:\n    mode: shared\n  kits:", 1), want: "/sandbox/workspace/mode"},
+		"wrong source shape":         {document: strings.Replace(valid, "        ref: v1", "        base: ghcr.io/example", 1), want: "sources"},
 		"unknown source field": {document: strings.Replace(valid, "        ref: v1", "        ref: v1\n        mystery: value", 1),
 			want: "mystery"},
 		"duplicate selection":    {document: valid + "      - source: community\n        kit: tooling\n", want: "items at 0 and 1 are equal"},

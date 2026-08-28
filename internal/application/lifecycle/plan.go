@@ -52,11 +52,16 @@ func NewPlan(report configuration.Validation) (Plan, error) {
 	for index, command := range report.Linked.Configuration.Sandbox.Hooks.Initialize {
 		initialize[index] = append([]string(nil), command.Command...)
 	}
+	workspaceMode := sandboxport.WorkspaceModeDirect
+	if workspace := report.Linked.Configuration.Sandbox.Workspace; workspace != nil && workspace.Mode == configuration.WorkspaceModeClone {
+		workspaceMode = sandboxport.WorkspaceModeClone
+	}
 	return Plan{
 		Environment: sandboxport.Environment{
 			Name:           report.Linked.Configuration.Sandbox.Name,
 			Agent:          report.Linked.Configuration.Sandbox.Agent,
 			Workspace:      filepath.Dir(report.Declaration),
+			WorkspaceMode:  workspaceMode,
 			Kits:           kits,
 			AllowedSources: append([]string(nil), report.Linked.Trust.AllowedSources...),
 			AllowLocalKits: report.Linked.Trust.AllowLocalKits,

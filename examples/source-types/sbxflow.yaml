@@ -5,6 +5,9 @@ sandbox:
   name: source-types
   agent: shell
 
+  workspace:
+    mode: direct
+
   kits:
     sources:
       git-kits:

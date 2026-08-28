@@ -81,11 +81,16 @@ func (r UpRunner) Run(ctx context.Context, start string, options UpOptions, stre
 		return ValidationReport{}, ErrForceRequiresRecreate
 	}
 	report := r.Validation.Run(ctx, start)
+	if streams.Err != nil {
+		if report.Valid() {
+			_, _ = fmt.Fprintf(streams.Err, "Configuration valid: %s\n", report.Declaration)
+		}
+		for _, warning := range report.Warnings {
+			_, _ = fmt.Fprintf(streams.Err, "Warning: %s\n", warning)
+		}
+	}
 	if !report.Valid() {
 		return report, ErrValidationFailed
-	}
-	if streams.Err != nil {
-		_, _ = fmt.Fprintf(streams.Err, "Configuration valid: %s\n", report.Declaration)
 	}
 
 	plan, err := NewPlan(report)

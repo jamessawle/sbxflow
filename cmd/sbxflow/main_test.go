@@ -157,6 +157,8 @@ func executableValidateTest(t *testing.T, binary string) {
 sandbox:
   name: executable-test
   agent: codex
+  workspace:
+    mode: direct
   hooks:
     initialize:
       - command: [must-not-run]
@@ -279,6 +281,8 @@ func executableUpTest(t *testing.T, binary string) {
 sandbox:
   name: executable-up
   agent: codex
+  workspace:
+    mode: direct
   network:
     allowedHosts:
       - api.example.com

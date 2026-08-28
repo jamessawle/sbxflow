@@ -20,6 +20,9 @@ sandbox:
   name: my-project
   agent: codex
 
+  workspace:
+    mode: clone
+
   network:
     allowedHosts:
       - api.github.com
@@ -152,7 +155,7 @@ detail, not additional repository configuration. An existing sandbox's
 workspace and kits are not inspected or reconciled when the declaration
 changes.
 
-Use `--recreate` to replace an existing sandbox from the current declaration. Recreation permanently removes the sandbox's installed tools, Docker images, agent history, configuration changes, and other persisted state. A running sandbox requires confirmation; a stopped sandbox does not. The repository's host workspace is not deleted.
+Use `--recreate` to replace an existing sandbox from the current declaration. Recreation permanently removes the sandbox's installed tools, Docker images, agent history, configuration changes, and other persisted state, including work stored only in a private clone. A running sandbox requires confirmation; a stopped sandbox does not. The repository's host workspace is not deleted. Workspace mode is creation-time configuration: ordinary `up` does not reconcile an existing sandbox after the declaration changes; recreate it to apply the current mode.
 
 Use `--force` with `--recreate` to bypass confirmation for a running sandbox. This still permanently removes its persisted state and can terminate other attached terminal sessions. `--force` is not valid without `--recreate`.
 
@@ -167,7 +170,10 @@ sbxflow destroy
 sbxflow destroy --force
 ```
 
-Permanently removes the exact declared sandbox and its persisted state. Docker owns the default confirmation; `--force` or `-f` skips it and permits removal during an active session. The repository's host workspace is not deleted.
+Permanently removes the exact declared sandbox and its persisted state,
+including work stored only inside the sandbox or its private clone. Docker owns
+the default confirmation; `--force` or `-f` skips it and permits removal during
+an active session. The repository's host workspace is not deleted.
 
 ## Kit source trust
 
@@ -178,6 +184,31 @@ sbxflow derives Docker's kit-source settings from the selected kits:
 - Local kits are enabled only when selected.
 
 The derived settings apply only to Docker Sandbox processes started by sbxflow. Host and organisation policy can impose stricter controls.
+
+## Sandbox workspace mode
+
+Declare `sandbox.workspace.mode` explicitly. New declarations should normally
+use `clone`, which asks Docker Sandboxes to create a private Git clone and keeps
+the host repository outside the agent's writable workspace:
+
+```yaml
+sandbox:
+  workspace:
+    mode: clone
+```
+
+Use `direct` when sandbox changes must be immediately visible in the host
+repository. In direct mode the repository directory containing `sbxflow.yaml`
+is mounted as the writable workspace. In clone mode, changes remain in the
+private clone and must be transferred through Git before destroying or
+recreating the sandbox.
+
+For compatibility, omitting the workspace mode currently behaves as `direct`
+and produces a validation warning. The implicit mode is planned to change to
+`clone` in a future pre-1.0 release, so declare either mode to make the intended
+behavior stable. Docker Sandboxes remains authoritative for whether a
+repository can be cloned; clone-related creation diagnostics are passed
+through unchanged.
 
 ## Sandbox network access
 
@@ -237,15 +268,16 @@ example. Standard output and error are forwarded to `sbxflow up`, while
 standard input is disconnected so setup cannot consume confirmation or agent
 input.
 
-Initialization runs only when `up` creates a missing sandbox, including after
+Initialization runs in the effective workspace only when `up` creates a missing sandbox, including after
 `up --recreate`; an ordinary `up` never reruns or reconciles hooks for an
 existing running or stopped sandbox. Recreate the sandbox to apply changed
 hooks. There is no implicit timeout, so readiness checks should be bounded.
 Cancellation or the first failed command prevents later commands and agent
 entry, then removes the newly created sandbox and its declared scoped
-resources. This rollback cannot undo changes already written to the
-host-mounted workspace, so commands should tolerate a complete retry after a
-partial run.
+resources. This rollback cannot undo changes already written to a direct
+host-mounted workspace. A successfully removed clone-mode sandbox discards
+changes confined to its private clone and leaves the host repository unchanged,
+so commands should tolerate a complete retry after a partial run.
 
 ## Versioning
 

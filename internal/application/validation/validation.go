@@ -30,6 +30,7 @@ func (v Validator) Run(ctx context.Context, start string) Report {
 		Declaration: resolution.Declaration,
 		Linked:      resolution.Linked,
 		Errors:      append([]error(nil), resolution.Errors...),
+		Warnings:    append([]string(nil), resolution.Warnings...),
 	}
 	if !resolution.Valid() {
 		return report

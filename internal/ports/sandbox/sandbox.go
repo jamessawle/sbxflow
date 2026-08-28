@@ -27,10 +27,19 @@ type Environment struct {
 	Name           string
 	Agent          string
 	Workspace      string
+	WorkspaceMode  WorkspaceMode
 	Kits           []string
 	AllowedSources []string
 	AllowLocalKits bool
 }
+
+// WorkspaceMode selects the backend-neutral workspace behavior at creation.
+type WorkspaceMode string
+
+const (
+	WorkspaceModeDirect WorkspaceMode = "direct"
+	WorkspaceModeClone  WorkspaceMode = "clone"
+)
 
 // CreateRequest contains the environment to create without attaching to its
 // agent session.

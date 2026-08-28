@@ -4,6 +4,9 @@ sandbox:
   name: sbxflow
   agent: codex
 
+  workspace:
+    mode: clone
+
   network:
     allowedHosts:
       - www.bestpractices.dev

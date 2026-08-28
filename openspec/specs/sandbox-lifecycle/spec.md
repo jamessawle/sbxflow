@@ -131,8 +131,8 @@ additional confirmation. A running sandbox SHALL be force-removed only after
 the user explicitly confirms a warning that recreation can terminate other
 attached sessions or explicitly requests forced recreation. The shared removal
 operation SHALL remain limited to the exact declared name and SHALL permanently
-discard the removed sandbox's persisted state without deleting files from the
-repository's host workspace.
+discard the removed sandbox's persisted state, including work stored only inside
+the sandbox, without deleting files from the repository's host workspace.
 
 If lifecycle state cannot be determined, or unforced confirmation cannot be
 obtained or is declined, `up` SHALL stop without removing, creating, entering,
@@ -149,8 +149,8 @@ lifecycle work.
   name
 - **AND** Docker does not ask for an additional removal confirmation
 - **AND** after successful removal, `up` creates and enters a sandbox with
-  the declared name, agent, repository workspace, selected kits, and derived
-  trust
+  the declared name, agent, effective workspace mode, repository path, selected
+  kits, and derived trust
 
 #### Scenario: Running sandbox recreation is confirmed
 
@@ -226,26 +226,48 @@ lifecycle work.
 
 #### Scenario: Recreated sandbox starts with new state
 
-- **WHEN** forced removal succeeds and `up` creates the replacement sandbox
+- **WHEN** forced removal succeeds and `up` creates a direct-mode replacement sandbox
 - **THEN** state from the removed sandbox is unavailable in the replacement
+- **AND** files in the repository's host workspace remain intact
+
+#### Scenario: Recreated clone-mode sandbox discards private work
+
+- **WHEN** forced removal succeeds for a clone-mode sandbox whose private clone contains work not stored elsewhere
+- **THEN** that private work is unavailable in the replacement
 - **AND** files in the repository's host workspace remain intact
 
 ### Requirement: Missing sandbox is created and entered from the declaration
 
 When the declared sandbox name is absent, `up` SHALL provision a sandbox under
-that name with the repository workspace and every selected kit in declaration
-order, and SHALL then enter its agent session interactively. Provisioning and
+that name with the declaration directory as its repository path, the effective
+workspace mode, and every selected kit in declaration order, and SHALL then enter
+its agent session interactively. `direct` mode SHALL expose the host repository
+workspace directly. `clone` mode SHALL request Docker Sandboxes' private clone
+of that repository while keeping the host repository files outside the agent's
+writable workspace. Provisioning and
 interactive entry SHALL remain separate lifecycle operations so a declared
 network rule can be applied between them. Remote kits SHALL use their linked
 execution references, and local kits SHALL use their safely resolved absolute
-host paths.
+host paths. Docker Sandboxes SHALL remain authoritative for whether the
+repository can be provisioned in the selected mode.
+
+#### Scenario: Missing sandbox uses direct mode
+
+- **WHEN** the declared sandbox is absent and its effective workspace mode is `direct`
+- **THEN** the provisioning operation uses the declaration directory as a directly mounted workspace
+
+#### Scenario: Missing sandbox uses clone mode
+
+- **WHEN** the declared sandbox is absent and its effective workspace mode is `clone`
+- **THEN** the provisioning operation requests a private clone of the repository at the declaration directory
+- **AND** does not expose that host repository as the agent's writable workspace
 
 #### Scenario: Missing sandbox uses a Git kit
 
 - **WHEN** the declared sandbox is absent and selects a Git kit
 - **THEN** the provisioning operation includes the linked Git execution
   reference
-- **AND** includes the declared name, agent, and repository workspace
+- **AND** includes the declared name, agent, repository path, and effective workspace mode
 
 #### Scenario: Missing sandbox uses an OCI kit
 
@@ -273,7 +295,7 @@ host paths.
 
 #### Scenario: Docker cannot provision the sandbox
 
-- **WHEN** Docker Sandboxes rejects or cannot complete provisioning
+- **WHEN** Docker Sandboxes rejects or cannot complete provisioning, including because the repository cannot be cloned
 - **THEN** its diagnostic output remains visible to the user
 - **AND** `up` does not attach to a sandbox
 - **AND** exits with a non-zero status
@@ -681,8 +703,9 @@ sandbox-scoped resource is outside sbxflow's ownership guarantees.
 
 After validation, sandbox provisioning, and application of any declared network
 resources, `up` SHALL execute every declared `sandbox.hooks.initialize` command
-in order inside the exact newly created sandbox with the declared repository
-workspace as its working directory. The commands SHALL run when `up` creates a
+in order inside the exact newly created sandbox with its effective workspace as
+the working directory. In direct mode that workspace SHALL be the host-mounted
+repository; in clone mode it SHALL be the private clone. The commands SHALL run when `up` creates a
 missing sandbox, including creation following recreation, and agent entry SHALL
 begin only after every command succeeds. They SHALL NOT run for an existing
 running or stopped sandbox, or during `validate`, `down`, or `destroy`.
@@ -691,9 +714,20 @@ running or stopped sandbox, or during `validate`, `down`, or `destroy`.
 
 - **WHEN** `up` creates a missing sandbox with declared initialization commands
 - **THEN** it applies any declared network resources to the created sandbox
-- **AND** executes the commands inside that sandbox and workspace in declaration
+- **AND** executes the commands inside that sandbox and its effective workspace in declaration
   order
 - **AND** enters the agent only after every command succeeds
+
+#### Scenario: Direct-mode initialization changes host files
+
+- **WHEN** an initialization command changes files in a direct-mode workspace
+- **THEN** those changes are immediately visible in the repository's host workspace
+
+#### Scenario: Clone-mode initialization changes private files
+
+- **WHEN** an initialization command changes files in a clone-mode workspace
+- **THEN** those changes remain in the private clone until transferred through Git
+- **AND** the corresponding host repository files remain unchanged
 
 #### Scenario: Recreated sandbox has initialization commands
 
@@ -769,8 +803,9 @@ cancelled, `up` SHALL stop before executing later commands or entering the agent
 return a non-zero result with context identifying the failed command, and remove
 the sandbox created by that invocation plus its declared sandbox-scoped
 resources. If cleanup also fails, `up` SHALL report both failures while preserving
-the initialization failure as the primary cause. Cleanup does not revert changes
-already made to the host-mounted workspace.
+the initialization failure as the primary cause. Cleanup SHALL NOT revert changes
+already made to a direct host-mounted workspace; changes confined to a successfully
+removed private clone SHALL be discarded with that sandbox.
 
 #### Scenario: A command fails
 
@@ -796,6 +831,26 @@ already made to the host-mounted workspace.
 
 #### Scenario: A failed command changed the host workspace
 
-- **WHEN** an initialization command changes the host-mounted workspace before
+- **WHEN** an initialization command changes the direct host-mounted workspace before
   failing
 - **THEN** sandbox rollback does not claim to revert that host filesystem change
+
+#### Scenario: A failed command changed the private clone
+
+- **WHEN** an initialization command changes only the clone-mode private workspace before failing and sandbox cleanup succeeds
+- **THEN** the private changes are discarded with the sandbox
+- **AND** the host repository remains unchanged
+
+### Requirement: Existing sandbox workspace mode is not reconciled
+
+Workspace mode SHALL be a creation-time setting. Ordinary `up` SHALL enter an existing exact-name sandbox without comparing its actual workspace mode to the current declaration. A changed mode SHALL take effect only after `up --recreate` successfully replaces the sandbox.
+
+#### Scenario: Workspace mode changes after creation
+
+- **WHEN** the declared workspace mode differs from the mode used to create an existing sandbox and recreation is not requested
+- **THEN** `up` enters the existing sandbox without changing or comparing its mode
+
+#### Scenario: Workspace mode changes before recreation
+
+- **WHEN** the declared workspace mode differs from the existing sandbox and recreation is successfully requested
+- **THEN** the replacement is provisioned using the currently declared mode

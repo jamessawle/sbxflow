@@ -36,8 +36,17 @@
           ]
         },
         "kits": { "$ref": "#/$defs/kits" },
+        "workspace": { "$ref": "#/$defs/workspace" },
         "network": { "$ref": "#/$defs/network" },
         "hooks": { "$ref": "#/$defs/hooks" }
+      }
+    },
+    "workspace": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "type": "string", "enum": ["direct", "clone"] }
       }
     },
     "hooks": {

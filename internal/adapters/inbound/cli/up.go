@@ -26,7 +26,7 @@ func NewUpCommand(runner UpRunner) *cobra.Command {
 		Short: "Create or enter the repository's Docker Sandbox",
 		Long: "Discover and validate the nearest sbxflow.yaml, then interactively create or enter its declared Docker Sandbox.\n" +
 			"An existing named sandbox is entered without reconciling its workspace or kits with the current declaration.\n" +
-			"With --recreate, an existing sandbox and its persisted state are force-removed before its replacement is created and entered.\n" +
+			"With --recreate, an existing sandbox, its persisted state, and work stored only inside it are force-removed before its replacement is created and entered.\n" +
 			"Recreating a running sandbox requires confirmation because it can terminate other attached terminal sessions.\n" +
 			"With --recreate, --force bypasses that confirmation despite the permanent state loss and risk to attached sessions.",
 		Args: cobra.NoArgs,
@@ -67,7 +67,7 @@ func (recreationConfirmer) ConfirmRunningSandboxRecreation(name string, streams 
 	if streams.In == nil || streams.Err == nil {
 		return false, errors.New("confirmation input or error stream is unavailable")
 	}
-	_, _ = fmt.Fprintf(streams.Err, "Warning: recreating running sandbox %q permanently removes its persisted state and can terminate other attached terminal sessions.\nContinue? [y/N] ", name)
+	_, _ = fmt.Fprintf(streams.Err, "Warning: recreating running sandbox %q permanently removes its persisted state and work stored only inside it, and can terminate other attached terminal sessions.\nContinue? [y/N] ", name)
 	response, err := readConfirmationLine(streams.In)
 	if err != nil {
 		return false, fmt.Errorf("read confirmation response: %w", err)
