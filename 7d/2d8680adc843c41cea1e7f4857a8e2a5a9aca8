@@ -1,0 +1,19 @@
+sbxflow.yaml
+  s_730aa437f31d88::t_61ce5620b24928 14-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "7d2d8680adc843c41cea1e7f4857a8e2a5a9aca8",
+  "prompts": {},
+  "sessions": {
+    "s_730aa437f31d88": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c5caf73e-e760-44cd-8375-62bf2d76ed99",
+        "model": "unknown"
+      },
+      "human_author": "James Sawle <jamessawle@hotmail.com>"
+    }
+  }
+}
