@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/jamessawle/sbxflow/internal/domain/configuration"
+	sandboxport "github.com/jamessawle/sbxflow/internal/ports/sandbox"
 )
 
 func TestNewPlanPreservesKitOrderAndTrust(t *testing.T) {
@@ -72,5 +73,33 @@ func TestNewPlanRejectsMissingLocalValidationResult(t *testing.T) {
 	}
 	if _, err := NewPlan(report); err == nil {
 		t.Fatal("NewPlan() error = nil, want missing local result")
+	}
+}
+
+func TestNewPlanMapsWorkspaceModes(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		workspace *configuration.Workspace
+		want      sandboxport.WorkspaceMode
+	}{
+		{name: "omitted", want: sandboxport.WorkspaceModeDirect},
+		{name: "explicit direct", workspace: &configuration.Workspace{Mode: configuration.WorkspaceModeDirect}, want: sandboxport.WorkspaceModeDirect},
+		{name: "clone", workspace: &configuration.Workspace{Mode: configuration.WorkspaceModeClone}, want: sandboxport.WorkspaceModeClone},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			report := configuration.Validation{
+				Declaration: "/repo/sbxflow.yaml",
+				Linked: configuration.LinkedConfiguration{Configuration: configuration.Configuration{Sandbox: configuration.Sandbox{
+					Name: "project", Agent: "codex", Workspace: test.workspace,
+				}}},
+			}
+			plan, err := NewPlan(report)
+			if err != nil || plan.Environment.WorkspaceMode != test.want {
+				t.Fatalf("NewPlan() mode = %q, %v, want %q", plan.Environment.WorkspaceMode, err, test.want)
+			}
+			if plan.Environment.Workspace != "/repo" {
+				t.Fatalf("NewPlan() workspace = %q, want declaration directory", plan.Environment.Workspace)
+			}
+		})
 	}
 }

@@ -114,15 +114,35 @@ func TestRunnerValidationGatesLifecycleLookup(t *testing.T) {
 	commands := &fakeCommandRunner{}
 	var stderr bytes.Buffer
 	runner := UpRunner{
-		Validation: fakeValidator{report: configuration.Validation{Errors: []error{errors.New("invalid")}}},
+		Validation: fakeValidator{report: configuration.Validation{Warnings: []string{"workspace mode is omitted"}, Errors: []error{errors.New("invalid")}}},
 		Sandboxes:  sbx.Client{Commands: commands, Interactive: &fakeInteractiveRunner{}},
 	}
 	_, err := runner.Run(context.Background(), "/repo", UpOptions{}, Streams{Err: &stderr})
 	if !errors.Is(err, ErrValidationFailed) || commands.lookups != 0 || commands.runs != 0 {
 		t.Fatalf("Run() error = %v, lookups = %d, runs = %d", err, commands.lookups, commands.runs)
 	}
-	if stderr.String() != "" {
-		t.Fatalf("stderr = %q, want no validation success status", stderr.String())
+	if stderr.String() != "Warning: workspace mode is omitted\n" {
+		t.Fatalf("stderr = %q, want warning without validation success status", stderr.String())
+	}
+}
+
+func TestRunnerReportsWarningsBeforeLifecycleLookup(t *testing.T) {
+	var stderr bytes.Buffer
+	report := validReport()
+	report.Warnings = []string{"workspace mode is omitted"}
+	commands := &fakeCommandRunner{
+		path:   "/bin/sbx",
+		output: sbx.Output{Stdout: []byte(`{"sandboxes":[]}`)},
+		onLookup: func() {
+			want := "Configuration valid: /repo/sbxflow.yaml\nWarning: workspace mode is omitted\n"
+			if stderr.String() != want {
+				t.Fatalf("stderr before lookup = %q, want %q", stderr.String(), want)
+			}
+		},
+	}
+	runner := UpRunner{Validation: fakeValidator{report: report}, Sandboxes: sbx.Client{Commands: commands, Interactive: &fakeInteractiveRunner{}}}
+	if _, err := runner.Run(context.Background(), "/repo", UpOptions{}, Streams{Err: &stderr}); err != nil {
+		t.Fatalf("Run() error = %v", err)
 	}
 }
 
@@ -292,6 +312,43 @@ func TestRunnerRecreatesExactExistingSandboxBeforeCreatingFromPlan(t *testing.T)
 	}
 }
 
+func TestRunnerUsesCloneModeForCreationAndRecreation(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		state   sandboxport.State
+		options UpOptions
+	}{
+		{name: "creation", state: sandboxport.StateAbsent},
+		{name: "recreation", state: sandboxport.StateStopped, options: UpOptions{Recreate: true}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			report := cloneReport()
+			sandboxes := &fakeUpSandboxes{state: test.state}
+			runner := UpRunner{Validation: fakeValidator{report: report}, Sandboxes: sandboxes}
+			if _, err := runner.Run(context.Background(), "/repo", test.options, Streams{}); err != nil {
+				t.Fatalf("Run() error = %v", err)
+			}
+			if sandboxes.createRequest.Environment.WorkspaceMode != sandboxport.WorkspaceModeClone || sandboxes.runRequest.Environment.WorkspaceMode != sandboxport.WorkspaceModeClone {
+				t.Fatalf("create/run environments = %#v / %#v", sandboxes.createRequest.Environment, sandboxes.runRequest.Environment)
+			}
+		})
+	}
+}
+
+func TestRunnerDoesNotReconcileExistingSandboxWorkspaceMode(t *testing.T) {
+	sandboxes := &fakeUpSandboxes{state: sandboxport.StateRunning}
+	runner := UpRunner{Validation: fakeValidator{report: cloneReport()}, Sandboxes: sandboxes}
+	if _, err := runner.Run(context.Background(), "/repo", UpOptions{}, Streams{}); err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !reflect.DeepEqual(sandboxes.calls, []string{"lookup project", "run project"}) {
+		t.Fatalf("calls = %#v, want inspection and entry without recreation", sandboxes.calls)
+	}
+	if sandboxes.createRequest.Environment.Name != "" || sandboxes.runRequest.Environment.WorkspaceMode != sandboxport.WorkspaceModeClone {
+		t.Fatalf("create/run requests = %#v / %#v", sandboxes.createRequest, sandboxes.runRequest)
+	}
+}
+
 func TestRunnerConfirmsOnlyRunningRecreation(t *testing.T) {
 	for _, test := range []struct {
 		name       string
@@ -410,6 +467,12 @@ func validReport() configuration.Validation {
 			Trust: configuration.Trust{AllowedSources: []string{"docker.io/", "github.com/example/kits"}},
 		},
 	}
+}
+
+func cloneReport() configuration.Validation {
+	report := validReport()
+	report.Linked.Configuration.Sandbox.Workspace = &configuration.Workspace{Mode: configuration.WorkspaceModeClone}
+	return report
 }
 
 func expectedEnvironment() sandboxport.Environment {

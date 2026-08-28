@@ -38,6 +38,12 @@ sandbox:
 	if !report.Valid() {
 		t.Fatalf("Run() errors = %v", report.Errors)
 	}
+	if len(report.Warnings) != 1 || !strings.Contains(report.Warnings[0], "effective mode is currently direct") {
+		t.Fatalf("Run() warnings = %#v, want omitted-mode advisory", report.Warnings)
+	}
+	if report.Linked.Configuration.Sandbox.Workspace == nil || report.Linked.Configuration.Sandbox.Workspace.Mode != configuration.WorkspaceModeDirect {
+		t.Fatalf("Run() workspace = %#v, want effective direct mode", report.Linked.Configuration.Sandbox.Workspace)
+	}
 	if commands.lookups != 0 || len(commands.calls) != 0 {
 		t.Fatalf("remote validation invoked commands: lookups=%d calls=%#v", commands.lookups, commands.calls)
 	}
@@ -87,8 +93,37 @@ sandbox:
 	if report.Valid() || len(report.Errors) != 1 || len(report.LocalKits) != 2 || !report.LocalKits[1].Valid {
 		t.Fatalf("Run() report = %#v", report)
 	}
+	if len(report.Warnings) != 1 {
+		t.Fatalf("Run() warnings = %#v, want warning retained alongside error", report.Warnings)
+	}
 	if !report.Linked.Trust.AllowLocalKits || len(commands.calls) != 2 {
 		t.Fatalf("trust/calls = %#v / %#v", report.Linked.Trust, commands.calls)
+	}
+}
+
+func TestRunnerDoesNotWarnForExplicitWorkspaceMode(t *testing.T) {
+	for _, mode := range []string{"direct", "clone"} {
+		t.Run(mode, func(t *testing.T) {
+			repository := t.TempDir()
+			writeDeclaration(t, repository, `version: 1
+sandbox:
+  name: demo
+  agent: codex
+  workspace:
+    mode: `+mode+`
+  kits:
+    sources:
+      remote: {type: git, repo: https://github.com/example/kits.git, ref: v1}
+    use:
+      - {source: remote, kit: tooling}
+`)
+			declarations := declaration.NewRepository()
+			configurations := configuration.Resolver{Declarations: declarations, LocalPaths: declarations}
+			report := validation.NewValidator(configurations, sbx.Client{Commands: &recordingRunner{}}).Run(context.Background(), repository)
+			if !report.Valid() || len(report.Warnings) != 0 {
+				t.Fatalf("Run() report = %#v, want valid without warnings", report)
+			}
+		})
 	}
 }
 

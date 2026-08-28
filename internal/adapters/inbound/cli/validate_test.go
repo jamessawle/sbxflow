@@ -55,6 +55,24 @@ func TestValidateRendersSuccessReport(t *testing.T) {
 	}
 }
 
+func TestValidateRendersWarningsWithoutFailing(t *testing.T) {
+	report := validation.Report{
+		Declaration: "/repo/sbxflow.yaml",
+		Linked:      configuration.LinkedConfiguration{Configuration: configuration.Configuration{Version: 1}},
+		Warnings:    []string{"declare direct or clone explicitly"},
+	}
+	stdout, stderr, err := executeWithValidate([]string{"validate"}, fakeValidateRunner{report: report})
+	if err != nil {
+		t.Fatalf("validate error = %v", err)
+	}
+	if !strings.Contains(stdout, "State: pass") {
+		t.Fatalf("stdout = %q, want passing validation report", stdout)
+	}
+	if stderr != "Warning: declare direct or clone explicitly\n" {
+		t.Fatalf("stderr = %q", stderr)
+	}
+}
+
 func TestValidateRendersActionableFailure(t *testing.T) {
 	report := validation.Report{
 		Declaration: "/repo/sbxflow.yaml",
@@ -76,6 +94,21 @@ func TestValidateRendersActionableFailure(t *testing.T) {
 	}
 	if strings.Contains(stderr, errValidationFailed.Error()) {
 		t.Fatalf("failure appends an unstructured Cobra error: %q", stderr)
+	}
+}
+
+func TestValidateKeepsWarningsSeparateFromErrors(t *testing.T) {
+	report := validation.Report{
+		Declaration: "/repo/sbxflow.yaml",
+		Warnings:    []string{"workspace mode is omitted"},
+		Errors:      []error{errors.New("independent validation error")},
+	}
+	stdout, stderr, err := executeWithValidate([]string{"validate"}, fakeValidateRunner{report: report})
+	if !errors.Is(err, errValidationFailed) || stdout != "" {
+		t.Fatalf("error = %v, stdout = %q", err, stdout)
+	}
+	if !strings.HasPrefix(stderr, "Warning: workspace mode is omitted\n") || !strings.Contains(stderr, "independent validation error") {
+		t.Fatalf("stderr = %q, want warning followed by validation error", stderr)
 	}
 }
 

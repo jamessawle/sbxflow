@@ -69,6 +69,25 @@ func TestUpInitializesCreatedSandboxInOrderBeforeAttachment(t *testing.T) {
 	}
 }
 
+func TestUpInitializesAndRollsBackCloneWorkspace(t *testing.T) {
+	want := errors.New("clone initialization failed")
+	report := initializationReport()
+	report.Linked.Configuration.Sandbox.Workspace = &configuration.Workspace{Mode: configuration.WorkspaceModeClone}
+	sandboxes := &fakeUpSandboxes{executeErr: want}
+	runner := UpRunner{Validation: fakeValidator{report: report}, Sandboxes: sandboxes}
+	_, err := runner.Run(context.Background(), "/repo", UpOptions{}, Streams{})
+	if !errors.Is(err, want) {
+		t.Fatalf("Run() error = %v", err)
+	}
+	wantCalls := []string{"lookup project", "create project", "allow project", "execute project", "remove project"}
+	if !reflect.DeepEqual(sandboxes.calls, wantCalls) {
+		t.Fatalf("calls = %#v, want %#v", sandboxes.calls, wantCalls)
+	}
+	if sandboxes.createRequest.Environment.WorkspaceMode != sandboxport.WorkspaceModeClone || len(sandboxes.executeRequests) != 1 || sandboxes.executeRequests[0].Environment.WorkspaceMode != sandboxport.WorkspaceModeClone {
+		t.Fatalf("clone create/execute requests = %#v / %#v", sandboxes.createRequest, sandboxes.executeRequests)
+	}
+}
+
 func TestUpSkipsInitializationForExistingSandbox(t *testing.T) {
 	for _, state := range []sandboxport.State{sandboxport.StateRunning, sandboxport.StateStopped} {
 		sandboxes := &fakeUpSandboxes{state: state}
