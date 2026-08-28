@@ -9,6 +9,7 @@ type Resolution struct {
 	Linked      LinkedConfiguration
 	LocalKits   []LocalKit
 	Errors      []error
+	Warnings    []string
 }
 
 // Valid reports whether declaration discovery, linking, and path resolution
@@ -29,6 +30,7 @@ type Validation struct {
 	Linked      LinkedConfiguration
 	LocalKits   []LocalKitValidation
 	Errors      []error
+	Warnings    []string
 }
 
 // Valid reports whether every validation phase succeeded.
@@ -58,6 +60,10 @@ func (r Resolver) Resolve(start string) Resolution {
 		return resolution
 	}
 	resolution.Declaration = declaration.Path
+	if declaration.Configuration.Sandbox.Workspace == nil {
+		resolution.Warnings = append(resolution.Warnings, "sandbox.workspace.mode is omitted; the effective mode is currently direct. Declare direct or clone explicitly because the implicit mode will change to clone in a future pre-1.0 release")
+		declaration.Configuration.Sandbox.Workspace = &Workspace{Mode: WorkspaceModeDirect}
+	}
 	linked, err := Link(declaration.Configuration)
 	if err != nil {
 		resolution.Errors = append(resolution.Errors, err)

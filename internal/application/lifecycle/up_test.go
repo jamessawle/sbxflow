@@ -417,6 +417,7 @@ func expectedEnvironment() sandboxport.Environment {
 		Name:           "project",
 		Agent:          "codex",
 		Workspace:      "/repo",
+		WorkspaceMode:  sandboxport.WorkspaceModeDirect,
 		Kits:           []string{"git+https://github.com/example/kits.git#ref=v1&dir=tooling"},
 		AllowedSources: []string{"docker.io/", "github.com/example/kits"},
 	}

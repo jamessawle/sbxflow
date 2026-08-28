@@ -21,7 +21,7 @@ func NewDestroyCommand(runner DestroyRunner) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "destroy",
 		Short: "Permanently remove the repository's Docker Sandbox",
-		Long: "Discover the nearest sbxflow.yaml and permanently remove its declared Docker Sandbox and persisted state.\n" +
+		Long: "Discover the nearest sbxflow.yaml and permanently remove its declared Docker Sandbox, persisted state, and work stored only inside it.\n" +
 			"Unlike down, destroy cannot be undone. Docker asks for confirmation by default; --force skips confirmation and permits removal with an active session.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {

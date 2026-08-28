@@ -17,6 +17,14 @@ type LifecycleTarget = declaration.LifecycleTarget
 type LocalKit = declaration.LocalKit
 type LocalKitRequest = declaration.LocalKitRequest
 type Sandbox = declaration.Sandbox
+type Workspace = declaration.Workspace
+type WorkspaceMode = declaration.WorkspaceMode
+
+const (
+	WorkspaceModeDirect = declaration.WorkspaceModeDirect
+	WorkspaceModeClone  = declaration.WorkspaceModeClone
+)
+
 type Network = declaration.Network
 type Hooks = declaration.Hooks
 type Command = declaration.Command

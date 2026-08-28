@@ -20,13 +20,21 @@ Each configuration separates two concerns:
 - `sources` names and pins reusable kit locations.
 - `use` selects kit artifacts in the order passed to Docker Sandboxes.
 
+The examples also select workspace behavior explicitly. `node-project` uses
+the recommended `clone` mode, where changes remain private until transferred
+through Git. `source-types` uses `direct` to demonstrate immediate host
+visibility. Omission remains accepted as a compatibility behavior equivalent
+to direct mode, but emits a warning because the implicit mode is planned to
+change before 1.0.
+
 The Node project example also declares creation-only `hooks.initialize`
 commands. Its bounded shell loop waits for the `language-node-npm` kit's
 sandbox-local `node_modules` mount before `npm ci` writes dependencies. Hooks
 run non-interactively in order and forward output; use an explicit shell for
 shell syntax. Changed hooks require `up --recreate`. A failed or cancelled hook
-removes the new sandbox and declared scoped resources, but cannot undo changes
-to the host-mounted workspace, so bootstrap commands should be safe to retry.
+removes the new sandbox and declared scoped resources. It cannot undo changes
+to a direct host-mounted workspace; changes confined to a successfully removed
+private clone are discarded, so bootstrap commands should be safe to retry.
 
 Kit-source trust is derived from the selected sources and is not declared in the
 configuration. Remote Git and OCI selections are normalized without network

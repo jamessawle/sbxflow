@@ -33,6 +33,7 @@ func NewValidateCommand(runner ValidateRunner) *cobra.Command {
 				return fmt.Errorf("determine working directory: %w", err)
 			}
 			report := runner.Run(cmd.Context(), workingDirectory)
+			renderValidationWarnings(cmd.ErrOrStderr(), report.Warnings)
 			renderValidationReport(cmd, report)
 			if !report.Valid() {
 				cmd.Root().SilenceErrors = true
@@ -40,6 +41,12 @@ func NewValidateCommand(runner ValidateRunner) *cobra.Command {
 			}
 			return nil
 		},
+	}
+}
+
+func renderValidationWarnings(writer io.Writer, warnings []string) {
+	for _, warning := range warnings {
+		_, _ = fmt.Fprintf(writer, "Warning: %s\n", warning)
 	}
 }
 

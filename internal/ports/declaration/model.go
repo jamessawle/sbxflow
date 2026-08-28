@@ -42,11 +42,26 @@ type LocalKitRequest struct {
 
 // Sandbox declares the sandbox identity and ordered kit configuration.
 type Sandbox struct {
-	Name    string  `json:"name" yaml:"name"`
-	Agent   string  `json:"agent" yaml:"agent"`
-	Kits    Kits    `json:"kits" yaml:"kits"`
-	Network Network `json:"network,omitempty" yaml:"network,omitempty"`
-	Hooks   Hooks   `json:"hooks,omitempty" yaml:"hooks,omitempty"`
+	Name      string     `json:"name" yaml:"name"`
+	Agent     string     `json:"agent" yaml:"agent"`
+	Workspace *Workspace `json:"workspace,omitempty" yaml:"workspace,omitempty"`
+	Kits      Kits       `json:"kits" yaml:"kits"`
+	Network   Network    `json:"network,omitempty" yaml:"network,omitempty"`
+	Hooks     Hooks      `json:"hooks,omitempty" yaml:"hooks,omitempty"`
+}
+
+// WorkspaceMode selects how the repository is exposed inside the sandbox.
+type WorkspaceMode string
+
+const (
+	WorkspaceModeDirect WorkspaceMode = "direct"
+	WorkspaceModeClone  WorkspaceMode = "clone"
+)
+
+// Workspace contains creation-time workspace behavior. A nil Workspace on
+// Sandbox preserves that the declaration omitted the setting.
+type Workspace struct {
+	Mode WorkspaceMode `json:"mode" yaml:"mode"`
 }
 
 // Hooks contains ordered commands run at defined sandbox lifecycle boundaries.

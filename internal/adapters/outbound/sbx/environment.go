@@ -19,16 +19,25 @@ type environmentDocument struct {
 	SchemaVersion string   `yaml:"schemaVersion"`
 	Name          string   `yaml:"name"`
 	Agent         string   `yaml:"agent"`
-	Workspace     string   `yaml:"workspace"`
+	Workspace     any      `yaml:"workspace"`
 	Kits          []string `yaml:"kits,omitempty"`
 }
 
+type cloneWorkspaceDocument struct {
+	Path  string `yaml:"path"`
+	Clone bool   `yaml:"clone"`
+}
+
 func fullEnvironmentDocument(environment sandboxport.Environment) environmentDocument {
+	workspace := any(environment.Workspace)
+	if environment.WorkspaceMode == sandboxport.WorkspaceModeClone {
+		workspace = cloneWorkspaceDocument{Path: environment.Workspace, Clone: true}
+	}
 	return environmentDocument{
 		SchemaVersion: "1",
 		Name:          environment.Name,
 		Agent:         environment.Agent,
-		Workspace:     environment.Workspace,
+		Workspace:     workspace,
 		Kits:          append([]string(nil), environment.Kits...),
 	}
 }

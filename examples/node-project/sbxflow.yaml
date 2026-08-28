@@ -4,6 +4,9 @@ sandbox:
   name: node-project
   agent: codex
 
+  workspace:
+    mode: clone
+
   network:
     allowedHosts:
       - registry.npmjs.org

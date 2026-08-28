@@ -47,6 +47,25 @@ func TestRenderEnvironmentWritesOrderedPrivateDocumentOutsideWorkspace(t *testin
 	}
 }
 
+func TestRenderEnvironmentWritesCloneWorkspaceObject(t *testing.T) {
+	workspace := t.TempDir()
+	rendered, err := (Client{TemporaryDirectory: t.TempDir()}).renderEnvironment(sandboxport.Environment{
+		Name: "project", Agent: "codex", Workspace: workspace, WorkspaceMode: sandboxport.WorkspaceModeClone,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = rendered.cleanup() })
+	data, err := os.ReadFile(rendered.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "schemaVersion: \"1\"\nname: project\nagent: codex\nworkspace:\n  path: " + workspace + "\n  clone: true\n"
+	if string(data) != want {
+		t.Fatalf("clone environment =\n%s\nwant:\n%s", data, want)
+	}
+}
+
 func TestRenderRemovalEnvironmentContainsOnlyIdentityAndInertInputs(t *testing.T) {
 	rendered, err := (Client{TemporaryDirectory: t.TempDir()}).renderRemovalEnvironment("exact-name")
 	if err != nil {
