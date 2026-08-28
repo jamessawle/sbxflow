@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -19,15 +20,17 @@ func TestSandboxClientExecutesLiteralCommandWithMatchingOutput(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	command := []string{"printf", "%s", "$HOME; literal"}
 	err := (sbx.Client{Commands: commands, Interactive: interactive}).ExecuteCommand(context.Background(), sandboxport.CommandRequest{
-		Name: "exact-sandbox", Workspace: "/workspace with spaces", Command: command,
+		Environment: sandboxport.Environment{Name: "exact-sandbox", Agent: "codex", Workspace: t.TempDir()}, Command: command,
 	}, sandboxport.Streams{Out: &stdout, Err: &stderr})
 	if err == nil || interactive.calls != 1 {
 		t.Fatalf("ExecuteCommand() error = %v, calls = %d", err, interactive.calls)
 	}
-	wantArgs := []string{"exec", "--workdir", "/workspace with spaces", "exact-sandbox", "printf", "%s", "$HOME; literal"}
 	invocation := interactive.invocation
-	if !reflect.DeepEqual(invocation.Args, wantArgs) || invocation.Stdin != nil || invocation.Stdout != &stdout || invocation.Stderr != &stderr {
+	if len(invocation.Args) != 7 || !reflect.DeepEqual(invocation.Args[:2], []string{"env", "exec"}) || invocation.Args[3] != "--" || !reflect.DeepEqual(invocation.Args[4:], command) || invocation.Stdin != nil || invocation.Stdout != &stdout || invocation.Stderr != &stderr {
 		t.Fatalf("invocation = %#v, want literal non-interactive invocation", invocation)
+	}
+	if _, err := os.Stat(invocation.Args[2]); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("temporary environment still exists or stat failed: %v", err)
 	}
 }
 
@@ -53,8 +56,8 @@ func TestUpInitializesCreatedSandboxInOrderBeforeAttachment(t *testing.T) {
 		t.Fatalf("calls = %#v, want %#v", sandboxes.calls, wantCalls)
 	}
 	wantRequests := []sandboxport.CommandRequest{
-		{Name: "project", Workspace: "/repo", Command: []string{"bash", "-c", "printf 'one' && printf 'err' >&2"}},
-		{Name: "project", Workspace: "/repo", Command: []string{"printf", "%s", "$HOME; literal"}},
+		{Environment: expectedEnvironment(), Command: []string{"bash", "-c", "printf 'one' && printf 'err' >&2"}},
+		{Environment: expectedEnvironment(), Command: []string{"printf", "%s", "$HOME; literal"}},
 	}
 	if !reflect.DeepEqual(sandboxes.executeRequests, wantRequests) {
 		t.Fatalf("execute requests = %#v, want %#v", sandboxes.executeRequests, wantRequests)
@@ -87,7 +90,7 @@ func TestInitializationFailureStopsAndRollsBack(t *testing.T) {
 	if !errors.Is(err, want) || !strings.Contains(err.Error(), "initialize command 1") || !strings.Contains(err.Error(), "bash") {
 		t.Fatalf("Run() error = %v", err)
 	}
-	wantCalls := []string{"lookup project", "create project", "allow project", "execute project", "remove project", "cleanup first.example", "cleanup second.example"}
+	wantCalls := []string{"lookup project", "create project", "allow project", "execute project", "remove project"}
 	if !reflect.DeepEqual(sandboxes.calls, wantCalls) || len(sandboxes.executeRequests) != 1 {
 		t.Fatalf("calls = %#v, requests = %#v", sandboxes.calls, sandboxes.executeRequests)
 	}

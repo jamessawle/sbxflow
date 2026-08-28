@@ -92,25 +92,25 @@ func (r UpRunner) Run(ctx context.Context, start string, options UpOptions, stre
 	if err != nil {
 		return report, err
 	}
-	state, err := r.Sandboxes.Inspect(ctx, plan.Name)
+	state, err := r.Sandboxes.Inspect(ctx, plan.Environment.Name)
 	if err != nil {
 		return report, err
 	}
 	exists := state != sandboxport.StateAbsent
 	if state == sandboxport.StateRunning && options.Recreate && !options.Force {
 		if options.Confirmer == nil {
-			return report, fmt.Errorf("confirm recreation of running sandbox %q: confirmation is unavailable", plan.Name)
+			return report, fmt.Errorf("confirm recreation of running sandbox %q: confirmation is unavailable", plan.Environment.Name)
 		}
-		approved, confirmErr := options.Confirmer.ConfirmRunningSandboxRecreation(plan.Name, streams)
+		approved, confirmErr := options.Confirmer.ConfirmRunningSandboxRecreation(plan.Environment.Name, streams)
 		if confirmErr != nil {
-			return report, fmt.Errorf("confirm recreation of running sandbox %q: %w", plan.Name, confirmErr)
+			return report, fmt.Errorf("confirm recreation of running sandbox %q: %w", plan.Environment.Name, confirmErr)
 		}
 		if !approved {
-			return report, fmt.Errorf("%w: sandbox %q was not removed", ErrRecreationCancelled, plan.Name)
+			return report, fmt.Errorf("%w: sandbox %q was not removed", ErrRecreationCancelled, plan.Environment.Name)
 		}
 	}
 	if exists && options.Recreate {
-		err = removeSandbox(ctx, r.Sandboxes, plan.Name, plan.AllowedHosts, true, streams)
+		err = removeSandbox(ctx, r.Sandboxes, plan.Environment.Name, true, streams)
 		if err != nil {
 			return report, err
 		}
@@ -121,12 +121,7 @@ func (r UpRunner) Run(ctx context.Context, start string, options UpOptions, stre
 			return report, err
 		}
 	}
-	err = r.Sandboxes.RunSandbox(ctx, sandboxport.RunRequest{
-		Name:           plan.Name,
-		Agent:          plan.Agent,
-		AllowedSources: plan.Trust.AllowedSources,
-		AllowLocalKits: plan.Trust.AllowLocalKits,
-	}, sandboxport.Streams{
+	err = r.Sandboxes.RunSandbox(ctx, sandboxport.RunRequest{Environment: plan.Environment}, sandboxport.Streams{
 		In: streams.In, Out: streams.Out, Err: streams.Err,
 	})
 	if err != nil {
@@ -142,27 +137,20 @@ func (r UpRunner) Run(ctx context.Context, start string, options UpOptions, stre
 // that cannot be applied removes the new sandbox again so that up neither
 // creates nor enters a sandbox without its declared network access.
 func (r UpRunner) create(ctx context.Context, plan Plan, streams Streams) error {
-	err := r.Sandboxes.CreateSandbox(ctx, sandboxport.CreateRequest{
-		Name:           plan.Name,
-		Agent:          plan.Agent,
-		Workspace:      plan.Workspace,
-		Kits:           plan.Kits,
-		AllowedSources: plan.Trust.AllowedSources,
-		AllowLocalKits: plan.Trust.AllowLocalKits,
-	}, sandboxport.Streams{
+	err := r.Sandboxes.CreateSandbox(ctx, sandboxport.CreateRequest{Environment: plan.Environment}, sandboxport.Streams{
 		In: streams.In, Out: streams.Out, Err: streams.Err,
 	})
 	if err != nil {
 		return AttachedProcessError{Err: err}
 	}
 	if len(plan.AllowedHosts) != 0 {
-		err = r.Sandboxes.AllowNetwork(ctx, sandboxport.NetworkAllowRequest{Name: plan.Name, Resources: plan.AllowedHosts})
+		err = r.Sandboxes.AllowNetwork(ctx, sandboxport.NetworkAllowRequest{Name: plan.Environment.Name, Resources: plan.AllowedHosts})
 		if err != nil {
 			return r.rollbackCreation(ctx, plan, streams, err)
 		}
 	}
 	for index, command := range plan.Initialize {
-		err = r.Sandboxes.ExecuteCommand(ctx, sandboxport.CommandRequest{Name: plan.Name, Workspace: plan.Workspace, Command: command}, sandboxport.Streams{Out: streams.Out, Err: streams.Err})
+		err = r.Sandboxes.ExecuteCommand(ctx, sandboxport.CommandRequest{Environment: plan.Environment, Command: command}, sandboxport.Streams{Out: streams.Out, Err: streams.Err})
 		if err != nil {
 			initializationErr := fmt.Errorf("initialize command %d %q: %w", index+1, command, err)
 			return r.rollbackCreation(ctx, plan, streams, initializationErr)
@@ -175,8 +163,8 @@ func (r UpRunner) rollbackCreation(ctx context.Context, plan Plan, streams Strea
 	// Cancellation stops the active initialization command but must not prevent
 	// cleanup of the incomplete sandbox it created.
 	cleanupContext := context.WithoutCancel(ctx)
-	if rollback := removeSandbox(cleanupContext, r.Sandboxes, plan.Name, plan.AllowedHosts, true, streams); rollback != nil {
-		return fmt.Errorf("%w; the created sandbox %q could not be removed again: %v", primary, plan.Name, rollback)
+	if rollback := removeSandbox(cleanupContext, r.Sandboxes, plan.Environment.Name, true, streams); rollback != nil {
+		return fmt.Errorf("%w; the created sandbox %q could not be removed again: %v", primary, plan.Environment.Name, rollback)
 	}
 	return primary
 }

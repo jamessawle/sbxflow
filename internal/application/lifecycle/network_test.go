@@ -64,7 +64,7 @@ func TestUpRemovesCreatedSandboxWhenNetworkAllowFails(t *testing.T) {
 	}
 	// The sandbox exists by the time the rule is rejected, so it is removed again
 	// rather than entered without its declared access.
-	wantCalls := []string{"lookup project", "create project", "allow project", "remove project", "cleanup first.example", "cleanup second.example"}
+	wantCalls := []string{"lookup project", "create project", "allow project", "remove project"}
 	if !reflect.DeepEqual(sandboxes.calls, wantCalls) {
 		t.Fatalf("calls = %#v, want %#v", sandboxes.calls, wantCalls)
 	}
@@ -92,21 +92,21 @@ func TestRecreationCleansThenReappliesNetwork(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	want := []string{"lookup project", "remove project", "cleanup first.example", "cleanup second.example", "create project", "allow project", "run project"}
+	want := []string{"lookup project", "remove project", "create project", "allow project", "run project"}
 	if !reflect.DeepEqual(sandboxes.calls, want) {
 		t.Fatalf("calls = %#v, want %#v", sandboxes.calls, want)
 	}
 }
 
-func TestRemovalDoesNotCleanupAfterRemovalFailureAndReportsPartialCleanup(t *testing.T) {
+func TestRemovalDelegatesScopedResourceCleanupToEnvironmentRemoval(t *testing.T) {
 	sandboxes := &fakeUpSandboxes{removeErr: errors.New("remove failed")}
-	err := removeSandbox(context.Background(), sandboxes, "project", []string{"first.example"}, true, Streams{})
+	err := removeSandbox(context.Background(), sandboxes, "project", true, Streams{})
 	if !errors.Is(err, sandboxes.removeErr) || !reflect.DeepEqual(sandboxes.calls, []string{"remove project"}) {
 		t.Fatalf("removeSandbox() = %v, calls %#v", err, sandboxes.calls)
 	}
-	sandboxes = &fakeUpSandboxes{cleanupErr: errors.New("cleanup failed")}
-	err = removeSandbox(context.Background(), sandboxes, "project", []string{"first.example", "second.example"}, true, Streams{})
-	if err == nil || !strings.Contains(err.Error(), "was removed") || !reflect.DeepEqual(sandboxes.calls, []string{"remove project", "cleanup first.example"}) {
+	sandboxes = &fakeUpSandboxes{}
+	err = removeSandbox(context.Background(), sandboxes, "project", true, Streams{})
+	if err != nil || !reflect.DeepEqual(sandboxes.calls, []string{"remove project"}) || len(sandboxes.cleanupRequests) != 0 {
 		t.Fatalf("removeSandbox() = %v, calls %#v", err, sandboxes.calls)
 	}
 }

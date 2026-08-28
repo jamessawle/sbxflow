@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	// The v0.35.0 command contracts were verified against the released binary.
-	// Docker's current v0.37.x CLI reference retains all four contracts. Exclude
-	// the next minor until its pre-1.0 schemas have been deliberately verified.
-	SupportedSbxMinimum          = "v0.35.0"
-	SupportedSbxMaximumExclusive = "v0.38.0"
+	// Declarative sandbox environments were introduced in v0.39.0. Their
+	// interface is experimental, so exclude the next minor until it has been
+	// deliberately verified.
+	SupportedSbxMinimum          = "v0.39.0"
+	SupportedSbxMaximumExclusive = "v0.40.0"
 )
 
 var sbxVersionPattern = regexp.MustCompile(`(?m)^sbx version:\s*v?(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.-]+)?(?:\s|$)`)
@@ -361,5 +361,5 @@ func compareVersions(left, right semanticVersion) int {
 	return 0
 }
 
-func supportedMinimum() semanticVersion { return semanticVersion{major: 0, minor: 35, patch: 0} }
-func supportedMaximum() semanticVersion { return semanticVersion{major: 0, minor: 38, patch: 0} }
+func supportedMinimum() semanticVersion { return semanticVersion{major: 0, minor: 39, patch: 0} }
+func supportedMaximum() semanticVersion { return semanticVersion{major: 0, minor: 40, patch: 0} }

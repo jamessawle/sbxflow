@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -54,12 +55,12 @@ func TestDestroyRunnerAbsentAndSimilarNamesAreNoOps(t *testing.T) {
 
 func TestDestroyRunnerRemovesExactSandboxWithSelectedSafeguardsAndAttachedStreams(t *testing.T) {
 	for _, test := range []struct {
-		name  string
-		force bool
-		args  []string
+		name   string
+		force  bool
+		prefix []string
 	}{
-		{name: "confirmed", args: []string{"rm", "project"}},
-		{name: "forced", force: true, args: []string{"rm", "--force", "project"}},
+		{name: "confirmed", prefix: []string{"env", "rm"}},
+		{name: "forced", force: true, prefix: []string{"env", "rm", "--force"}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			commands := &fakeCommandRunner{path: "/bin/sbx", output: sbx.Output{Stdout: []byte("other\nproject\n")}}
@@ -78,15 +79,12 @@ func TestDestroyRunnerRemovesExactSandboxWithSelectedSafeguardsAndAttachedStream
 			if err := runner.Run(ctx, "/repo/nested", test.force, Streams{In: stdin, Out: &stdout, Err: &stderr}); err != nil {
 				t.Fatalf("Run() error = %v", err)
 			}
-			want := sbx.InteractiveInvocation{
-				Executable: "/bin/sbx",
-				Args:       test.args,
-				Stdin:      stdin,
-				Stdout:     &stdout,
-				Stderr:     &stderr,
+			invocation := interactive.invocation
+			if invocation.Executable != "/bin/sbx" || len(invocation.Args) != len(test.prefix)+1 || !reflect.DeepEqual(invocation.Args[:len(test.prefix)], test.prefix) || invocation.Stdin != stdin || invocation.Stdout != &stdout || invocation.Stderr != &stderr {
+				t.Fatalf("invocation = %#v, want prefix %#v and attached streams", invocation, test.prefix)
 			}
-			if !reflect.DeepEqual(interactive.invocation, want) {
-				t.Fatalf("invocation = %#v, want %#v", interactive.invocation, want)
+			if _, err := os.Stat(invocation.Args[len(invocation.Args)-1]); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("temporary removal environment still exists or stat failed: %v", err)
 			}
 		})
 	}

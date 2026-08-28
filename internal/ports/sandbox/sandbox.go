@@ -21,9 +21,9 @@ type Streams struct {
 	Err io.Writer
 }
 
-// CreateRequest contains the inputs needed to create a sandbox without
-// attaching to its agent session.
-type CreateRequest struct {
+// Environment is a backend-neutral sandbox definition shared by lifecycle
+// operations that may need to resolve its selected kits.
+type Environment struct {
 	Name           string
 	Agent          string
 	Workspace      string
@@ -32,19 +32,21 @@ type CreateRequest struct {
 	AllowLocalKits bool
 }
 
+// CreateRequest contains the environment to create without attaching to its
+// agent session.
+type CreateRequest struct {
+	Environment Environment
+}
+
 // RunRequest contains the inputs needed to enter an existing sandbox.
 type RunRequest struct {
-	Name           string
-	Agent          string
-	AllowedSources []string
-	AllowLocalKits bool
+	Environment Environment
 }
 
 // CommandRequest executes one literal command vector inside a sandbox workspace.
 type CommandRequest struct {
-	Name      string
-	Workspace string
-	Command   []string
+	Environment Environment
+	Command     []string
 }
 
 // RemoveRequest contains the safeguards and streams for sandbox removal.

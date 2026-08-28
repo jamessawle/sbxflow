@@ -32,7 +32,7 @@ func TestNewPlanPreservesKitOrderAndTrust(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewPlan() error = %v", err)
 	}
-	if plan.Name != "project" || plan.Agent != "codex" || plan.Workspace != "/repo" {
+	if plan.Environment.Name != "project" || plan.Environment.Agent != "codex" || plan.Environment.Workspace != "/repo" {
 		t.Fatalf("NewPlan() identity = %#v", plan)
 	}
 	wantKits := []string{
@@ -40,11 +40,11 @@ func TestNewPlanPreservesKitOrderAndTrust(t *testing.T) {
 		"/canonical/repo/kits/local-kit",
 		"ghcr.io/example/kits/oci-kit:v2",
 	}
-	if !reflect.DeepEqual(plan.Kits, wantKits) {
-		t.Fatalf("Kits = %#v, want %#v", plan.Kits, wantKits)
+	if !reflect.DeepEqual(plan.Environment.Kits, wantKits) {
+		t.Fatalf("Kits = %#v, want %#v", plan.Environment.Kits, wantKits)
 	}
-	if !reflect.DeepEqual(plan.Trust, report.Linked.Trust) {
-		t.Fatalf("Trust = %#v, want %#v", plan.Trust, report.Linked.Trust)
+	if !reflect.DeepEqual(plan.Environment.AllowedSources, report.Linked.Trust.AllowedSources) || plan.Environment.AllowLocalKits != report.Linked.Trust.AllowLocalKits {
+		t.Fatalf("Environment trust = %#v, want %#v", plan.Environment, report.Linked.Trust)
 	}
 	if !reflect.DeepEqual(plan.AllowedHosts, []string{"first.example", "second.example"}) {
 		t.Fatalf("AllowedHosts = %#v", plan.AllowedHosts)
@@ -53,8 +53,12 @@ func TestNewPlanPreservesKitOrderAndTrust(t *testing.T) {
 		t.Fatalf("Initialize = %#v", plan.Initialize)
 	}
 	report.Linked.Configuration.Sandbox.Hooks.Initialize[0].Command[0] = "changed"
+	report.Linked.Trust.AllowedSources[0] = "changed"
 	if plan.Initialize[0][0] != "npm" {
 		t.Fatalf("Initialize shares declaration storage: %#v", plan.Initialize)
+	}
+	if plan.Environment.AllowedSources[0] != "docker.io/" {
+		t.Fatalf("AllowedSources shares declaration storage: %#v", plan.Environment.AllowedSources)
 	}
 }
 

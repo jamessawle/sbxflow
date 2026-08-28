@@ -21,10 +21,10 @@ func TestCompatibilityCheck(t *testing.T) {
 		{name: "unavailable", lookupErr: errors.New("not found"), wantStatus: StatusFail, wantText: "not installed"},
 		{name: "unexecutable", lookupPath: "/fake/sbx", output: CommandOutput{ExitCode: -1, Err: errors.New("permission denied")}, wantStatus: StatusFail, wantText: "could not be determined"},
 		{name: "malformed", lookupPath: "/fake/sbx", output: successfulOutput("unexpected"), wantStatus: StatusFail, wantText: "unrecognized"},
-		{name: "below lower boundary", lookupPath: "/fake/sbx", output: successfulOutput("sbx version: v0.34.99 abc\n"), wantStatus: StatusFail, wantText: "unsupported"},
-		{name: "lower boundary", lookupPath: "/fake/sbx", output: successfulOutput("sbx version: v0.35.0 abc\n"), wantStatus: StatusPass, wantText: "compatible"},
-		{name: "upper supported", lookupPath: "/fake/sbx", output: successfulOutput("sbx version: v0.37.99 abc\n"), wantStatus: StatusPass, wantText: "compatible"},
-		{name: "exclusive upper boundary", lookupPath: "/fake/sbx", output: successfulOutput("sbx version: v0.38.0 abc\n"), wantStatus: StatusFail, wantText: "unsupported"},
+		{name: "below lower boundary", lookupPath: "/fake/sbx", output: successfulOutput("sbx version: v0.38.99 abc\n"), wantStatus: StatusFail, wantText: "unsupported"},
+		{name: "lower boundary", lookupPath: "/fake/sbx", output: successfulOutput("sbx version: v0.39.0 abc\n"), wantStatus: StatusPass, wantText: "compatible"},
+		{name: "upper supported", lookupPath: "/fake/sbx", output: successfulOutput("sbx version: v0.39.99 abc\n"), wantStatus: StatusPass, wantText: "compatible"},
+		{name: "exclusive upper boundary", lookupPath: "/fake/sbx", output: successfulOutput("sbx version: v0.40.0 abc\n"), wantStatus: StatusFail, wantText: "unsupported"},
 	}
 
 	for _, test := range tests {
@@ -154,7 +154,7 @@ func TestDefaultChecksAreInspectionOnly(t *testing.T) {
 	commands := &fakeCommandRunner{
 		path: "/fake/sbx",
 		outputs: []CommandOutput{
-			successfulOutput("sbx version: v0.35.0 abc\n"),
+			successfulOutput("sbx version: v0.39.0 abc\n"),
 			successfulOutput(`{"version":"1.0","summary":{"pass":1,"warn":0,"fail":0,"skip":0}}`),
 			successfulOutput(`{"rules":[]}`),
 			kitSetting(`["docker.io/"]`, "default"),

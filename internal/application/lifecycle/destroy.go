@@ -29,5 +29,5 @@ func (r DestroyRunner) Run(ctx context.Context, start string, force bool, stream
 		return nil
 	}
 
-	return removeSandbox(ctx, r.Sandboxes, target.Name, target.AllowedHosts, force, streams)
+	return removeSandbox(ctx, r.Sandboxes, target.Name, force, streams)
 }

@@ -23,8 +23,9 @@ type Streams = sandboxport.Streams
 // Client invokes Docker Sandboxes through injected captured and interactive
 // process runners.
 type Client struct {
-	Commands    Runner
-	Interactive InteractiveRunner
+	Commands           Runner
+	Interactive        InteractiveRunner
+	TemporaryDirectory string
 }
 
 var (
@@ -205,24 +206,18 @@ func (c Client) CreateSandbox(ctx context.Context, request CreateRequest, stream
 	if err != nil {
 		return fmt.Errorf("locate sbx for sandbox creation: %w", err)
 	}
-	trust, err := kitTrustEnvironment(request.AllowedSources, request.AllowLocalKits)
+	trust, err := kitTrustEnvironment(request.Environment.AllowedSources, request.Environment.AllowLocalKits)
 	if err != nil {
 		return err
 	}
 
-	args := []string{"create", "--name", request.Name}
-	for _, kit := range request.Kits {
-		args = append(args, "--kit", kit)
-	}
-	args = append(args, request.Agent, request.Workspace)
-
-	return c.Interactive.Run(ctx, InteractiveInvocation{
-		Executable:  executable,
-		Args:        args,
-		Environment: trust,
-		Stdin:       streams.In,
-		Stdout:      streams.Out,
-		Stderr:      streams.Err,
+	return withRenderedEnvironment(func() (renderedEnvironment, error) {
+		return c.renderEnvironment(request.Environment)
+	}, func(path string) error {
+		return c.Interactive.Run(ctx, InteractiveInvocation{
+			Executable: executable, Args: []string{"env", "create", path}, Environment: trust,
+			Stdin: streams.In, Stdout: streams.Out, Stderr: streams.Err,
+		})
 	})
 }
 
@@ -232,18 +227,18 @@ func (c Client) RunSandbox(ctx context.Context, request RunRequest, streams Stre
 	if err != nil {
 		return fmt.Errorf("locate sbx for sandbox execution: %w", err)
 	}
-	trust, err := kitTrustEnvironment(request.AllowedSources, request.AllowLocalKits)
+	trust, err := kitTrustEnvironment(request.Environment.AllowedSources, request.Environment.AllowLocalKits)
 	if err != nil {
 		return err
 	}
 
-	return c.Interactive.Run(ctx, InteractiveInvocation{
-		Executable:  executable,
-		Args:        []string{"run", request.Agent, "--name", request.Name},
-		Environment: trust,
-		Stdin:       streams.In,
-		Stdout:      streams.Out,
-		Stderr:      streams.Err,
+	return withRenderedEnvironment(func() (renderedEnvironment, error) {
+		return c.renderEnvironment(request.Environment)
+	}, func(path string) error {
+		return c.Interactive.Run(ctx, InteractiveInvocation{
+			Executable: executable, Args: []string{"env", "run", path}, Environment: trust,
+			Stdin: streams.In, Stdout: streams.Out, Stderr: streams.Err,
+		})
 	})
 }
 
@@ -254,13 +249,19 @@ func (c Client) ExecuteCommand(ctx context.Context, request CommandRequest, stre
 	if err != nil {
 		return fmt.Errorf("locate sbx for sandbox command execution: %w", err)
 	}
-	args := []string{"exec", "--workdir", request.Workspace, request.Name}
-	args = append(args, request.Command...)
-	return c.Interactive.Run(ctx, InteractiveInvocation{
-		Executable: executable,
-		Args:       args,
-		Stdout:     streams.Out,
-		Stderr:     streams.Err,
+	trust, err := kitTrustEnvironment(request.Environment.AllowedSources, request.Environment.AllowLocalKits)
+	if err != nil {
+		return err
+	}
+	return withRenderedEnvironment(func() (renderedEnvironment, error) {
+		return c.renderEnvironment(request.Environment)
+	}, func(path string) error {
+		args := []string{"env", "exec", path, "--"}
+		args = append(args, request.Command...)
+		return c.Interactive.Run(ctx, InteractiveInvocation{
+			Executable: executable, Args: args, Environment: trust,
+			Stdout: streams.Out, Stderr: streams.Err,
+		})
 	})
 }
 
@@ -298,16 +299,17 @@ func (c Client) RemoveSandbox(ctx context.Context, request RemoveRequest) error 
 	if err != nil {
 		return fmt.Errorf("locate sbx for sandbox removal: %w", err)
 	}
-	args := []string{"rm", request.Name}
-	if request.Force {
-		args = []string{"rm", "--force", request.Name}
-	}
-	return c.Interactive.Run(ctx, InteractiveInvocation{
-		Executable: executable,
-		Args:       args,
-		Stdin:      request.Streams.In,
-		Stdout:     request.Streams.Out,
-		Stderr:     request.Streams.Err,
+	return withRenderedEnvironment(func() (renderedEnvironment, error) {
+		return c.renderRemovalEnvironment(request.Name)
+	}, func(path string) error {
+		args := []string{"env", "rm", path}
+		if request.Force {
+			args = []string{"env", "rm", "--force", path}
+		}
+		return c.Interactive.Run(ctx, InteractiveInvocation{
+			Executable: executable, Args: args,
+			Stdin: request.Streams.In, Stdout: request.Streams.Out, Stderr: request.Streams.Err,
+		})
 	})
 }
 

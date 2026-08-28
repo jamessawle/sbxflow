@@ -7,15 +7,12 @@ import (
 	"path/filepath"
 
 	"github.com/jamessawle/sbxflow/internal/domain/configuration"
+	sandboxport "github.com/jamessawle/sbxflow/internal/ports/sandbox"
 )
 
 // Plan contains the validated inputs needed to create or enter a sandbox.
 type Plan struct {
-	Name         string
-	Agent        string
-	Workspace    string
-	Kits         []string
-	Trust        configuration.Trust
+	Environment  sandboxport.Environment
 	AllowedHosts []string
 	Initialize   [][]string
 }
@@ -56,11 +53,14 @@ func NewPlan(report configuration.Validation) (Plan, error) {
 		initialize[index] = append([]string(nil), command.Command...)
 	}
 	return Plan{
-		Name:         report.Linked.Configuration.Sandbox.Name,
-		Agent:        report.Linked.Configuration.Sandbox.Agent,
-		Workspace:    filepath.Dir(report.Declaration),
-		Kits:         kits,
-		Trust:        report.Linked.Trust,
+		Environment: sandboxport.Environment{
+			Name:           report.Linked.Configuration.Sandbox.Name,
+			Agent:          report.Linked.Configuration.Sandbox.Agent,
+			Workspace:      filepath.Dir(report.Declaration),
+			Kits:           kits,
+			AllowedSources: append([]string(nil), report.Linked.Trust.AllowedSources...),
+			AllowLocalKits: report.Linked.Trust.AllowLocalKits,
+		},
 		AllowedHosts: append([]string(nil), report.Linked.Configuration.Sandbox.Network.AllowedHosts...),
 		Initialize:   initialize,
 	}, nil

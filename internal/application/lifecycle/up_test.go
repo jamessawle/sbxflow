@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -160,33 +161,29 @@ func TestRunnerLookupFailureDoesNotRunAgent(t *testing.T) {
 }
 
 func TestRunnerSelectsExactMissingAndExistingArguments(t *testing.T) {
-	attachArgs := []string{"run", "codex", "--name", "project"}
 	for _, test := range []struct {
 		name       string
 		listOutput string
-		wantArgs   [][]string
+		wantOps    []string
 	}{
 		{
 			name:       "missing",
 			listOutput: `{"sandboxes":[{"name":"other","status":"running"}]}`,
-			wantArgs: [][]string{
-				{"create", "--name", "project", "--kit", "git+https://github.com/example/kits.git#ref=v1&dir=tooling", "codex", "/repo"},
-				attachArgs,
-			},
+			wantOps:    []string{"create", "run"},
 		},
 		{
 			name:       "existing",
 			listOutput: `{"sandboxes":[{"name":"project","status":"running"}]}`,
-			wantArgs:   [][]string{attachArgs},
+			wantOps:    []string{"run"},
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			assertRunnerInvocations(t, test.listOutput, test.wantArgs)
+			assertRunnerInvocations(t, test.listOutput, test.wantOps)
 		})
 	}
 }
 
-func assertRunnerInvocations(t *testing.T, listOutput string, wantArgs [][]string) {
+func assertRunnerInvocations(t *testing.T, listOutput string, wantOps []string) {
 	t.Helper()
 	commands := &fakeCommandRunner{path: "/bin/sbx", output: sbx.Output{Stdout: []byte(listOutput)}}
 	interactive := &fakeInteractiveRunner{}
@@ -197,15 +194,21 @@ func assertRunnerInvocations(t *testing.T, listOutput string, wantArgs [][]strin
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	assertInvocationArguments(t, interactive.invocations, wantArgs)
+	assertInvocationArguments(t, interactive.invocations, wantOps)
 	assertInvocationStreamsAndTrust(t, interactive.invocations, stdin, &stdout, &stderr)
 }
 
-func assertInvocationArguments(t *testing.T, invocations []sbx.InteractiveInvocation, want [][]string) {
+func assertInvocationArguments(t *testing.T, invocations []sbx.InteractiveInvocation, want []string) {
 	t.Helper()
-	got := make([][]string, 0, len(invocations))
+	got := make([]string, 0, len(invocations))
 	for _, invocation := range invocations {
-		got = append(got, invocation.Args)
+		if len(invocation.Args) != 3 || invocation.Args[0] != "env" {
+			t.Fatalf("args = %#v, want env operation and explicit file", invocation.Args)
+		}
+		got = append(got, invocation.Args[1])
+		if _, err := os.Stat(invocation.Args[2]); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("temporary environment still exists or stat failed: %v", err)
+		}
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("args = %#v, want %#v", got, want)
@@ -270,19 +273,13 @@ func TestRunnerRecreatesExactExistingSandboxBeforeCreatingFromPlan(t *testing.T)
 		t.Fatalf("remove request = %#v, want %#v", sandboxes.removeRequest, wantRemove)
 	}
 	wantCreate := sandboxport.CreateRequest{
-		Name:           "project",
-		Agent:          "codex",
-		Workspace:      "/repo",
-		Kits:           []string{"git+https://github.com/example/kits.git#ref=v1&dir=tooling"},
-		AllowedSources: []string{"docker.io/", "github.com/example/kits"},
+		Environment: expectedEnvironment(),
 	}
 	if !reflect.DeepEqual(sandboxes.createRequest, wantCreate) {
 		t.Fatalf("create request = %#v, want %#v", sandboxes.createRequest, wantCreate)
 	}
 	wantRun := sandboxport.RunRequest{
-		Name:           "project",
-		Agent:          "codex",
-		AllowedSources: []string{"docker.io/", "github.com/example/kits"},
+		Environment: expectedEnvironment(),
 	}
 	if !reflect.DeepEqual(sandboxes.runRequest, wantRun) {
 		t.Fatalf("run request = %#v, want %#v", sandboxes.runRequest, wantRun)
@@ -415,6 +412,16 @@ func validReport() configuration.Validation {
 	}
 }
 
+func expectedEnvironment() sandboxport.Environment {
+	return sandboxport.Environment{
+		Name:           "project",
+		Agent:          "codex",
+		Workspace:      "/repo",
+		Kits:           []string{"git+https://github.com/example/kits.git#ref=v1&dir=tooling"},
+		AllowedSources: []string{"docker.io/", "github.com/example/kits"},
+	}
+}
+
 type fakeValidator struct{ report configuration.Validation }
 
 func (v fakeValidator) Run(context.Context, string) configuration.Validation { return v.report }
@@ -508,14 +515,14 @@ type fakeUpSandboxes struct {
 }
 
 func (s *fakeUpSandboxes) ExecuteCommand(_ context.Context, request sandboxport.CommandRequest, streams sandboxport.Streams) error {
-	s.calls = append(s.calls, "execute "+request.Name)
+	s.calls = append(s.calls, "execute "+request.Environment.Name)
 	s.executeRequests = append(s.executeRequests, request)
 	s.executeStreams = append(s.executeStreams, streams)
 	return s.executeErr
 }
 
 func (s *fakeUpSandboxes) CreateSandbox(_ context.Context, request sandboxport.CreateRequest, streams sandboxport.Streams) error {
-	s.calls = append(s.calls, "create "+request.Name)
+	s.calls = append(s.calls, "create "+request.Environment.Name)
 	s.createRequest = request
 	s.createStreams = streams
 	return s.createErr
@@ -549,7 +556,7 @@ func (s *fakeUpSandboxes) RemoveSandbox(ctx context.Context, request sandboxport
 }
 
 func (s *fakeUpSandboxes) RunSandbox(_ context.Context, request sandboxport.RunRequest, streams sandboxport.Streams) error {
-	s.calls = append(s.calls, "run "+request.Name)
+	s.calls = append(s.calls, "run "+request.Environment.Name)
 	s.runRequest = request
 	s.runStreams = streams
 	return s.runErr
